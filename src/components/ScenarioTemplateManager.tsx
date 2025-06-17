@@ -4,7 +4,7 @@ import { useTemplateManager } from '@/hooks/useTemplateManager';
 import { useToast } from '@/hooks/use-toast';
 import { validateTemplate } from '@/utils/templateValidation';
 import type { Database } from '@/integrations/supabase/types';
-import { AdvancedVisualTemplateCreationForm } from './scenario-templates/AdvancedVisualTemplateCreationForm';
+import { ImprovedAdvancedVisualTemplateCreationForm } from './scenario-templates/ImprovedAdvancedVisualTemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
@@ -136,7 +136,7 @@ const ScenarioTemplateManager = () => {
   if (isMobile && isCreateOpen) {
     return (
       <div className="fixed inset-0 z-50 bg-gray-900">
-        <AdvancedVisualTemplateCreationForm
+        <ImprovedAdvancedVisualTemplateCreationForm
           onSave={handleCreateTemplate}
           onCancel={() => setIsCreateOpen(false)}
         />
@@ -181,8 +181,8 @@ const ScenarioTemplateManager = () => {
       {/* Dialogs */}
       {!isMobile && (
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
-            <AdvancedVisualTemplateCreationForm
+          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden bg-gray-900 border-gray-700 p-0">
+            <ImprovedAdvancedVisualTemplateCreationForm
               onSave={handleCreateTemplate}
               onCancel={() => setIsCreateOpen(false)}
             />
