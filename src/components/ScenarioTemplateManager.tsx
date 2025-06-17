@@ -4,12 +4,11 @@ import { useTemplateManager } from '@/hooks/useTemplateManager';
 import { useToast } from '@/hooks/use-toast';
 import { validateTemplate } from '@/utils/templateValidation';
 import type { Database } from '@/integrations/supabase/types';
-import TemplateCreationForm from './scenario-templates/TemplateCreationForm';
+import { VisualTemplateCreationForm } from './scenario-templates/VisualTemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
-import { TemplateActionManager } from './scenario-templates/TemplateActionManager';
-import { Loader2, AlertCircle, RefreshCw, User } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
@@ -108,27 +107,12 @@ const ScenarioTemplateManager = () => {
             <p className="text-gray-400 text-sm mb-4">
               У вас пока нет созданных шаблонов сценариев
             </p>
-            <div className="flex gap-2 justify-center">
-              <Button 
-                onClick={handleCreateNew}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                Создать первый шаблон
-              </Button>
-              <Button 
-                onClick={refreshTemplates}
-                variant="outline"
-                className="border-gray-600 text-gray-400 hover:bg-gray-700"
-                disabled={refreshing}
-              >
-                {refreshing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Обновить
-              </Button>
-            </div>
+            <Button 
+              onClick={handleCreateNew}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Создать первый шаблон
+            </Button>
           </div>
         </div>
       ) : (
@@ -139,18 +123,12 @@ const ScenarioTemplateManager = () => {
         />
       )}
 
-      <TemplateCreationForm
+      <VisualTemplateCreationForm
         isOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         formData={formData}
         setFormData={setFormData}
         onCreateTemplate={handleCreateTemplate}
-        actionManager={
-          <TemplateActionManager
-            formData={formData}
-            setFormData={setFormData}
-          />
-        }
       />
 
       <TemplateViewer
