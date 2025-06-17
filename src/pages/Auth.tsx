@@ -9,11 +9,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [showResendOption, setShowResendOption] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -30,7 +33,12 @@ const Auth: React.FC = () => {
     try {
       const { error } = await signIn(email, password);
       if (error) {
-        toast.error(error.message);
+        if (error.message.includes('Email not confirmed')) {
+          toast.error('Подтвердите email перед входом. Проверьте почту.');
+          setShowResendOption(true);
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success('Добро пожаловать!');
         navigate('/');
@@ -49,14 +57,51 @@ const Auth: React.FC = () => {
     try {
       const { error } = await signUp(email, password);
       if (error) {
-        toast.error(error.message);
+        if (error.message.includes('User already registered')) {
+          toast.warning('Пользователь уже зарегистрирован. Попробуйте войти или повторно отправить письмо подтверждения.');
+          setShowResendOption(true);
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success('Регистрация успешна! Проверьте email для подтверждения.');
+        setShowResendOption(true);
       }
     } catch (error) {
       toast.error('Произошла ошибка при регистрации');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast.error('Введите email адрес');
+      return;
+    }
+
+    setResendLoading(true);
+    
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        toast.error('Ошибка при отправке письма: ' + error.message);
+      } else {
+        toast.success('Письмо подтверждения отправлено повторно!');
+      }
+    } catch (error) {
+      toast.error('Произошла ошибка при отправке письма');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -143,6 +188,22 @@ const Auth: React.FC = () => {
               </form>
             </TabsContent>
           </Tabs>
+
+          {showResendOption && (
+            <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500 rounded-lg">
+              <p className="text-blue-300 text-sm mb-3">
+                Не получили письмо? Отправим повторно:
+              </p>
+              <Button 
+                onClick={handleResendConfirmation}
+                disabled={resendLoading || !email}
+                variant="outline"
+                className="w-full border-blue-500 text-blue-300 hover:bg-blue-900/30"
+              >
+                {resendLoading ? 'Отправка...' : 'Отправить письмо повторно'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
