@@ -63,11 +63,17 @@ export const useTemplateManager = () => {
       setLoading(true);
       console.log('Fetching templates for user:', user.id);
       
+      // First check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('Пользователь не авторизован');
+      }
+
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
         .eq('status', 'template')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       console.log('Supabase query result:', { data, error });
@@ -79,14 +85,13 @@ export const useTemplateManager = () => {
       
       console.log('Successfully fetched templates:', data?.length || 0);
       setTemplates(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching templates:', error);
       toast({
         title: "Ошибка",
         description: `Не удалось загрузить шаблоны сценариев: ${error.message || 'Неизвестная ошибка'}`,
         variant: "destructive"
       });
-      // Устанавливаем пустой массив в случае ошибки
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -148,7 +153,7 @@ export const useTemplateManager = () => {
       });
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating template:', error);
       toast({
         title: "Ошибка",
@@ -175,8 +180,7 @@ export const useTemplateManager = () => {
       const { error } = await supabase
         .from('scenarios')
         .delete()
-        .eq('id', templateId)
-        .eq('user_id', user.id);
+        .eq('id', templateId);
 
       if (error) {
         console.error('Supabase error deleting template:', error);
@@ -189,7 +193,7 @@ export const useTemplateManager = () => {
         title: "Успешно",
         description: "Шаблон сценария удален"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting template:', error);
       toast({
         title: "Ошибка",

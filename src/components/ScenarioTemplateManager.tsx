@@ -9,6 +9,7 @@ import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
 import { TemplateActionManager } from './scenario-templates/TemplateActionManager';
+import { Loader2 } from 'lucide-react';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -69,7 +70,8 @@ const ScenarioTemplateManager = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-white">Загрузка шаблонов сценариев...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+        <span className="ml-2 text-white">Загрузка шаблонов сценариев...</span>
       </div>
     );
   }
