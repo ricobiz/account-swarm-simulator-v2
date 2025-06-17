@@ -4,7 +4,7 @@ import { useTemplateManager } from '@/hooks/useTemplateManager';
 import { useToast } from '@/hooks/use-toast';
 import { validateTemplate } from '@/utils/templateValidation';
 import type { Database } from '@/integrations/supabase/types';
-import { VisualTemplateCreationForm } from './scenario-templates/VisualTemplateCreationForm';
+import { AdvancedVisualTemplateCreationForm } from './scenario-templates/AdvancedVisualTemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
@@ -123,7 +123,7 @@ const ScenarioTemplateManager = () => {
         />
       )}
 
-      <VisualTemplateCreationForm
+      <AdvancedVisualTemplateCreationForm
         isOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         formData={formData}

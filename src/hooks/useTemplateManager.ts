@@ -12,6 +12,7 @@ export interface FormData {
   platform: string;
   description: string;
   steps: any[];
+  flowData?: { nodes: any[]; edges: any[] }; // Добавляем данные графа
   settings: {
     minDelay: number;
     maxDelay: number;
