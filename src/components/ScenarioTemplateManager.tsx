@@ -1,57 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Play, Copy, Eye } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import { TemplateCreationForm } from './scenario-templates/TemplateCreationForm';
+import { TemplateList } from './scenario-templates/TemplateList';
+import { TemplateViewer } from './scenario-templates/TemplateViewer';
+import { StepForm } from './scenario-templates/StepBuilder';
 
-// Use the existing scenarios table from the database types
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'] & {
   template_config?: {
     steps: any[];
     settings: any;
   };
 };
-
-interface StepForm {
-  type: string;
-  name: string;
-  description: string;
-  selector?: string;
-  url?: string;
-  text?: string;
-  minTime?: number;
-  maxTime?: number;
-}
-
-const PLATFORMS = [
-  { value: 'telegram', label: 'Telegram' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'twitter', label: 'Twitter' },
-  { value: 'reddit', label: 'Reddit' }
-];
-
-const STEP_TYPES = [
-  { value: 'navigate', label: 'Переход на страницу', fields: ['url'] },
-  { value: 'click', label: 'Клик по элементу', fields: ['selector'] },
-  { value: 'type', label: 'Ввод текста', fields: ['selector', 'text'] },
-  { value: 'scroll', label: 'Скроллинг', fields: [] },
-  { value: 'wait', label: 'Ожидание', fields: ['minTime', 'maxTime'] },
-  { value: 'random_interaction', label: 'Случайное взаимодействие', fields: [] },
-  { value: 'submit_post', label: 'Отправить пост (Reddit)', fields: ['title', 'content'] },
-  { value: 'comment', label: 'Комментарий', fields: ['text'] }
-];
 
 const ScenarioTemplateManager = () => {
   const [templates, setTemplates] = useState<ScenarioTemplate[]>([]);
@@ -129,8 +94,8 @@ const ScenarioTemplateManager = () => {
           user_id: user.id,
           name: formData.name,
           platform: formData.platform,
-          status: 'template', // Special status for templates
-          config: templateConfig
+          status: 'template',
+          config: templateConfig as any
         })
         .select()
         .single();
@@ -228,28 +193,9 @@ const ScenarioTemplateManager = () => {
     });
   };
 
-  const getCurrentStepFields = () => {
-    const stepType = STEP_TYPES.find(t => t.value === currentStep.type);
-    return stepType?.fields || [];
-  };
-
-  const getPlatformColor = (platform: string) => {
-    const colors: Record<string, string> = {
-      telegram: 'bg-blue-500',
-      tiktok: 'bg-black',
-      youtube: 'bg-red-500',
-      instagram: 'bg-pink-500',
-      twitter: 'bg-blue-400',
-      reddit: 'bg-orange-500'
-    };
-    return colors[platform] || 'bg-gray-500';
-  };
-
-  const getStepsCount = (template: ScenarioTemplate) => {
-    if (template.config && typeof template.config === 'object' && 'steps' in template.config) {
-      return (template.config as any).steps?.length || 0;
-    }
-    return 0;
+  const handleViewTemplate = (template: ScenarioTemplate) => {
+    setSelectedTemplate(template);
+    setIsViewOpen(true);
   };
 
   if (loading) {
@@ -263,288 +209,41 @@ const ScenarioTemplateManager = () => {
           <h3 className="text-2xl font-bold text-white">Шаблоны сценариев</h3>
           <p className="text-gray-400">Создание и управление JSON-конфигурациями сценариев</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-purple-500 hover:bg-purple-600" onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Создать шаблон
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="text-white">Создание шаблона сценария</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Настройте шаги автоматизации для выбранной платформы
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              {/* Basic information */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Название</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    placeholder="Например: Лайки Instagram"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Платформа</label>
-                  <Select value={formData.platform} onValueChange={(value) => setFormData(prev => ({ ...prev, platform: value }))}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                      <SelectValue placeholder="Выберите платформу" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {PLATFORMS.map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          {platform.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-300">Описание</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-gray-700 border-gray-600 text-white"
-                  placeholder="Краткое описание сценария"
-                />
-              </div>
-
-              {/* Add steps section */}
-              <Card className="bg-gray-900 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Добавить шаг</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Тип шага</label>
-                      <Select value={currentStep.type} onValueChange={(value) => setCurrentStep(prev => ({ ...prev, type: value }))}>
-                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                          <SelectValue placeholder="Выберите тип" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-600">
-                          {STEP_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Название</label>
-                      <Input
-                        value={currentStep.name}
-                        onChange={(e) => setCurrentStep(prev => ({ ...prev, name: e.target.value }))}
-                        className="bg-gray-700 border-gray-600 text-white"
-                        placeholder="Название шага"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Описание</label>
-                      <Input
-                        value={currentStep.description}
-                        onChange={(e) => setCurrentStep(prev => ({ ...prev, description: e.target.value }))}
-                        className="bg-gray-700 border-gray-600 text-white"
-                        placeholder="Описание"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dynamic fields based on step type */}
-                  {getCurrentStepFields().length > 0 && (
-                    <div className="grid grid-cols-2 gap-4">
-                      {getCurrentStepFields().map((field) => (
-                        <div key={field}>
-                          <label className="text-sm font-medium text-gray-300 capitalize">{field}</label>
-                          {field === 'minTime' || field === 'maxTime' ? (
-                            <Input
-                              type="number"
-                              value={currentStep[field as keyof StepForm] || ''}
-                              onChange={(e) => setCurrentStep(prev => ({ ...prev, [field]: parseInt(e.target.value) }))}
-                              className="bg-gray-700 border-gray-600 text-white"
-                              placeholder={field === 'minTime' ? 'Мин. время (мс)' : 'Макс. время (мс)'}
-                            />
-                          ) : (
-                            <Input
-                              value={currentStep[field as keyof StepForm] || ''}
-                              onChange={(e) => setCurrentStep(prev => ({ ...prev, [field]: e.target.value }))}
-                              className="bg-gray-700 border-gray-600 text-white"
-                              placeholder={field === 'selector' ? 'CSS селектор' : field === 'url' ? 'https://...' : 'Текст для ввода'}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <Button onClick={addStep} className="bg-blue-500 hover:bg-blue-600">
-                    Добавить шаг
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* List of added steps */}
-              {formData.steps.length > 0 && (
-                <Card className="bg-gray-900 border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="text-white">Шаги сценария ({formData.steps.length})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {formData.steps.map((step, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-800 p-3 rounded">
-                          <div>
-                            <span className="text-white font-medium">{index + 1}. {step.name}</span>
-                            <p className="text-sm text-gray-400">{step.type} - {step.description}</p>
-                          </div>
-                          <Button
-                            onClick={() => removeStep(index)}
-                            size="sm"
-                            variant="outline"
-                            className="border-red-600 text-red-400 hover:bg-red-900"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleCreateTemplate} 
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={!formData.name || !formData.platform || formData.steps.length === 0}
-                >
-                  Создать шаблон
-                </Button>
-                <Button onClick={() => setIsCreateOpen(false)} variant="outline" className="border-gray-600 text-gray-400">
-                  Отмена
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="bg-purple-500 hover:bg-purple-600" 
+          onClick={() => {
+            resetForm();
+            setIsCreateOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Создать шаблон
+        </Button>
       </div>
 
-      {/* Templates table */}
-      <Card className="bg-gray-800/50 border-gray-700">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-700">
-                <TableHead className="text-gray-300">Название</TableHead>
-                <TableHead className="text-gray-300">Платформа</TableHead>
-                <TableHead className="text-gray-300">Шагов</TableHead>
-                <TableHead className="text-gray-300">Статус</TableHead>
-                <TableHead className="text-gray-300">Создан</TableHead>
-                <TableHead className="text-gray-300">Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.map((template) => (
-                <TableRow key={template.id} className="border-gray-700">
-                  <TableCell>
-                    <div>
-                      <div className="text-white font-medium">{template.name}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${getPlatformColor(template.platform)} text-white`}>
-                      {template.platform}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-300">{getStepsCount(template)}</TableCell>
-                  <TableCell>
-                    <Badge variant="default">
-                      Шаблон
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-300">
-                    {new Date(template.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-600 text-blue-400 hover:bg-blue-500/20"
-                        onClick={() => {
-                          setSelectedTemplate(template);
-                          setIsViewOpen(true);
-                        }}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-600 text-red-400 hover:bg-red-900"
-                        onClick={() => handleDeleteTemplate(template.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <TemplateList
+        templates={templates}
+        onViewTemplate={handleViewTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+      />
 
-      {/* View template dialog */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-white">
-              {selectedTemplate?.name}
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Просмотр конфигурации шаблона сценария
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedTemplate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium text-gray-300">Платформа:</span>
-                  <Badge className={`ml-2 ${getPlatformColor(selectedTemplate.platform)} text-white`}>
-                    {selectedTemplate.platform}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-300">Шагов:</span>
-                  <span className="ml-2 text-white">{getStepsCount(selectedTemplate)}</span>
-                </div>
-              </div>
+      <TemplateCreationForm
+        isOpen={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        formData={formData}
+        setFormData={setFormData}
+        currentStep={currentStep}
+        setCurrentStep={setCurrentStep}
+        onCreateTemplate={handleCreateTemplate}
+        onAddStep={addStep}
+        onRemoveStep={removeStep}
+      />
 
-              <Card className="bg-gray-900 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">JSON конфигурация</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="text-xs text-gray-300 bg-gray-800 p-4 rounded overflow-x-auto">
-                    {JSON.stringify(selectedTemplate.config, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <TemplateViewer
+        isOpen={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        template={selectedTemplate}
+      />
     </div>
   );
 };
