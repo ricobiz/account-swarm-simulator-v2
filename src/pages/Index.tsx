@@ -25,34 +25,12 @@ const Index = () => {
 
   console.log('Auth state:', { user: !!user, authLoading, profile: !!profile, profileLoading });
 
-  const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
-  
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoadingTimeout(true);
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
           <p className="text-gray-300">Проверка аутентификации...</p>
-          {showLoadingTimeout && (
-            <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-red-400 mx-auto mb-2" />
-              <p className="text-red-400 text-sm">Загрузка занимает слишком много времени</p>
-              <Button 
-                onClick={() => window.location.href = '/auth'} 
-                className="mt-2 bg-red-600 hover:bg-red-700"
-              >
-                Перейти к входу
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -67,8 +45,8 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-300">Загрузка профиля пользователя...</p>
-          <p className="text-gray-400 text-sm mt-2">Создаем профиль если необходимо...</p>
+          <p className="text-gray-300">Загрузка профиля...</p>
+          <p className="text-gray-400 text-sm mt-2">Это может занять несколько секунд</p>
         </div>
       </div>
     );
@@ -94,11 +72,6 @@ const Index = () => {
                   <div className="flex items-center gap-1 bg-yellow-600 px-2 py-1 rounded-full text-xs text-white">
                     <Crown className="h-3 w-3" />
                     Администратор
-                  </div>
-                )}
-                {profile && (
-                  <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded-full text-xs text-white">
-                    Профиль загружен
                   </div>
                 )}
               </div>
@@ -174,13 +147,19 @@ const Index = () => {
             </Tabs>
           </>
         ) : (
-          <Card className="bg-yellow-900/20 border-yellow-500 mb-6">
+          <Card className="bg-red-900/20 border-red-500 mb-6">
             <CardContent className="p-6 text-center">
-              <Loader2 className="h-12 w-12 text-yellow-400 mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-white mb-2">Создание профиля...</h3>
+              <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">Ошибка загрузки профиля</h3>
               <p className="text-gray-400 mb-4">
-                Пожалуйста, подождите, мы создаем ваш профиль пользователя.
+                Не удалось загрузить или создать профиль пользователя.
               </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Обновить страницу
+              </Button>
             </CardContent>
           </Card>
         )}

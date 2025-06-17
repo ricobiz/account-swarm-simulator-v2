@@ -25,8 +25,49 @@ export const useProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const fetchProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Fetching profile for user:', user.id);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setLoading(false);
+        return;
+      }
+      
+      if (!data) {
+        console.log('No profile found, creating one...');
+        await createProfile();
+        return;
+      }
+      
+      console.log('Profile fetched successfully:', data);
+      setProfile(data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      setLoading(false);
+    }
+  };
+
   const createProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
       console.log('Creating profile for user:', user.id, user.email);
@@ -48,50 +89,25 @@ export const useProfile = () => {
 
       if (error) {
         console.error('Error creating profile:', error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось создать профиль: " + error.message,
+          variant: "destructive"
+        });
+        setLoading(false);
         return;
       }
 
       console.log('Profile created successfully:', data);
       setProfile(data);
+      setLoading(false);
       
       toast({
         title: "Профиль создан",
         description: "Ваш профиль пользователя был успешно создан"
       });
     } catch (error) {
-      console.error('Error creating profile:', error);
-    }
-  };
-
-  const fetchProfile = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      console.log('Fetching profile for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-      
-      if (!data) {
-        console.log('No profile found, creating one...');
-        await createProfile();
-        return;
-      }
-      
-      console.log('Profile fetched successfully:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
+      console.error('Error in createProfile:', error);
       setLoading(false);
     }
   };
@@ -146,12 +162,7 @@ export const useProfile = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-    } else {
-      setProfile(null);
-      setLoading(false);
-    }
+    fetchProfile();
   }, [user]);
 
   return {
