@@ -2,313 +2,313 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  Download, 
-  Filter, 
-  RefreshCw,
-  Calendar,
-  User,
-  Play
-} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Activity, AlertCircle, CheckCircle, Clock, Filter, Loader2, RefreshCw, Search, XCircle } from 'lucide-react';
 import { useLogs } from '@/hooks/useLogs';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useScenarios } from '@/hooks/useScenarios';
 
 const MonitoringPanel = () => {
-  const { logs, loading, fetchLogs, exportToCsv } = useLogs();
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterAccount, setFilterAccount] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  
+  const { logs, loading: logsLoading, refetch: refetchLogs } = useLogs();
   const { accounts } = useAccounts();
   const { scenarios } = useScenarios();
-  
-  const [filters, setFilters] = useState({
-    accountId: '',
-    scenarioId: '',
-    status: '',
-    dateFrom: '',
-    dateTo: ''
-  });
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  // Автообновление каждые 10 секунд если включено
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      refetchLogs();
+    }, 10000);
 
-  const applyFilters = () => {
-    const activeFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, value]) => value !== '')
-    );
-    fetchLogs(activeFilters);
-  };
+    return () => clearInterval(interval);
+  }, [autoRefresh, refetchLogs]);
 
-  const clearFilters = () => {
-    setFilters({
-      accountId: '',
-      scenarioId: '',
-      status: '',
-      dateFrom: '',
-      dateTo: ''
-    });
-    fetchLogs();
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
-        return 'default';
-      case 'error':
-        return 'destructive';
-      case 'warning':
-        return 'secondary';
-      default:
-        return 'outline';
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-400" />;
+      case 'error': return <XCircle className="h-4 w-4 text-red-400" />;
+      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-400" />;
+      case 'info': return <Activity className="h-4 w-4 text-blue-400" />;
+      default: return <Clock className="h-4 w-4 text-gray-400" />;
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      case 'warning': return 'bg-yellow-500';
+      case 'info': return 'bg-blue-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  // Фильтрация логов
+  const filteredLogs = logs.filter(log => {
+    const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
+    const matchesAccount = filterAccount === 'all' || log.account_id === filterAccount;
+    const matchesSearch = !searchTerm || 
+      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.details?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesAccount && matchesSearch;
+  });
+
+  // Статистика
+  const stats = {
+    total: logs.length,
+    success: logs.filter(l => l.status === 'success').length,
+    error: logs.filter(l => l.status === 'error').length,
+    warning: logs.filter(l => l.status === 'warning').length,
+    info: logs.filter(l => l.status === 'info').length
+  };
+
+  // Активные сценарии
+  const activeScenarios = scenarios.filter(s => s.status === 'running' || s.status === 'waiting');
+  
+  // Аккаунты по статусам
+  const accountStats = {
+    idle: accounts.filter(a => a.status === 'idle').length,
+    working: accounts.filter(a => a.status === 'working').length,
+    error: accounts.filter(a => a.status === 'error').length
   };
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gray-800/50 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Логи и отчёты
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Фильтры */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-gray-900/50 rounded-lg">
-            <Select value={filters.accountId} onValueChange={(value) => handleFilterChange('accountId', value)}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue placeholder="Аккаунт" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="">Все аккаунты</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.username} ({account.platform})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.scenarioId} onValueChange={(value) => handleFilterChange('scenarioId', value)}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue placeholder="Сценарий" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="">Все сценарии</SelectItem>
-                {scenarios.map((scenario) => (
-                  <SelectItem key={scenario.id} value={scenario.id}>
-                    {scenario.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue placeholder="Статус" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="">Все статусы</SelectItem>
-                <SelectItem value="info">Информация</SelectItem>
-                <SelectItem value="success">Успех</SelectItem>
-                <SelectItem value="warning">Предупреждение</SelectItem>
-                <SelectItem value="error">Ошибка</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="datetime-local"
-              value={filters.dateFrom}
-              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-              className="bg-gray-700 border-gray-600 text-white"
-              placeholder="От даты"
-            />
-
-            <Input
-              type="datetime-local"
-              value={filters.dateTo}
-              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-              className="bg-gray-700 border-gray-600 text-white"
-              placeholder="До даты"
-            />
-
-            <div className="flex gap-2">
-              <Button 
-                onClick={applyFilters}
-                variant="outline" 
-                size="sm"
-                className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                Фильтр
-              </Button>
-              <Button 
-                onClick={clearFilters}
-                variant="outline" 
-                size="sm"
-                className="border-gray-600 text-gray-400 hover:bg-gray-700"
-              >
-                Сброс
-              </Button>
+      {/* Общая статистика */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Активные сценарии</p>
+                <p className="text-2xl font-bold text-white">{activeScenarios.length}</p>
+              </div>
+              <Activity className="h-8 w-8 text-green-400" />
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Действия */}
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => fetchLogs()}
-                variant="outline" 
-                size="sm"
-                disabled={loading}
-                className="border-green-500 text-green-400 hover:bg-green-500/20"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Обновить
-              </Button>
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Работающие аккаунты</p>
+                <p className="text-2xl font-bold text-white">{accountStats.working}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-blue-400" />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Ошибки</p>
+                <p className="text-2xl font-bold text-white">{stats.error}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Всего логов</p>
+                <p className="text-2xl font-bold text-white">{stats.total}</p>
+              </div>
+              <Activity className="h-8 w-8 text-purple-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="logs" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
+          <TabsTrigger value="logs" className="text-white">Логи активности</TabsTrigger>
+          <TabsTrigger value="status" className="text-white">Статус системы</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="logs">
+          <Card className="bg-gray-800/50 border-gray-700">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Логи активности
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAutoRefresh(!autoRefresh)}
+                    className={autoRefresh ? 'border-green-500 text-green-400' : 'border-gray-600 text-gray-400'}
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${autoRefresh ? 'animate-spin' : ''}`} />
+                    Авто
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={refetchLogs}
+                    className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Обновить
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Фильтры */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Поиск по действию..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-48 bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+                
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-40 bg-gray-700 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="all">Все статусы</SelectItem>
+                    <SelectItem value="success">Успех</SelectItem>
+                    <SelectItem value="error">Ошибка</SelectItem>
+                    <SelectItem value="warning">Предупреждение</SelectItem>
+                    <SelectItem value="info">Информация</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterAccount} onValueChange={setFilterAccount}>
+                  <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="all">Все аккаунты</SelectItem>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.username} ({account.platform})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
             
-            <Button 
-              onClick={() => exportToCsv(logs)}
-              variant="outline" 
-              size="sm"
-              disabled={logs.length === 0}
-              className="border-purple-500 text-purple-400 hover:bg-purple-500/20"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Экспорт CSV
-            </Button>
-          </div>
-
-          {/* Таблица логов */}
-          <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center p-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-400" />
-                <span className="ml-2 text-gray-400">Загрузка логов...</span>
-              </div>
-            ) : logs.length === 0 ? (
-              <div className="flex items-center justify-center p-8 text-gray-400">
-                <Calendar className="h-6 w-6 mr-2" />
-                Логи не найдены
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-700">
-                    <TableHead className="text-gray-300">Дата</TableHead>
-                    <TableHead className="text-gray-300">Действие</TableHead>
-                    <TableHead className="text-gray-300">Аккаунт</TableHead>
-                    <TableHead className="text-gray-300">Сценарий</TableHead>
-                    <TableHead className="text-gray-300">Статус</TableHead>
-                    <TableHead className="text-gray-300">Детали</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => (
-                    <TableRow key={log.id} className="border-gray-700 hover:bg-gray-800/30">
-                      <TableCell className="text-gray-300 font-mono text-sm">
-                        {formatDate(log.created_at)}
-                      </TableCell>
-                      <TableCell className="text-white font-medium">
-                        {log.action}
-                      </TableCell>
-                      <TableCell className="text-gray-300">
-                        {log.accounts ? (
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>{log.accounts.username}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {log.accounts.platform}
-                            </Badge>
+            <CardContent>
+              {logsLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                  <span className="ml-2 text-gray-300">Загрузка логов...</span>
+                </div>
+              ) : filteredLogs.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">Логи не найдены</p>
+                  <p className="text-sm">Попробуйте изменить фильтры или запустить сценарии</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filteredLogs.map((log) => (
+                    <div key={log.id} className="bg-gray-900/50 rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          {getStatusIcon(log.status)}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-white font-medium">{log.action}</span>
+                              <Badge className={getStatusColor(log.status)} size="sm">
+                                {log.status}
+                              </Badge>
+                            </div>
+                            {log.details && (
+                              <p className="text-sm text-gray-400 mb-2">{log.details}</p>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>
+                                Аккаунт: {accounts.find(a => a.id === log.account_id)?.username || 'Unknown'}
+                              </span>
+                              <span>{new Date(log.created_at).toLocaleString()}</span>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-gray-300">
-                        {log.scenarios ? (
-                          <div className="flex items-center gap-2">
-                            <Play className="h-4 w-4" />
-                            <span>{log.scenarios.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(log.status)}>
-                          {log.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-400 max-w-xs truncate">
-                        {log.details || '-'}
-                      </TableCell>
-                    </TableRow>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Статистика */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">{logs.length}</div>
-                <div className="text-sm text-blue-200">Всего записей</div>
+        <TabsContent value="status">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Статус аккаунтов</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Свободные</span>
+                  <Badge className="bg-green-500">{accountStats.idle}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Работают</span>
+                  <Badge className="bg-yellow-500">{accountStats.working}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Ошибки</span>
+                  <Badge className="bg-red-500">{accountStats.error}</Badge>
+                </div>
               </CardContent>
             </Card>
-            
-            <Card className="bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/30">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">
-                  {logs.filter(l => l.status === 'success').length}
-                </div>
-                <div className="text-sm text-green-200">Успешных</div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-500/30">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">
-                  {logs.filter(l => l.status === 'warning').length}
-                </div>
-                <div className="text-sm text-yellow-200">Предупреждений</div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-red-500/20 to-red-600/20 border-red-500/30">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">
-                  {logs.filter(l => l.status === 'error').length}
-                </div>
-                <div className="text-sm text-red-200">Ошибок</div>
+
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Активные сценарии</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeScenarios.length === 0 ? (
+                  <p className="text-gray-400">Нет активных сценариев</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeScenarios.map((scenario) => (
+                      <div key={scenario.id} className="bg-gray-900/50 rounded p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-sm">{scenario.name}</span>
+                          <Badge className={getStatusColor(scenario.status)} size="sm">
+                            {scenario.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          {scenario.platform} • {scenario.accounts_count} аккаунт(ов)
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

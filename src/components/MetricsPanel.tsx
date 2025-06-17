@@ -1,206 +1,413 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
+import { TrendingUp, TrendingDown, Activity, Clock, Users, Target, Download, RefreshCw } from 'lucide-react';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useScenarios } from '@/hooks/useScenarios';
+import { useLogs } from '@/hooks/useLogs';
 
-const MetricsPanel: React.FC = () => {
-  const activityData = [
-    { time: '00:00', accounts: 120, actions: 45 },
-    { time: '04:00', accounts: 85, actions: 28 },
-    { time: '08:00', accounts: 280, actions: 156 },
-    { time: '12:00', accounts: 420, actions: 234 },
-    { time: '16:00', accounts: 380, actions: 189 },
-    { time: '20:00', accounts: 310, actions: 167 },
-  ];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
 
-  const platformData = [
-    { name: 'Instagram', value: 45, color: '#E1306C' },
-    { name: 'Twitter', value: 25, color: '#1DA1F2' },
-    { name: 'TikTok', value: 20, color: '#000000' },
-    { name: 'Facebook', value: 10, color: '#4267B2' },
-  ];
+const MetricsPanel = () => {
+  const [timeRange, setTimeRange] = useState('7d');
+  const [selectedPlatform, setSelectedPlatform] = useState('all');
+  
+  const { accounts } = useAccounts();
+  const { scenarios } = useScenarios();
+  const { logs } = useLogs();
 
-  const successData = [
-    { day: 'Mon', success: 92, failed: 8 },
-    { day: 'Tue', success: 95, failed: 5 },
-    { day: 'Wed', success: 88, failed: 12 },
-    { day: 'Thu', success: 94, failed: 6 },
-    { day: 'Fri', success: 96, failed: 4 },
-    { day: 'Sat', success: 91, failed: 9 },
-    { day: 'Sun', success: 93, failed: 7 },
-  ];
+  // Фильтрация данных по времени
+  const filterByTimeRange = (data: any[], dateField: string) => {
+    const now = new Date();
+    const days = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    return data.filter(item => new Date(item[dateField]) >= cutoff);
+  };
 
-  const COLORS = ['#E1306C', '#1DA1F2', '#000000', '#4267B2'];
+  // Метрики аккаунтов
+  const accountMetrics = useMemo(() => {
+    const filteredAccounts = selectedPlatform === 'all' 
+      ? accounts 
+      : accounts.filter(a => a.platform === selectedPlatform);
+
+    const statusCounts = filteredAccounts.reduce((acc, account) => {
+      acc[account.status] = (acc[account.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const platformCounts = accounts.reduce((acc, account) => {
+      acc[account.platform] = (acc[account.platform] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      total: filteredAccounts.length,
+      statusCounts,
+      platformCounts,
+      byPlatform: Object.entries(platformCounts).map(([platform, count]) => ({
+        platform,
+        count,
+        percentage: Math.round((count / accounts.length) * 100)
+      }))
+    };
+  }, [accounts, selectedPlatform]);
+
+  // Метрики сценариев
+  const scenarioMetrics = useMemo(() => {
+    const filteredScenarios = filterByTimeRange(scenarios, 'created_at');
+    const templates = scenarios.filter(s => s.status === 'template');
+    const activeScenarios = scenarios.filter(s => s.status !== 'template');
+
+    const statusCounts = activeScenarios.reduce((acc, scenario) => {
+      acc[scenario.status] = (acc[scenario.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const platformCounts = filteredScenarios.reduce((acc, scenario) => {
+      acc[scenario.platform] = (acc[scenario.platform] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      total: filteredScenarios.length,
+      templates: templates.length,
+      active: activeScenarios.length,
+      statusCounts,
+      platformCounts,
+      byStatus: Object.entries(statusCounts).map(([status, count]) => ({
+        status,
+        count,
+        percentage: Math.round((count / activeScenarios.length) * 100) || 0
+      }))
+    };
+  }, [scenarios, timeRange]);
+
+  // Метрики активности
+  const activityMetrics = useMemo(() => {
+    const filteredLogs = filterByTimeRange(logs, 'created_at');
+    
+    const statusCounts = filteredLogs.reduce((acc, log) => {
+      acc[log.status] = (acc[log.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Активность по дням
+    const dailyActivity = filteredLogs.reduce((acc, log) => {
+      const date = new Date(log.created_at).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const activityByDay = Object.entries(dailyActivity)
+      .map(([date, count]) => ({
+        date: new Date(date).toLocaleDateString(),
+        count
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return {
+      total: filteredLogs.length,
+      statusCounts,
+      successRate: filteredLogs.length > 0 ? Math.round((statusCounts.success || 0) / filteredLogs.length * 100) : 0,
+      errorRate: filteredLogs.length > 0 ? Math.round((statusCounts.error || 0) / filteredLogs.length * 100) : 0,
+      activityByDay
+    };
+  }, [logs, timeRange]);
+
+  const platforms = [...new Set(accounts.map(a => a.platform))];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-2xl font-bold text-white">Analytics & Metrics</h3>
-        <p className="text-gray-400">Monitor performance and activity metrics</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Account Activity (24h)</CardTitle>
-            <CardDescription className="text-gray-400">
-              Active accounts and actions performed
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#F9FAFB'
-                  }} 
-                />
-                <Area type="monotone" dataKey="accounts" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
-                <Area type="monotone" dataKey="actions" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Platform Distribution</CardTitle>
-            <CardDescription className="text-gray-400">
-              Account distribution across platforms
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={platformData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {platformData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+      {/* Фильтры */}
+      <Card className="bg-gray-800/50 border-gray-700">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Аналитика и метрики
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-32 bg-gray-700 border-gray-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="24h">24 часа</SelectItem>
+                  <SelectItem value="7d">7 дней</SelectItem>
+                  <SelectItem value="30d">30 дней</SelectItem>
+                  <SelectItem value="90d">90 дней</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                <SelectTrigger className="w-40 bg-gray-700 border-gray-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="all">Все платформы</SelectItem>
+                  {platforms.map((platform) => (
+                    <SelectItem key={platform} value={platform}>
+                      {platform}
+                    </SelectItem>
                   ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#F9FAFB'
-                  }} 
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+                </SelectContent>
+              </Select>
 
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Success Rate (7 days)</CardTitle>
-            <CardDescription className="text-gray-400">
-              Daily success and failure rates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={successData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="day" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#F9FAFB'
-                  }} 
-                />
-                <Bar dataKey="success" stackId="a" fill="#10B981" />
-                <Bar dataKey="failed" stackId="a" fill="#EF4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Обновить
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Performance Trends</CardTitle>
-            <CardDescription className="text-gray-400">
-              Actions per hour trend analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#F9FAFB'
-                  }} 
-                />
-                <Line type="monotone" dataKey="actions" stroke="#F59E0B" strokeWidth={3} dot={{ fill: '#F59E0B' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Основные метрики */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-blue-200 text-lg">Total Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">24,567</div>
-            <p className="text-blue-200 text-sm">+12% from yesterday</p>
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Всего аккаунтов</p>
+                <p className="text-2xl font-bold text-white">{accountMetrics.total}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-400" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-green-200 text-lg">Success Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">94.2%</div>
-            <p className="text-green-200 text-sm">+2.1% from last week</p>
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Активные сценарии</p>
+                <p className="text-2xl font-bold text-white">{scenarioMetrics.active}</p>
+              </div>
+              <Activity className="h-8 w-8 text-green-400" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-purple-200 text-lg">Avg Response</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">1.2s</div>
-            <p className="text-purple-200 text-sm">-0.3s improvement</p>
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Успешность</p>
+                <p className="text-2xl font-bold text-white">{activityMetrics.successRate}%</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-400" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-orange-200 text-lg">Uptime</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">99.8%</div>
-            <p className="text-orange-200 text-sm">Last 30 days</p>
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Активность</p>
+                <p className="text-2xl font-bold text-white">{activityMetrics.total}</p>
+              </div>
+              <Target className="h-8 w-8 text-purple-400" />
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      <Tabs defaultValue="accounts" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
+          <TabsTrigger value="accounts" className="text-white">Аккаунты</TabsTrigger>
+          <TabsTrigger value="scenarios" className="text-white">Сценарии</TabsTrigger>
+          <TabsTrigger value="activity" className="text-white">Активность</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="accounts" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Распределение по платформам</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={accountMetrics.byPlatform}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ platform, percentage }) => `${platform} (${percentage}%)`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {accountMetrics.byPlatform.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Статусы аккаунтов</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(accountMetrics.statusCounts).map(([status, count]) => (
+                  <div key={status} className="flex items-center justify-between">
+                    <span className="text-gray-300 capitalize">{status}</span>
+                    <Badge 
+                      className={
+                        status === 'idle' ? 'bg-green-500' :
+                        status === 'working' ? 'bg-yellow-500' :
+                        status === 'error' ? 'bg-red-500' :
+                        'bg-gray-500'
+                      }
+                    >
+                      {count}
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="scenarios" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Статусы сценариев</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={scenarioMetrics.byStatus}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="status" tick={{ fill: '#9CA3AF' }} />
+                    <YAxis tick={{ fill: '#9CA3AF' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '6px'
+                      }}
+                    />
+                    <Bar dataKey="count" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Сводка</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Всего сценариев</span>
+                  <Badge className="bg-blue-500">{scenarioMetrics.total}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Шаблоны</span>
+                  <Badge className="bg-purple-500">{scenarioMetrics.templates}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Активные</span>
+                  <Badge className="bg-green-500">{scenarioMetrics.active}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="space-y-6">
+          <Card className="bg-gray-800/50 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Активность по дням</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={activityMetrics.activityByDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" tick={{ fill: '#9CA3AF' }} />
+                  <YAxis tick={{ fill: '#9CA3AF' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <Area type="monotone" dataKey="count" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Статистика операций</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Успешные</span>
+                  <Badge className="bg-green-500">{activityMetrics.statusCounts.success || 0}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Ошибки</span>
+                  <Badge className="bg-red-500">{activityMetrics.statusCounts.error || 0}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Предупреждения</span>
+                  <Badge className="bg-yellow-500">{activityMetrics.statusCounts.warning || 0}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Информация</span>
+                  <Badge className="bg-blue-500">{activityMetrics.statusCounts.info || 0}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Показатели эффективности</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Успешность</span>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500">{activityMetrics.successRate}%</Badge>
+                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Ошибки</span>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-500">{activityMetrics.errorRate}%</Badge>
+                    {activityMetrics.errorRate > 10 ? (
+                      <TrendingDown className="h-4 w-4 text-red-400" />
+                    ) : (
+                      <TrendingUp className="h-4 w-4 text-green-400" />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
