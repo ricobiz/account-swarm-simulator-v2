@@ -14,6 +14,7 @@ import {
   Panel,
   useReactFlow,
   ReactFlowProvider,
+  ConnectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
@@ -93,10 +94,34 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
     };
   }, [setNodes]);
 
+  // Обработчик создания соединений между блоками
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      console.log('Creating connection:', params);
+      setEdges((eds) => addEdge({
+        ...params,
+        type: 'smoothstep',
+        animated: false,
+        style: { stroke: '#6366f1', strokeWidth: 2 }
+      }, eds));
+    },
     [setEdges]
   );
+
+  // Проверка возможности соединения
+  const isValidConnection = useCallback((connection: Connection) => {
+    // Предотвращаем самосоединение
+    if (connection.source === connection.target) {
+      return false;
+    }
+    
+    // Проверяем, что соединение не дублируется
+    const existingEdge = edges.find(
+      edge => edge.source === connection.source && edge.target === connection.target
+    );
+    
+    return !existingEdge;
+  }, [edges]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -278,8 +303,15 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
+          isValidConnection={isValidConnection}
+          connectionMode={ConnectionMode.Loose}
           fitView
           style={{ backgroundColor: '#1f2937' }}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            animated: false,
+            style: { stroke: '#6366f1', strokeWidth: 2 }
+          }}
         >
           <Controls />
           {!isMobile && (
