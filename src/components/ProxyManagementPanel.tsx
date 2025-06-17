@@ -7,13 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Plus, Upload, Link, Unlink, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Globe, Plus, Upload, Link, Unlink, RefreshCw, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useProxies } from '@/hooks/useProxies';
 import { useAccounts } from '@/hooks/useAccounts';
 import { toast } from 'sonner';
 
 const ProxyManagementPanel: React.FC = () => {
-  const { proxies, addProxy, updateProxy } = useProxies();
+  const { proxies, addProxy, updateProxy, deleteProxy, loading } = useProxies();
   const { accounts } = useAccounts();
   const [newProxy, setNewProxy] = useState('');
   const [importText, setImportText] = useState('');
@@ -115,7 +115,7 @@ const ProxyManagementPanel: React.FC = () => {
     if (newProxy.trim()) {
       const parts = newProxy.split(':');
       if (parts.length >= 2) {
-        await addProxy({
+        const { error } = await addProxy({
           ip: parts[0],
           port: parseInt(parts[1]),
           username: parts[2],
@@ -125,11 +125,38 @@ const ProxyManagementPanel: React.FC = () => {
           speed: null,
           usage: 0,
         });
-        setNewProxy('');
-        toast.success('Прокси добавлен');
+        
+        if (!error) {
+          setNewProxy('');
+          toast.success('Прокси добавлен');
+        } else {
+          toast.error('Ошибка при добавлении прокси');
+        }
+      } else {
+        toast.error('Неверный формат прокси. Используйте: ip:port:username:password');
       }
     }
   };
+
+  const handleDeleteProxy = async (id: string) => {
+    const { error } = await deleteProxy(id);
+    if (!error) {
+      toast.success('Прокси удален');
+    } else {
+      toast.error('Ошибка при удалении прокси');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
+          <p className="text-gray-300">Загрузка прокси...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -305,26 +332,44 @@ const ProxyManagementPanel: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {proxies.map((proxy) => (
-                <TableRow key={proxy.id} className="border-gray-700">
-                  <TableCell className="text-white font-mono">
-                    {proxy.ip}:{proxy.port}
-                  </TableCell>
-                  <TableCell className="text-gray-300">{proxy.country || 'Unknown'}</TableCell>
-                  <TableCell>
-                    <Badge className={`${getStatusColor(proxy.status)} text-white`}>
-                      {proxy.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-300">{proxy.speed || 'N/A'}</TableCell>
-                  <TableCell className="text-gray-300">{proxy.usage}</TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-                      <RefreshCw className="h-3 w-3" />
-                    </Button>
+              {proxies.length === 0 ? (
+                <TableRow className="border-gray-700">
+                  <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                    Нет добавленных прокси. Добавьте прокси с помощью формы выше.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                proxies.map((proxy) => (
+                  <TableRow key={proxy.id} className="border-gray-700">
+                    <TableCell className="text-white font-mono">
+                      {proxy.ip}:{proxy.port}
+                    </TableCell>
+                    <TableCell className="text-gray-300">{proxy.country || 'Unknown'}</TableCell>
+                    <TableCell>
+                      <Badge className={`${getStatusColor(proxy.status)} text-white`}>
+                        {proxy.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-300">{proxy.speed || 'N/A'}</TableCell>
+                    <TableCell className="text-gray-300">{proxy.usage}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="border-red-600 text-red-400 hover:bg-red-900"
+                          onClick={() => handleDeleteProxy(proxy.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
