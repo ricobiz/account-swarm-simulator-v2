@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -11,12 +11,7 @@ import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { StepForm } from './scenario-templates/StepBuilder';
 
-type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'] & {
-  template_config?: {
-    steps: any[];
-    settings: any;
-  };
-};
+type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
 const ScenarioTemplateManager = () => {
   const [templates, setTemplates] = useState<ScenarioTemplate[]>([]);
@@ -24,11 +19,12 @@ const ScenarioTemplateManager = () => {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ScenarioTemplate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Form data for creating/editing templates
+  // Form data for creating templates
   const [formData, setFormData] = useState({
     name: '',
     platform: '',
@@ -37,7 +33,9 @@ const ScenarioTemplateManager = () => {
     settings: {
       minDelay: 1000,
       maxDelay: 3000,
-      retryAttempts: 2
+      retryAttempts: 2,
+      randomizeOrder: false,
+      pauseBetweenAccounts: 5000
     }
   });
 
@@ -56,12 +54,11 @@ const ScenarioTemplateManager = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      // Fetch scenarios that have JSON config (template scenarios)
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
-        .not('config', 'is', null)
         .eq('status', 'template')
+        .not('config', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -78,14 +75,57 @@ const ScenarioTemplateManager = () => {
     }
   };
 
+  const refreshTemplates = async () => {
+    setRefreshing(true);
+    await fetchTemplates();
+    setRefreshing(false);
+  };
+
+  const validateTemplate = (data: typeof formData): string[] => {
+    const errors = [];
+    
+    if (!data.name.trim()) {
+      errors.push('Введите название шаблона');
+    }
+    
+    if (!data.platform) {
+      errors.push('Выберите платформу');
+    }
+    
+    if (data.steps.length === 0) {
+      errors.push('Добавьте хотя бы один шаг');
+    }
+
+    // Проверяем, что есть хотя бы один шаг навигации
+    const hasNavigationStep = data.steps.some(step => step.type === 'navigate');
+    if (!hasNavigationStep && data.steps.length > 0) {
+      errors.push('Рекомендуется добавить шаг навигации для начала сценария');
+    }
+
+    return errors;
+  };
+
   const handleCreateTemplate = async () => {
     if (!user) return;
+
+    const validationErrors = validateTemplate(formData);
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Ошибка валидации",
+        description: validationErrors.join(', '),
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const templateConfig = {
         steps: formData.steps,
         settings: formData.settings,
-        template_id: `template_${Date.now()}`
+        template_id: `template_${Date.now()}`,
+        description: formData.description,
+        created_by: user.id,
+        version: '1.0'
       };
 
       const { data, error } = await supabase
@@ -108,7 +148,7 @@ const ScenarioTemplateManager = () => {
 
       toast({
         title: "Успешно",
-        description: "Шаблон сценария создан"
+        description: `Шаблон сценария "${formData.name}" создан`
       });
     } catch (error) {
       console.error('Error creating template:', error);
@@ -146,10 +186,11 @@ const ScenarioTemplateManager = () => {
   };
 
   const addStep = () => {
-    if (!currentStep.type || !currentStep.name) {
+    const stepErrors = validateStep(currentStep);
+    if (stepErrors.length > 0) {
       toast({
         title: "Ошибка",
-        description: "Заполните тип и название шага",
+        description: stepErrors.join(', '),
         variant: "destructive"
       });
       return;
@@ -165,13 +206,62 @@ const ScenarioTemplateManager = () => {
       name: '',
       description: ''
     });
+
+    toast({
+      title: "Шаг добавлен",
+      description: `Шаг "${currentStep.name}" добавлен в сценарий`
+    });
+  };
+
+  const validateStep = (step: StepForm): string[] => {
+    const errors = [];
+    
+    if (!step.type) {
+      errors.push('Выберите тип шага');
+    }
+    
+    if (!step.name.trim()) {
+      errors.push('Введите название шага');
+    }
+
+    // Дополнительная валидация в зависимости от типа
+    switch (step.type) {
+      case 'navigate':
+        if (!step.url) {
+          errors.push('Введите URL для навигации');
+        }
+        break;
+      case 'click':
+        if (!step.selector) {
+          errors.push('Введите CSS селектор для клика');
+        }
+        break;
+      case 'type':
+        if (!step.selector || !step.text) {
+          errors.push('Введите селектор и текст для ввода');
+        }
+        break;
+      case 'wait':
+        if (!step.minTime || !step.maxTime || step.maxTime <= step.minTime) {
+          errors.push('Введите корректные значения времени ожидания');
+        }
+        break;
+    }
+
+    return errors;
   };
 
   const removeStep = (index: number) => {
+    const removedStep = formData.steps[index];
     setFormData(prev => ({
       ...prev,
       steps: prev.steps.filter((_, i) => i !== index)
     }));
+
+    toast({
+      title: "Шаг удален",
+      description: `Шаг "${removedStep.name}" удален из сценария`
+    });
   };
 
   const resetForm = () => {
@@ -183,7 +273,9 @@ const ScenarioTemplateManager = () => {
       settings: {
         minDelay: 1000,
         maxDelay: 3000,
-        retryAttempts: 2
+        retryAttempts: 2,
+        randomizeOrder: false,
+        pauseBetweenAccounts: 5000
       }
     });
     setCurrentStep({
@@ -207,18 +299,29 @@ const ScenarioTemplateManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-2xl font-bold text-white">Шаблоны сценариев</h3>
-          <p className="text-gray-400">Создание и управление JSON-конфигурациями сценариев</p>
+          <p className="text-gray-400">Создание и управление конфигурациями автоматизации</p>
         </div>
-        <Button 
-          className="bg-purple-500 hover:bg-purple-600" 
-          onClick={() => {
-            resetForm();
-            setIsCreateOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Создать шаблон
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={refreshTemplates}
+            disabled={refreshing}
+            className="border-gray-600 text-gray-400 hover:bg-gray-700"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Обновить
+          </Button>
+          <Button 
+            className="bg-purple-500 hover:bg-purple-600" 
+            onClick={() => {
+              resetForm();
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Создать шаблон
+          </Button>
+        </div>
       </div>
 
       <TemplateList
