@@ -6,60 +6,24 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Play, Pause, Square, Settings, Clock, Users } from 'lucide-react';
-
-interface ActiveScenario {
-  id: number;
-  name: string;
-  platform: string;
-  status: 'running' | 'paused' | 'completed' | 'error';
-  progress: number;
-  accounts: number;
-  startTime: string;
-  estimatedEnd: string;
-}
+import { useScenarios } from '@/hooks/useScenarios';
+import { useAccounts } from '@/hooks/useAccounts';
+import { toast } from 'sonner';
 
 const ScenarioLaunchPanel: React.FC = () => {
+  const { scenarios, addScenario, updateScenario } = useScenarios();
+  const { accounts, updateAccount } = useAccounts();
   const [selectedScenario, setSelectedScenario] = useState('');
-  const [activeScenarios, setActiveScenarios] = useState<ActiveScenario[]>([
-    {
-      id: 1,
-      name: 'Auto Like & Follow',
-      platform: 'Instagram',
-      status: 'running',
-      progress: 65,
-      accounts: 25,
-      startTime: '14:30',
-      estimatedEnd: '16:15'
-    },
-    {
-      id: 2,
-      name: 'Content Posting',
-      platform: 'Twitter',
-      status: 'paused',
-      progress: 30,
-      accounts: 15,
-      startTime: '13:45',
-      estimatedEnd: '17:30'
-    },
-    {
-      id: 3,
-      name: 'Story Viewing',
-      platform: 'Instagram',
-      status: 'completed',
-      progress: 100,
-      accounts: 40,
-      startTime: '12:00',
-      estimatedEnd: '14:00'
-    },
-  ]);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
 
-  const scenarios = [
-    { id: 'like_follow', name: 'Auto Like & Follow', platform: 'Instagram' },
-    { id: 'content_post', name: 'Content Posting', platform: 'Twitter' },
-    { id: 'story_view', name: 'Story Viewing', platform: 'Instagram' },
-    { id: 'video_engagement', name: 'Video Engagement', platform: 'TikTok' },
-    { id: 'group_interaction', name: 'Group Interaction', platform: 'Facebook' },
+  const scenarioTemplates = [
+    { id: 'telegram_warmup', name: 'Прогрев Telegram', platform: 'Telegram' },
+    { id: 'tiktok_upload', name: 'Заливка TikTok', platform: 'TikTok' },
+    { id: 'youtube_comment', name: 'Авто-коммент YouTube', platform: 'YouTube' },
+    { id: 'instagram_like', name: 'Лайки Instagram', platform: 'Instagram' },
+    { id: 'twitter_retweet', name: 'Ретвиты Twitter', platform: 'Twitter' },
   ];
 
   const getStatusColor = (status: string) => {
@@ -68,57 +32,101 @@ const ScenarioLaunchPanel: React.FC = () => {
       case 'paused': return 'bg-yellow-500';
       case 'completed': return 'bg-blue-500';
       case 'error': return 'bg-red-500';
+      case 'stopped': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'Instagram': return 'bg-pink-500';
-      case 'Twitter': return 'bg-blue-500';
-      case 'TikTok': return 'bg-black';
-      case 'Facebook': return 'bg-blue-600';
-      default: return 'bg-gray-500';
+  const handleAccountSelection = (accountId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedAccounts(prev => [...prev, accountId]);
+    } else {
+      setSelectedAccounts(prev => prev.filter(id => id !== accountId));
     }
   };
 
-  const handleLaunchScenario = () => {
-    if (selectedScenario) {
-      const scenario = scenarios.find(s => s.id === selectedScenario);
-      if (scenario) {
-        const newScenario: ActiveScenario = {
-          id: Date.now(),
-          name: scenario.name,
-          platform: scenario.platform,
-          status: 'running',
-          progress: 0,
-          accounts: Math.floor(Math.random() * 50) + 10,
-          startTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-          estimatedEnd: new Date(Date.now() + Math.random() * 3 * 60 * 60 * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-        };
-        setActiveScenarios([newScenario, ...activeScenarios]);
-        setSelectedScenario('');
-      }
+  const handleLaunchScenario = async () => {
+    if (!selectedScenario || selectedAccounts.length === 0) {
+      toast.error('Выберите сценарий и аккаунты');
+      return;
     }
-  };
 
-  const handleScenarioAction = (id: number, action: 'pause' | 'resume' | 'stop') => {
-    setActiveScenarios(prev => prev.map(scenario => {
-      if (scenario.id === id) {
-        switch (action) {
-          case 'pause':
-            return { ...scenario, status: 'paused' as const };
-          case 'resume':
-            return { ...scenario, status: 'running' as const };
-          case 'stop':
-            return { ...scenario, status: 'completed' as const, progress: 100 };
-          default:
-            return scenario;
+    const template = scenarioTemplates.find(s => s.id === selectedScenario);
+    if (!template) return;
+
+    try {
+      // Создаем новый сценарий
+      const { data: scenario } = await addScenario({
+        name: template.name,
+        platform: template.platform,
+        status: 'running',
+        accounts_count: selectedAccounts.length,
+        progress: 0,
+        next_run: null,
+        config: {
+          selectedAccounts,
+          template: selectedScenario
         }
+      });
+
+      if (scenario) {
+        // Обновляем статус выбранных аккаунтов
+        for (const accountId of selectedAccounts) {
+          await updateAccount(accountId, { status: 'working' });
+        }
+
+        // Симуляция выполнения сценария
+        setTimeout(async () => {
+          const progress = Math.floor(Math.random() * 50) + 25;
+          await updateScenario(scenario.id, { progress });
+          
+          setTimeout(async () => {
+            const finalStatus = Math.random() > 0.2 ? 'completed' : 'error';
+            await updateScenario(scenario.id, { 
+              progress: 100, 
+              status: finalStatus 
+            });
+
+            // Обновляем статус аккаунтов
+            for (const accountId of selectedAccounts) {
+              await updateAccount(accountId, { 
+                status: finalStatus === 'completed' ? 'completed' : 'error' 
+              });
+            }
+          }, 3000);
+        }, 2000);
+
+        toast.success('Сценарий запущен');
+        setSelectedScenario('');
+        setSelectedAccounts([]);
       }
-      return scenario;
-    }));
+    } catch (error) {
+      console.error('Error launching scenario:', error);
+      toast.error('Ошибка запуска сценария');
+    }
   };
+
+  const handleScenarioAction = async (id: string, action: 'pause' | 'resume' | 'stop') => {
+    let newStatus = '';
+    switch (action) {
+      case 'pause':
+        newStatus = 'paused';
+        break;
+      case 'resume':
+        newStatus = 'running';
+        break;
+      case 'stop':
+        newStatus = 'stopped';
+        break;
+    }
+
+    await updateScenario(id, { status: newStatus });
+    toast.success(`Сценарий ${action === 'pause' ? 'приостановлен' : action === 'resume' ? 'возобновлен' : 'остановлен'}`);
+  };
+
+  const runningScenarios = scenarios.filter(s => s.status === 'running');
+  const pausedScenarios = scenarios.filter(s => s.status === 'paused');
+  const completedScenarios = scenarios.filter(s => s.status === 'completed');
 
   return (
     <div className="space-y-6">
@@ -133,9 +141,7 @@ const ScenarioLaunchPanel: React.FC = () => {
             <CardTitle className="text-green-200 text-lg">Активные</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
-              {activeScenarios.filter(s => s.status === 'running').length}
-            </div>
+            <div className="text-3xl font-bold text-white">{runningScenarios.length}</div>
           </CardContent>
         </Card>
 
@@ -144,9 +150,7 @@ const ScenarioLaunchPanel: React.FC = () => {
             <CardTitle className="text-yellow-200 text-lg">На паузе</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
-              {activeScenarios.filter(s => s.status === 'paused').length}
-            </div>
+            <div className="text-3xl font-bold text-white">{pausedScenarios.length}</div>
           </CardContent>
         </Card>
 
@@ -155,9 +159,7 @@ const ScenarioLaunchPanel: React.FC = () => {
             <CardTitle className="text-blue-200 text-lg">Завершённые</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
-              {activeScenarios.filter(s => s.status === 'completed').length}
-            </div>
+            <div className="text-3xl font-bold text-white">{completedScenarios.length}</div>
           </CardContent>
         </Card>
 
@@ -166,9 +168,7 @@ const ScenarioLaunchPanel: React.FC = () => {
             <CardTitle className="text-purple-200 text-lg">Всего аккаунтов</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
-              {activeScenarios.reduce((sum, s) => sum + s.accounts, 0)}
-            </div>
+            <div className="text-3xl font-bold text-white">{accounts.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -178,15 +178,15 @@ const ScenarioLaunchPanel: React.FC = () => {
           <CardTitle className="text-white">Запуск нового сценария</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select value={selectedScenario} onValueChange={setSelectedScenario}>
               <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                 <SelectValue placeholder="Выберите сценарий" />
               </SelectTrigger>
               <SelectContent>
-                {scenarios.map(scenario => (
-                  <SelectItem key={scenario.id} value={scenario.id}>
-                    {scenario.name} ({scenario.platform})
+                {scenarioTemplates.map(template => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name} ({template.platform})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -194,18 +194,40 @@ const ScenarioLaunchPanel: React.FC = () => {
             
             <Button 
               onClick={handleLaunchScenario} 
-              disabled={!selectedScenario}
+              disabled={!selectedScenario || selectedAccounts.length === 0}
               className="bg-green-500 hover:bg-green-600 disabled:bg-gray-600"
             >
               <Play className="mr-2 h-4 w-4" />
               Запустить сценарий
             </Button>
-            
-            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-              <Settings className="mr-2 h-4 w-4" />
-              Настройки
-            </Button>
           </div>
+
+          {selectedScenario && (
+            <Card className="bg-gray-700/50 border-gray-600">
+              <CardHeader>
+                <CardTitle className="text-white text-lg">Выберите аккаунты ({selectedAccounts.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={account.id}
+                        checked={selectedAccounts.includes(account.id)}
+                        onCheckedChange={(checked) => handleAccountSelection(account.id, checked as boolean)}
+                      />
+                      <label
+                        htmlFor={account.id}
+                        className="text-sm text-gray-300 cursor-pointer flex-1"
+                      >
+                        {account.username} ({account.platform}) - {account.status}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </CardContent>
       </Card>
 
@@ -222,16 +244,16 @@ const ScenarioLaunchPanel: React.FC = () => {
                 <TableHead className="text-gray-300">Статус</TableHead>
                 <TableHead className="text-gray-300">Прогресс</TableHead>
                 <TableHead className="text-gray-300">Аккаунты</TableHead>
-                <TableHead className="text-gray-300">Время</TableHead>
+                <TableHead className="text-gray-300">Создан</TableHead>
                 <TableHead className="text-gray-300">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeScenarios.map((scenario) => (
+              {scenarios.map((scenario) => (
                 <TableRow key={scenario.id} className="border-gray-700">
                   <TableCell className="text-white font-medium">{scenario.name}</TableCell>
                   <TableCell>
-                    <Badge className={`${getPlatformColor(scenario.platform)} text-white`}>
+                    <Badge className="bg-blue-500 text-white">
                       {scenario.platform}
                     </Badge>
                   </TableCell>
@@ -248,11 +270,11 @@ const ScenarioLaunchPanel: React.FC = () => {
                   </TableCell>
                   <TableCell className="text-gray-300 flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {scenario.accounts}
+                    {scenario.accounts_count}
                   </TableCell>
                   <TableCell className="text-gray-300 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {scenario.startTime} - {scenario.estimatedEnd}
+                    {new Date(scenario.created_at).toLocaleString('ru-RU')}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -276,7 +298,7 @@ const ScenarioLaunchPanel: React.FC = () => {
                         </Button>
                       ) : null}
                       
-                      {scenario.status !== 'completed' && (
+                      {scenario.status !== 'completed' && scenario.status !== 'stopped' && (
                         <Button 
                           size="sm" 
                           variant="outline" 

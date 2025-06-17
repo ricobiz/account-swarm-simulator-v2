@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,11 +17,17 @@ import ProxyManagementPanel from '@/components/ProxyManagementPanel';
 import ScenarioLaunchPanel from '@/components/ScenarioLaunchPanel';
 import MonitoringPanel from '@/components/MonitoringPanel';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useProxies } from '@/hooks/useProxies';
+import { useScenarios } from '@/hooks/useScenarios';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('accounts');
   const { user, loading, signOut } = useAuth();
+  const { accounts } = useAccounts();
+  const { proxies } = useProxies();
+  const { scenarios } = useScenarios();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,6 +52,10 @@ const Index = () => {
   if (!user) {
     return null;
   }
+
+  const activeAccounts = accounts.filter(a => a.status === 'working' || a.status === 'idle').length;
+  const onlineProxies = proxies.filter(p => p.status === 'online').length;
+  const runningScenarios = scenarios.filter(s => s.status === 'running').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -98,7 +107,7 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">0</div>
+              <div className="text-3xl font-bold text-white">{activeAccounts}</div>
               <div className="text-sm text-blue-200">Активных аккаунтов</div>
             </CardContent>
           </Card>
@@ -111,7 +120,7 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">0</div>
+              <div className="text-3xl font-bold text-white">{onlineProxies}</div>
               <div className="text-sm text-green-200">Онлайн прокси</div>
             </CardContent>
           </Card>
@@ -124,7 +133,7 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">0</div>
+              <div className="text-3xl font-bold text-white">{runningScenarios}</div>
               <div className="text-sm text-purple-200">Запущенных</div>
             </CardContent>
           </Card>
@@ -137,8 +146,8 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">0</div>
-              <div className="text-sm text-orange-200">Действий/час</div>
+              <div className="text-3xl font-bold text-white">{scenarios.length}</div>
+              <div className="text-sm text-orange-200">Всего сценариев</div>
             </CardContent>
           </Card>
         </div>

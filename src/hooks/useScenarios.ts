@@ -3,112 +3,111 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-interface Proxy {
+interface Scenario {
   id: string;
-  ip: string;
-  port: number;
-  username?: string;
-  password?: string;
-  country: string | null;
+  name: string;
+  platform: string;
   status: string;
-  speed: string | null;
-  usage: number;
+  accounts_count: number;
+  progress: number;
+  next_run: string | null;
+  config: any;
   created_at: string;
   updated_at: string;
 }
 
-export const useProxies = () => {
-  const [proxies, setProxies] = useState<Proxy[]>([]);
+export const useScenarios = () => {
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchProxies = async () => {
+  const fetchScenarios = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('proxies')
+        .from('scenarios')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setProxies(data || []);
+      setScenarios(data || []);
     } catch (error) {
-      console.error('Error fetching proxies:', error);
+      console.error('Error fetching scenarios:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const addProxy = async (proxyData: Omit<Proxy, 'id' | 'created_at' | 'updated_at'>) => {
+  const addScenario = async (scenarioData: Omit<Scenario, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
-        .from('proxies')
+        .from('scenarios')
         .insert([{
-          ...proxyData,
+          ...scenarioData,
           user_id: user.id
         }])
         .select()
         .single();
 
       if (error) throw error;
-      setProxies(prev => [data, ...prev]);
+      setScenarios(prev => [data, ...prev]);
       return { data, error: null };
     } catch (error) {
-      console.error('Error adding proxy:', error);
+      console.error('Error adding scenario:', error);
       return { data: null, error };
     }
   };
 
-  const updateProxy = async (id: string, updates: Partial<Proxy>) => {
+  const updateScenario = async (id: string, updates: Partial<Scenario>) => {
     try {
       const { data, error } = await supabase
-        .from('proxies')
+        .from('scenarios')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      setProxies(prev => prev.map(proxy => proxy.id === id ? data : proxy));
+      setScenarios(prev => prev.map(scenario => scenario.id === id ? data : scenario));
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating proxy:', error);
+      console.error('Error updating scenario:', error);
       return { data: null, error };
     }
   };
 
-  const deleteProxy = async (id: string) => {
+  const deleteScenario = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('proxies')
+        .from('scenarios')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      setProxies(prev => prev.filter(proxy => proxy.id !== id));
+      setScenarios(prev => prev.filter(scenario => scenario.id !== id));
       return { error: null };
     } catch (error) {
-      console.error('Error deleting proxy:', error);
+      console.error('Error deleting scenario:', error);
       return { error };
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchProxies();
+      fetchScenarios();
     }
   }, [user]);
 
   return {
-    proxies,
+    scenarios,
     loading,
-    addProxy,
-    updateProxy,
-    deleteProxy,
-    refetch: fetchProxies
+    addScenario,
+    updateScenario,
+    deleteScenario,
+    refetch: fetchScenarios
   };
 };

@@ -3,31 +3,25 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Plus, Upload, Link, Unlink, RefreshCw } from 'lucide-react';
-
-interface Proxy {
-  id: number;
-  ip: string;
-  port: number;
-  username?: string;
-  password?: string;
-  country: string;
-  status: 'online' | 'offline' | 'checking';
-  speed: string;
-  connectedAccounts: number;
-}
+import { Globe, Plus, Upload, Link, Unlink, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { useProxies } from '@/hooks/useProxies';
+import { useAccounts } from '@/hooks/useAccounts';
+import { toast } from 'sonner';
 
 const ProxyManagementPanel: React.FC = () => {
-  const [proxies, setProxies] = useState<Proxy[]>([
-    { id: 1, ip: '192.168.1.10', port: 8080, country: 'US', status: 'online', speed: '45ms', connectedAccounts: 3 },
-    { id: 2, ip: '192.168.1.11', port: 8081, country: 'UK', status: 'online', speed: '62ms', connectedAccounts: 2 },
-    { id: 3, ip: '192.168.1.12', port: 8082, country: 'DE', status: 'offline', speed: 'N/A', connectedAccounts: 0 },
-  ]);
-
+  const { proxies, addProxy, updateProxy } = useProxies();
+  const { accounts } = useAccounts();
   const [newProxy, setNewProxy] = useState('');
+  const [importText, setImportText] = useState('');
+  const [validationResults, setValidationResults] = useState<{
+    valid: string[];
+    invalid: string[];
+  }>({ valid: [], invalid: [] });
+  const [importing, setImporting] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -38,25 +32,26 @@ const ProxyManagementPanel: React.FC = () => {
     }
   };
 
-  const handleAddProxy = () => {
-    if (newProxy.trim()) {
-      const parts = newProxy.split(':');
-      if (parts.length >= 2) {
-        const newProxyObj: Proxy = {
-          id: Date.now(),
-          ip: parts[0],
-          port: parseInt(parts[1]),
-          username: parts[2],
-          password: parts[3],
-          country: 'Unknown',
-          status: 'checking',
-          speed: 'Checking...',
-          connectedAccounts: 0
-        };
-        setProxies([...proxies, newProxyObj]);
-        setNewProxy('');
+  const validateProxies = (text: string) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const valid: string[] = [];
+    const invalid: string[] = [];
+
+    lines.forEach(line => {
+      const parts = line.trim().split(':');
+      if (parts.length >= 2 && parts[0] && !isNaN(Number(parts[1]))) {
+        valid.push(line.trim());
+      } else {
+        invalid.push(line.trim());
       }
-    }
+    });
+
+    setValidationResults({ valid, invalid });
+  };
+
+  const handleTextChange = (text: string) => {
+    setImportText(text);
+    validateProxies(text);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,26 +60,74 @@ const ProxyManagementPanel: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        const lines = content.split('\n').filter(line => line.trim());
-        
-        const newProxies: Proxy[] = lines.map((line, index) => {
-          const parts = line.trim().split(':');
-          return {
-            id: Date.now() + index,
-            ip: parts[0] || '',
-            port: parseInt(parts[1]) || 8080,
-            username: parts[2],
-            password: parts[3],
-            country: 'Unknown',
-            status: 'checking' as const,
-            speed: 'Checking...',
-            connectedAccounts: 0
-          };
-        });
-        
-        setProxies([...proxies, ...newProxies]);
+        setImportText(content);
+        validateProxies(content);
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleImportProxies = async () => {
+    if (validationResults.valid.length === 0) {
+      toast.error('Нет валидных прокси для импорта');
+      return;
+    }
+
+    setImporting(true);
+    let successCount = 0;
+
+    try {
+      for (const proxyLine of validationResults.valid) {
+        const parts = proxyLine.split(':');
+        const ip = parts[0];
+        const port = parseInt(parts[1]);
+        const username = parts[2] || undefined;
+        const password = parts[3] || undefined;
+
+        const { error } = await addProxy({
+          ip,
+          port,
+          username,
+          password,
+          country: null,
+          status: 'offline',
+          speed: null,
+          usage: 0,
+        });
+
+        if (!error) {
+          successCount++;
+        }
+      }
+
+      toast.success(`Импортировано ${successCount} прокси`);
+      setImportText('');
+      setValidationResults({ valid: [], invalid: [] });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Ошибка при импорте прокси');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleAddProxy = async () => {
+    if (newProxy.trim()) {
+      const parts = newProxy.split(':');
+      if (parts.length >= 2) {
+        await addProxy({
+          ip: parts[0],
+          port: parseInt(parts[1]),
+          username: parts[2],
+          password: parts[3],
+          country: null,
+          status: 'offline',
+          speed: null,
+          usage: 0,
+        });
+        setNewProxy('');
+        toast.success('Прокси добавлен');
+      }
     }
   };
 
@@ -120,91 +163,133 @@ const ProxyManagementPanel: React.FC = () => {
 
         <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-blue-200 text-lg">Подключений</CardTitle>
+            <CardTitle className="text-blue-200 text-lg">Всего</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
-              {proxies.reduce((sum, p) => sum + p.connectedAccounts, 0)}
-            </div>
+            <div className="text-3xl font-bold text-white">{proxies.length}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Добавить прокси</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="ip:port:username:password"
-                value={newProxy}
-                onChange={(e) => setNewProxy(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-              <Button onClick={handleAddProxy} className="bg-blue-500 hover:bg-blue-600">
-                <Plus className="h-4 w-4" />
-              </Button>
+      <Card className="bg-gray-800/50 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Импорт прокси</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept=".txt,.csv"
+                  onChange={handleFileUpload}
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
+                <Button className="bg-blue-500 hover:bg-blue-600">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Загрузить
+                </Button>
+              </div>
+              <div className="text-sm text-gray-400">
+                Поддерживаемые форматы: .txt, .csv<br/>
+                Формат: ip:port:username:password
+              </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <Input
-                type="file"
-                accept=".txt"
-                onChange={handleFileUpload}
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-              <Button className="bg-green-500 hover:bg-green-600">
-                <Upload className="mr-2 h-4 w-4" />
-                Загрузить
-              </Button>
+            <div className="text-center">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-2xl font-bold text-green-400">{validationResults.valid.length}</div>
+                  <div className="text-sm text-gray-400">Валидных</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-red-400">{validationResults.invalid.length}</div>
+                  <div className="text-sm text-gray-400">Ошибочных</div>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="bg-gray-800/50 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Привязка к аккаунтам</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue placeholder="Выберите аккаунт" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="account1">@user1</SelectItem>
-                <SelectItem value="account2">@user2</SelectItem>
-                <SelectItem value="account3">@user3</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue placeholder="Выберите прокси" />
-              </SelectTrigger>
-              <SelectContent>
-                {proxies.filter(p => p.status === 'online').map(proxy => (
-                  <SelectItem key={proxy.id} value={proxy.id.toString()}>
-                    {proxy.ip}:{proxy.port} ({proxy.country})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <div className="flex gap-2">
-              <Button className="flex-1 bg-green-500 hover:bg-green-600">
-                <Link className="mr-2 h-4 w-4" />
-                Привязать
-              </Button>
-              <Button className="flex-1 bg-red-500 hover:bg-red-600">
-                <Unlink className="mr-2 h-4 w-4" />
-                Отвязать
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Textarea
+            placeholder="ip:port:username:password&#10;192.168.1.1:8080:user:pass&#10;..."
+            value={importText}
+            onChange={(e) => handleTextChange(e.target.value)}
+            className="min-h-[100px] bg-gray-700 border-gray-600 text-white"
+          />
+          
+          <Button 
+            onClick={handleImportProxies}
+            disabled={validationResults.valid.length === 0 || importing}
+            className="bg-green-500 hover:bg-green-600 disabled:bg-gray-600"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            {importing ? 'Импорт...' : `Импортировать прокси (${validationResults.valid.length})`}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {(validationResults.valid.length > 0 || validationResults.invalid.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {validationResults.valid.length > 0 && (
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-green-400 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Валидные прокси ({validationResults.valid.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {validationResults.valid.map((proxy, index) => (
+                    <div key={index} className="text-sm text-gray-300 font-mono">
+                      {proxy}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {validationResults.invalid.length > 0 && (
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-red-400 flex items-center gap-2">
+                  <XCircle className="h-5 w-5" />
+                  Ошибочные строки ({validationResults.invalid.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {validationResults.invalid.map((proxy, index) => (
+                    <div key={index} className="text-sm text-red-300 font-mono">
+                      {proxy}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      <Card className="bg-gray-800/50 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Добавить прокси вручную</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="ip:port:username:password"
+              value={newProxy}
+              onChange={(e) => setNewProxy(e.target.value)}
+              className="bg-gray-700 border-gray-600 text-white"
+            />
+            <Button onClick={handleAddProxy} className="bg-blue-500 hover:bg-blue-600">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="bg-gray-800/50 border-gray-700">
         <CardContent className="p-0">
@@ -215,7 +300,7 @@ const ProxyManagementPanel: React.FC = () => {
                 <TableHead className="text-gray-300">Страна</TableHead>
                 <TableHead className="text-gray-300">Статус</TableHead>
                 <TableHead className="text-gray-300">Скорость</TableHead>
-                <TableHead className="text-gray-300">Подключений</TableHead>
+                <TableHead className="text-gray-300">Использование</TableHead>
                 <TableHead className="text-gray-300">Действия</TableHead>
               </TableRow>
             </TableHeader>
@@ -225,14 +310,14 @@ const ProxyManagementPanel: React.FC = () => {
                   <TableCell className="text-white font-mono">
                     {proxy.ip}:{proxy.port}
                   </TableCell>
-                  <TableCell className="text-gray-300">{proxy.country}</TableCell>
+                  <TableCell className="text-gray-300">{proxy.country || 'Unknown'}</TableCell>
                   <TableCell>
                     <Badge className={`${getStatusColor(proxy.status)} text-white`}>
                       {proxy.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-300">{proxy.speed}</TableCell>
-                  <TableCell className="text-gray-300">{proxy.connectedAccounts}</TableCell>
+                  <TableCell className="text-gray-300">{proxy.speed || 'N/A'}</TableCell>
+                  <TableCell className="text-gray-300">{proxy.usage}</TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
                       <RefreshCw className="h-3 w-3" />
