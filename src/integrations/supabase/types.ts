@@ -104,6 +104,51 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          accounts_limit: number | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          scenarios_limit: number | null
+          subscription_end: string | null
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          subscription_tier: string | null
+          trial_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          accounts_limit?: number | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          scenarios_limit?: number | null
+          subscription_end?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          subscription_tier?: string | null
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accounts_limit?: number | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          scenarios_limit?: number | null
+          subscription_end?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          subscription_tier?: string | null
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       proxies: {
         Row: {
           country: string | null
@@ -196,10 +241,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "premium" | "basic"
+      subscription_status: "active" | "inactive" | "trial" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -314,6 +366,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "premium", "basic"],
+      subscription_status: ["active", "inactive", "trial", "expired"],
+    },
   },
 } as const
