@@ -36,6 +36,17 @@ const LogFilters = ({
   onRefresh,
   accounts
 }: LogFiltersProps) => {
+  // Filter valid accounts to prevent empty string values
+  const validAccounts = accounts.filter(account => {
+    return account?.id && 
+           typeof account.id === 'string' && 
+           account.id.trim() !== '' &&
+           account.id.length > 0 &&
+           account.username &&
+           typeof account.username === 'string' &&
+           account.username.trim() !== '';
+  });
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-wrap gap-3">
@@ -68,11 +79,18 @@ const LogFilters = ({
           </SelectTrigger>
           <SelectContent className="bg-gray-800 border-gray-600">
             <SelectItem value="all">Все аккаунты</SelectItem>
-            {accounts.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.username} ({account.platform})
-              </SelectItem>
-            ))}
+            {validAccounts.map((account) => {
+              // Double check the value before rendering
+              if (!account.id || account.id.trim() === '') {
+                console.error('Skipping account with invalid ID:', account);
+                return null;
+              }
+              return (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.username} ({account.platform})
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

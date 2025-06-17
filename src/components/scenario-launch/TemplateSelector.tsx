@@ -29,15 +29,17 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   // More robust filtering for templates
   const validTemplates = templates.filter(template => {
-    const hasValidId = template.id && 
+    const hasValidId = template?.id && 
                       typeof template.id === 'string' && 
                       template.id.trim() !== '' && 
                       template.id !== 'undefined' && 
-                      template.id !== 'null';
+                      template.id !== 'null' &&
+                      template.id.length > 0;
     
-    const hasValidName = template.name && 
+    const hasValidName = template?.name && 
                         typeof template.name === 'string' && 
-                        template.name.trim() !== '';
+                        template.name.trim() !== '' &&
+                        template.name.length > 0;
     
     if (!hasValidId) {
       console.warn('Template filtered out due to invalid ID:', template);
@@ -53,6 +55,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   });
 
   console.log('Valid templates after filtering:', validTemplates);
+  console.log('Selected template value:', selectedTemplate);
   
   const selectedTemplateData = validTemplates.find(t => t.id === selectedTemplate);
 
@@ -75,6 +78,11 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             <SelectContent className="bg-gray-800 border-gray-600">
               {validTemplates.map((template) => {
                 console.log('Rendering SelectItem with value:', template.id);
+                // Double check the value is still valid before rendering
+                if (!template.id || template.id.trim() === '') {
+                  console.error('Skipping template with invalid ID:', template);
+                  return null;
+                }
                 return (
                   <SelectItem key={template.id} value={template.id}>
                     <div className="flex items-center gap-2">

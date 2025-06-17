@@ -36,19 +36,29 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
   onCreateTemplate,
   actionManager
 }) => {
+  // More robust validation for platforms
   const validPlatforms = PLATFORMS.filter(platform => {
-    const hasValidValue = platform.value && 
+    const hasValidValue = platform?.value && 
                          typeof platform.value === 'string' && 
                          platform.value.trim() !== '' && 
                          platform.value !== 'undefined' && 
-                         platform.value !== 'null';
+                         platform.value !== 'null' &&
+                         platform.value.length > 0;
     
-    const hasValidLabel = platform.label && 
+    const hasValidLabel = platform?.label && 
                          typeof platform.label === 'string' && 
-                         platform.label.trim() !== '';
+                         platform.label.trim() !== '' &&
+                         platform.label.length > 0;
     
-    return hasValidValue && hasValidLabel;
+    if (!hasValidValue || !hasValidLabel) {
+      console.warn('Platform filtered out:', platform);
+      return false;
+    }
+    
+    return true;
   });
+
+  console.log('Valid platforms:', validPlatforms);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -84,11 +94,18 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          {platform.label}
-                        </SelectItem>
-                      ))}
+                      {validPlatforms.map((platform) => {
+                        // Double check the value before rendering
+                        if (!platform.value || platform.value.trim() === '') {
+                          console.error('Skipping platform with invalid value:', platform);
+                          return null;
+                        }
+                        return (
+                          <SelectItem key={platform.value} value={platform.value}>
+                            {platform.label}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
