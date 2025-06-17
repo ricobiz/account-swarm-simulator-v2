@@ -11,6 +11,7 @@ import { TemplateActions } from './scenario-templates/TemplateActions';
 import { Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -18,6 +19,7 @@ const ScenarioTemplateManager = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ScenarioTemplate | null>(null);
+  const isMobile = useIsMobile();
   
   const {
     templates,
@@ -107,6 +109,18 @@ const ScenarioTemplateManager = () => {
     );
   }
 
+  // Для мобильных устройств - полноэкранное отображение формы создания
+  if (isMobile && isCreateOpen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900">
+        <AdvancedVisualTemplateCreationForm
+          onSave={handleCreateTemplate}
+          onCancel={() => setIsCreateOpen(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <TemplateActions
@@ -138,14 +152,17 @@ const ScenarioTemplateManager = () => {
         />
       )}
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
-          <AdvancedVisualTemplateCreationForm
-            onSave={handleCreateTemplate}
-            onCancel={() => setIsCreateOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Десктопная версия диалога */}
+      {!isMobile && (
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+            <AdvancedVisualTemplateCreationForm
+              onSave={handleCreateTemplate}
+              onCancel={() => setIsCreateOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <TemplateViewer
         isOpen={isViewOpen}

@@ -1,110 +1,225 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { AdvancedScenarioBuilder } from '../scenario-flow/AdvancedScenarioBuilder';
 import { Node, Edge } from '@xyflow/react';
-import { Save } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ArrowLeft, Save, X } from 'lucide-react';
+
+const PLATFORMS = [
+  { value: 'telegram', label: 'Telegram' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'twitter', label: 'Twitter' },
+  { value: 'reddit', label: 'Reddit' }
+];
 
 interface AdvancedVisualTemplateCreationFormProps {
-  onSave: (template: any) => void;
+  onSave: (template: {
+    name: string;
+    description: string;
+    nodes: Node[];
+    edges: Edge[];
+  }) => void;
   onCancel: () => void;
 }
 
 export const AdvancedVisualTemplateCreationForm: React.FC<AdvancedVisualTemplateCreationFormProps> = ({
   onSave,
-  onCancel,
+  onCancel
 }) => {
-  const [templateName, setTemplateName] = useState('');
-  const [templateDescription, setTemplateDescription] = useState('');
-  const [scenarioNodes, setScenarioNodes] = useState<Node[]>([]);
-  const [scenarioEdges, setScenarioEdges] = useState<Edge[]>([]);
+  const [currentStep, setCurrentStep] = useState<'info' | 'builder'>('info');
+  const [templateData, setTemplateData] = useState({
+    name: '',
+    description: '',
+    platform: '',
+    nodes: [] as Node[],
+    edges: [] as Edge[]
+  });
+  const isMobile = useIsMobile();
 
-  const handleSaveScenario = (nodes: Node[], edges: Edge[]) => {
-    setScenarioNodes(nodes);
-    setScenarioEdges(edges);
+  const handleFlowSave = (nodes: Node[], edges: Edge[]) => {
+    setTemplateData(prev => ({ ...prev, nodes, edges }));
+    setCurrentStep('info');
   };
 
   const handleSaveTemplate = () => {
-    if (!templateName.trim()) {
-      alert('Введите название шаблона');
+    if (!templateData.name || !templateData.description) {
       return;
     }
-
-    if (scenarioNodes.length === 0) {
-      alert('Создайте сценарий перед сохранением');
-      return;
-    }
-
-    const template = {
-      id: `template-${Date.now()}`,
-      name: templateName,
-      description: templateDescription,
-      type: 'visual',
-      nodes: scenarioNodes,
-      edges: scenarioEdges,
-      created_at: new Date().toISOString(),
-    };
-
-    onSave(template);
+    onSave(templateData);
   };
 
+  const canSave = templateData.name && templateData.description && templateData.nodes.length > 0;
+
+  // Для мобильных устройств показываем полноэкранный интерфейс
+  if (isMobile && currentStep === 'builder') {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900">
+        {/* Мобильная шапка */}
+        <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentStep('info')}
+            className="text-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Назад
+          </Button>
+          <h2 className="text-white font-medium">Конструктор сценария</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            className="text-white"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Конструктор на весь экран */}
+        <div className="h-[calc(100vh-73px)]">
+          <AdvancedScenarioBuilder onSave={handleFlowSave} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Форма метаданных шаблона */}
-      <Card className="bg-gray-800 border-gray-700">
+    <div className="space-y-6 p-6">
+      <DialogHeader>
+        <DialogTitle className="text-white">Создать новый шаблон сценария</DialogTitle>
+        <DialogDescription className="text-gray-400">
+          Настройте основные параметры и создайте сценарий
+        </DialogDescription>
+      </DialogHeader>
+
+      {/* Основная информация */}
+      <Card className="bg-gray-900 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Создание визуального шаблона</CardTitle>
+          <CardTitle className="text-white">Основная информация</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Название шаблона
-            </label>
-            <Input
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="Введите название шаблона"
-              className="bg-gray-700 border-gray-600 text-white"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">Название шаблона</label>
+              <Input
+                value={templateData.name}
+                onChange={(e) => setTemplateData(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-gray-700 border-gray-600 text-white"
+                placeholder="Введите название шаблона"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">Платформа</label>
+              <Select 
+                value={templateData.platform} 
+                onValueChange={(value) => setTemplateData(prev => ({ ...prev, platform: value }))}
+              >
+                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="Выберите платформу" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  {PLATFORMS.map((platform) => (
+                    <SelectItem key={platform.value} value={platform.value}>
+                      {platform.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Описание
-            </label>
+            <label className="text-sm font-medium text-gray-300 block mb-2">Описание</label>
             <Textarea
-              value={templateDescription}
-              onChange={(e) => setTemplateDescription(e.target.value)}
-              placeholder="Опишите что делает этот шаблон"
-              rows={3}
+              value={templateData.description}
+              onChange={(e) => setTemplateData(prev => ({ ...prev, description: e.target.value }))}
               className="bg-gray-700 border-gray-600 text-white"
+              placeholder="Опишите назначение шаблона"
+              rows={3}
             />
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex gap-2">
-            <Button onClick={handleSaveTemplate} className="bg-green-600 hover:bg-green-700">
-              <Save className="mr-2 h-4 w-4" />
-              Сохранить шаблон
+      {/* Сценарий */}
+      <Card className="bg-gray-900 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Сценарий действий</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center py-6">
+            <div className="mb-4">
+              <div className="text-lg font-medium text-white mb-2">
+                {templateData.nodes.length > 0 
+                  ? `Создано ${templateData.nodes.length} блоков сценария`
+                  : 'Сценарий не создан'
+                }
+              </div>
+              <div className="text-gray-400 text-sm mb-4">
+                Используйте визуальный конструктор для создания логики сценария
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => setCurrentStep('builder')}
+              className="bg-blue-600 hover:bg-blue-700 mb-4"
+              size="lg"
+            >
+              {templateData.nodes.length > 0 ? 'Редактировать сценарий' : 'Создать сценарий'}
             </Button>
-            <Button onClick={onCancel} variant="outline" className="border-gray-600 text-gray-300">
-              Отмена
-            </Button>
+
+            {templateData.nodes.length > 0 && (
+              <div className="bg-gray-800 rounded-lg p-4 text-left">
+                <div className="text-sm font-medium text-gray-300 mb-3">Созданные блоки:</div>
+                <div className="flex flex-wrap gap-2">
+                  {templateData.nodes
+                    .filter(node => node.type === 'action')
+                    .slice(0, 5)
+                    .map((node, index) => (
+                      <Badge key={node.id} variant="secondary" className="text-xs">
+                        {node.data?.label || `Блок ${index + 1}`}
+                      </Badge>
+                    ))}
+                  {templateData.nodes.filter(node => node.type === 'action').length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{templateData.nodes.filter(node => node.type === 'action').length - 5} ещё
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Визуальный конструктор */}
-      <Card className="bg-gray-800 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white">Конструктор сценария</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AdvancedScenarioBuilder onSave={handleSaveScenario} />
-        </CardContent>
-      </Card>
+      {/* Кнопки действий */}
+      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-700">
+        <Button 
+          variant="outline" 
+          onClick={onCancel}
+          className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+        >
+          Отмена
+        </Button>
+        <Button 
+          onClick={handleSaveTemplate} 
+          className="flex-1 bg-purple-600 hover:bg-purple-700"
+          disabled={!canSave}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          Создать шаблон
+        </Button>
+      </div>
     </div>
   );
 };

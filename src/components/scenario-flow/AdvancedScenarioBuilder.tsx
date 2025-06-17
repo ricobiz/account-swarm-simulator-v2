@@ -17,12 +17,13 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { Save, Play, Download, Upload } from 'lucide-react';
+import { Save, Play, Download, Upload, Menu, X } from 'lucide-react';
 import { AdvancedActionNode } from './AdvancedActionNode';
 import { BlocksSidebar } from './BlocksSidebar';
 import { PresetsSidebar } from './PresetsSidebar';
 import { BlockConfigPanel } from './BlockConfigPanel';
 import { SCENARIO_PRESETS } from './PresetTemplates';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const nodeTypes = {
   action: AdvancedActionNode,
@@ -53,8 +54,10 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets'>('blocks');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -99,9 +102,12 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
         };
 
         setNodes((nds) => [...nds, newNode]);
+        if (isMobile) {
+          setSidebarOpen(false); // Закрываем сайдбар после добавления блока на мобильном
+        }
       });
     },
-    [screenToFlowPosition, setNodes]
+    [screenToFlowPosition, setNodes, isMobile]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -187,13 +193,35 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
     if (preset) {
       setNodes(preset.nodes);
       setEdges(preset.edges);
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, isMobile]);
 
   return (
-    <div className="flex h-[800px] bg-gray-900 rounded-lg overflow-hidden">
-      {/* Боковая панель с вкладками */}
-      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+    <div className={`flex ${isMobile ? 'flex-col' : ''} h-full bg-gray-900 rounded-lg overflow-hidden relative`}>
+      {/* Мобильная кнопка меню */}
+      {isMobile && (
+        <div className="absolute top-4 left-4 z-10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+          >
+            {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </Button>
+        </div>
+      )}
+
+      {/* Боковая панель */}
+      <div className={`
+        ${isMobile ? 'absolute inset-0 z-20' : 'relative'} 
+        ${isMobile && !sidebarOpen ? 'hidden' : ''}
+        ${isMobile ? 'w-full' : 'w-80'} 
+        bg-gray-800 border-r border-gray-700 flex flex-col
+      `}>
         {/* Переключатель вкладок */}
         <div className="flex border-b border-gray-700">
           <button
@@ -226,6 +254,26 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
             <PresetsSidebar onLoadPreset={loadPreset} />
           )}
         </div>
+
+        {/* Мобильные кнопки в сайдбаре */}
+        {isMobile && (
+          <div className="p-4 border-t border-gray-700 space-y-2">
+            <Button onClick={handleSave} className="w-full bg-green-600 hover:bg-green-700 text-sm">
+              <Save className="mr-2 h-4 w-4" />
+              Сохранить
+            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleImportJSON} variant="outline" className="flex-1 text-sm">
+                <Upload className="mr-2 h-4 w-4" />
+                Импорт
+              </Button>
+              <Button onClick={handleExportJSON} variant="outline" className="flex-1 text-sm">
+                <Download className="mr-2 h-4 w-4" />
+                Экспорт
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Основная область конструктора */}
@@ -246,26 +294,30 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
           style={{ backgroundColor: '#1f2937' }}
         >
           <Controls />
-          <MiniMap 
-            style={{ backgroundColor: '#374151' }}
-            maskColor="rgba(0, 0, 0, 0.2)"
-          />
+          {!isMobile && (
+            <MiniMap 
+              style={{ backgroundColor: '#374151' }}
+              maskColor="rgba(0, 0, 0, 0.2)"
+            />
+          )}
           <Background gap={20} size={1} color="#374151" />
           
-          <Panel position="top-right" className="space-x-2">
-            <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700">
-              <Upload className="mr-2 h-4 w-4" />
-              Импорт
-            </Button>
-            <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700">
-              <Download className="mr-2 h-4 w-4" />
-              Экспорт JSON
-            </Button>
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-              <Save className="mr-2 h-4 w-4" />
-              Сохранить
-            </Button>
-          </Panel>
+          {!isMobile && (
+            <Panel position="top-right" className="space-x-2">
+              <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700">
+                <Upload className="mr-2 h-4 w-4" />
+                Импорт
+              </Button>
+              <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700">
+                <Download className="mr-2 h-4 w-4" />
+                Экспорт JSON
+              </Button>
+              <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+                <Save className="mr-2 h-4 w-4" />
+                Сохранить
+              </Button>
+            </Panel>
+          )}
         </ReactFlow>
 
         {/* Скрытый input для загрузки файлов */}
@@ -279,12 +331,36 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
       </div>
 
       {/* Панель настроек выбранного блока */}
-      {selectedNode && (
+      {selectedNode && !isMobile && (
         <BlockConfigPanel
           node={selectedNode}
           onSave={(config) => updateNodeConfig(selectedNode.id, config)}
           onCancel={() => setSelectedNode(null)}
         />
+      )}
+
+      {/* Мобильная панель настроек */}
+      {selectedNode && isMobile && (
+        <div className="absolute inset-0 z-30 bg-gray-900">
+          <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+            <h3 className="text-white font-medium">Настройки блока</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedNode(null)}
+              className="text-white"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="p-4 h-[calc(100vh-73px)] overflow-y-auto">
+            <BlockConfigPanel
+              node={selectedNode}
+              onSave={(config) => updateNodeConfig(selectedNode.id, config)}
+              onCancel={() => setSelectedNode(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
