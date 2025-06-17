@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, CheckCircle, XCircle } from 'lucide-react';
+import { useAccounts } from '@/hooks/useAccounts';
+import { toast } from 'sonner';
 
 const ImportAccountsPanel: React.FC = () => {
   const [importText, setImportText] = useState('');
@@ -14,6 +15,9 @@ const ImportAccountsPanel: React.FC = () => {
     valid: string[];
     invalid: string[];
   }>({ valid: [], invalid: [] });
+  const [importing, setImporting] = useState(false);
+
+  const { addAccount } = useAccounts();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -48,6 +52,60 @@ const ImportAccountsPanel: React.FC = () => {
   const handleTextChange = (text: string) => {
     setImportText(text);
     validateAccounts(text);
+  };
+
+  const handleImportAccounts = async () => {
+    if (validationResults.valid.length === 0) {
+      toast.error('Нет валидных аккаунтов для импорта');
+      return;
+    }
+
+    setImporting(true);
+    let successCount = 0;
+
+    try {
+      for (const accountLine of validationResults.valid) {
+        const parts = accountLine.split(':');
+        const username = parts[0];
+        const password = parts[1];
+        
+        // Определяем платформу по username
+        let platform = 'Other';
+        if (username.includes('@')) {
+          if (username.includes('instagram') || username.includes('ig')) {
+            platform = 'Instagram';
+          } else if (username.includes('twitter') || username.includes('tw')) {
+            platform = 'Twitter';
+          } else if (username.includes('tiktok') || username.includes('tt')) {
+            platform = 'TikTok';
+          } else if (username.includes('facebook') || username.includes('fb')) {
+            platform = 'Facebook';
+          }
+        }
+
+        const { error } = await addAccount({
+          username,
+          password,
+          platform,
+          status: 'idle',
+          proxy_id: null,
+          last_action: new Date().toISOString(),
+        });
+
+        if (!error) {
+          successCount++;
+        }
+      }
+
+      toast.success(`Импортировано ${successCount} аккаунтов`);
+      setImportText('');
+      setValidationResults({ valid: [], invalid: [] });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Ошибка при импорте аккаунтов');
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -112,9 +170,13 @@ const ImportAccountsPanel: React.FC = () => {
             onChange={(e) => handleTextChange(e.target.value)}
             className="min-h-[150px] bg-gray-700 border-gray-600 text-white"
           />
-          <Button className="mt-4 bg-green-500 hover:bg-green-600">
+          <Button 
+            onClick={handleImportAccounts}
+            disabled={validationResults.valid.length === 0 || importing}
+            className="mt-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-600"
+          >
             <CheckCircle className="mr-2 h-4 w-4" />
-            Импортировать аккаунты
+            {importing ? 'Импорт...' : `Импортировать аккаунты (${validationResults.valid.length})`}
           </Button>
         </CardContent>
       </Card>

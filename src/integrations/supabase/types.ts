@@ -9,7 +9,140 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          created_at: string
+          id: string
+          last_action: string | null
+          password: string
+          platform: string
+          proxy_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_action?: string | null
+          password: string
+          platform: string
+          proxy_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_action?: string | null
+          password?: string
+          platform?: string
+          proxy_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_accounts_proxy"
+            columns: ["proxy_id"]
+            isOneToOne: false
+            referencedRelation: "proxies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proxies: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          ip: string
+          password: string | null
+          port: number
+          speed: string | null
+          status: string
+          updated_at: string
+          usage: number | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip: string
+          password?: string | null
+          port: number
+          speed?: string | null
+          status?: string
+          updated_at?: string
+          usage?: number | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip?: string
+          password?: string | null
+          port?: number
+          speed?: string | null
+          status?: string
+          updated_at?: string
+          usage?: number | null
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      scenarios: {
+        Row: {
+          accounts_count: number | null
+          config: Json | null
+          created_at: string
+          id: string
+          name: string
+          next_run: string | null
+          platform: string
+          progress: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accounts_count?: number | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          next_run?: string | null
+          platform: string
+          progress?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accounts_count?: number | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          next_run?: string | null
+          platform?: string
+          progress?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
