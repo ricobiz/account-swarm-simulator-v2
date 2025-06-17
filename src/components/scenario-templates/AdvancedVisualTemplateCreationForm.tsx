@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -95,12 +95,17 @@ export const AdvancedVisualTemplateCreationForm: React.FC<AdvancedVisualTemplate
 
   return (
     <div className="space-y-6 p-6">
-      <DialogHeader>
-        <DialogTitle className="text-white">Создать новый шаблон сценария</DialogTitle>
-        <DialogDescription className="text-gray-400">
-          Настройте основные параметры и создайте сценарий
-        </DialogDescription>
-      </DialogHeader>
+      {/* Заголовок - только для десктопа или когда не в режиме билдера */}
+      {!isMobile && (
+        <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+          <h2 className="text-lg font-semibold leading-none tracking-tight text-white">
+            Создать новый шаблон сценария
+          </h2>
+          <p className="text-sm text-gray-400">
+            Настройте основные параметры и создайте сценарий
+          </p>
+        </div>
+      )}
 
       {/* Основная информация */}
       <Card className="bg-gray-900 border-gray-700">
