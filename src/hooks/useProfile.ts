@@ -44,6 +44,11 @@ export const useProfile = () => {
       
       if (error) {
         console.error('Error fetching profile:', error);
+        toast({
+          title: "Ошибка",
+          description: "Ошибка загрузки профиля: " + error.message,
+          variant: "destructive"
+        });
         setLoading(false);
         return;
       }
@@ -59,6 +64,11 @@ export const useProfile = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при загрузке профиля",
+        variant: "destructive"
+      });
       setLoading(false);
     }
   };
@@ -72,18 +82,20 @@ export const useProfile = () => {
     try {
       console.log('Creating profile for user:', user.id, user.email);
       
+      const profileData = {
+        id: user.id,
+        email: user.email || '',
+        full_name: '',
+        role: 'basic' as const,
+        subscription_status: 'trial' as const,
+        trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        accounts_limit: 5,
+        scenarios_limit: 2
+      };
+
       const { data, error } = await supabase
         .from('profiles')
-        .insert({
-          id: user.id,
-          email: user.email,
-          full_name: '',
-          role: 'basic',
-          subscription_status: 'trial',
-          trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          accounts_limit: 5,
-          scenarios_limit: 2
-        })
+        .insert(profileData)
         .select()
         .single();
 
@@ -108,6 +120,11 @@ export const useProfile = () => {
       });
     } catch (error) {
       console.error('Error in createProfile:', error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при создании профиля",
+        variant: "destructive"
+      });
       setLoading(false);
     }
   };
