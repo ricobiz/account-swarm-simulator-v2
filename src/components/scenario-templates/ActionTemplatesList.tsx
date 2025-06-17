@@ -74,17 +74,19 @@ export const ActionTemplatesList: React.FC<ActionTemplatesListProps> = ({
                     {action.description}
                   </p>
                   
-                  {/* Настройки действия */}
-                  <div className="space-y-1 text-xs">
-                    {Object.entries(action.settings).map(([key, value]) => (
-                      <div key={key} className="text-gray-500">
-                        <span className="text-gray-400 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
-                        </span>{' '}
-                        {formatSettingValue(key, value)}
-                      </div>
-                    ))}
-                  </div>
+                  {/* Настройки действия - добавляем проверку на существование settings */}
+                  {action.settings && typeof action.settings === 'object' && (
+                    <div className="space-y-1 text-xs">
+                      {Object.entries(action.settings).map(([key, value]) => (
+                        <div key={key} className="text-gray-500">
+                          <span className="text-gray-400 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
+                          </span>{' '}
+                          {formatSettingValue(key, value)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex gap-1 ml-4">
