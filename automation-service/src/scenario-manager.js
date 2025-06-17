@@ -9,11 +9,12 @@ export class ScenarioManager {
 
   async loadCustomScenarios() {
     try {
-      // Загружаем кастомные сценарии из базы данных
+      // Загружаем кастомные сценарии из базы данных (используем таблицу scenarios со статусом template)
       const { data: scenarios, error } = await this.db.supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .select('*')
-        .eq('active', true);
+        .not('config', 'is', null)
+        .eq('status', 'template');
 
       if (error) {
         console.error('Ошибка загрузки сценариев:', error);
@@ -49,8 +50,8 @@ export class ScenarioManager {
         config: {
           template_id: templateId,
           account_id: accountId,
-          steps: template.steps,
-          settings: template.settings
+          steps: template.config?.steps || [],
+          settings: template.config?.settings || {}
         }
       };
 
@@ -78,12 +79,16 @@ export class ScenarioManager {
 
   async executeCustomScenario(scenario, account, automation) {
     const template = this.customScenarios.get(scenario.config.template_id);
-    if (!template) {
+    if (!template && scenario.config?.steps) {
+      // Если шаблон не найден, но есть steps в конфиге, используем их напрямую
+      console.log(`Выполняем сценарий напрямую из конфига для аккаунта ${account.username}`);
+      return await this.executeStepsFromConfig(scenario, account, automation);
+    } else if (!template) {
       throw new Error('Шаблон сценария не найден');
     }
 
     const actions = [];
-    const steps = template.steps || [];
+    const steps = template.config?.steps || [];
 
     console.log(`Начинаем выполнение сценария "${template.name}" для аккаунта ${account.username}`);
 
@@ -135,6 +140,60 @@ export class ScenarioManager {
     };
   }
 
+  async executeStepsFromConfig(scenario, account, automation) {
+    const actions = [];
+    const steps = scenario.config?.steps || [];
+
+    console.log(`Начинаем выполнение сценария "${scenario.name}" для аккаунта ${account.username}`);
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const progress = Math.round(((i + 1) / steps.length) * 100);
+
+      // Обновляем прогресс сценария
+      await this.db.updateScenarioStatus(scenario.id, 'running', progress);
+
+      try {
+        console.log(`Выполняем шаг ${i + 1}/${steps.length}: ${step.name}`);
+        
+        await this.executeStep(step, automation, actions);
+        
+        // Логируем успешное выполнение шага
+        await this.db.createLog(
+          scenario.user_id,
+          account.id,
+          scenario.id,
+          `Шаг ${i + 1}: ${step.name}`,
+          `Выполнен: ${step.description || step.name}`,
+          'success'
+        );
+
+        console.log(`✓ Шаг ${i + 1} выполнен: ${step.name}`);
+
+      } catch (error) {
+        console.error(`✗ Ошибка в шаге ${i + 1}: ${step.name}`, error);
+        
+        // Логируем ошибку
+        await this.db.createLog(
+          scenario.user_id,
+          account.id,
+          scenario.id,
+          `Ошибка в шаге ${i + 1}`,
+          `${step.name}: ${error.message}`,
+          'error'
+        );
+        
+        throw error;
+      }
+    }
+
+    return {
+      success: true,
+      actions,
+      message: `Выполнен сценарий: ${scenario.name}`
+    };
+  }
+
   async executeStep(step, automation, actions) {
     switch (step.type) {
       case 'navigate':
@@ -171,6 +230,25 @@ export class ScenarioManager {
         actions.push('Случайное взаимодействие');
         break;
 
+      case 'submit_post':
+        // Специфичный для Reddit
+        if (step.title && step.content) {
+          await automation.page.waitForSelector('textarea[name="title"]', { timeout: 10000 });
+          await automation.humanBehavior.typeWithMistakes('textarea[name="title"]', step.title);
+          await automation.page.waitForSelector('textarea[name="text"]', { timeout: 10000 });
+          await automation.humanBehavior.typeWithMistakes('textarea[name="text"]', step.content);
+          actions.push(`Создание поста: ${step.title}`);
+        }
+        break;
+
+      case 'comment':
+        if (step.text) {
+          await automation.page.waitForSelector('textarea[placeholder*="comment"]', { timeout: 10000 });
+          await automation.humanBehavior.typeWithMistakes('textarea[placeholder*="comment"]', step.text);
+          actions.push(`Комментарий: ${step.text}`);
+        }
+        break;
+
       default:
         console.warn(`Неизвестный тип шага: ${step.type}`);
     }
@@ -182,9 +260,10 @@ export class ScenarioManager {
   async getAvailableScenarios(platform = null) {
     try {
       let query = this.db.supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .select('*')
-        .eq('active', true);
+        .not('config', 'is', null)
+        .eq('status', 'template');
 
       if (platform) {
         query = query.eq('platform', platform);
@@ -207,15 +286,17 @@ export class ScenarioManager {
   async createScenarioTemplate(userId, templateData) {
     try {
       const { data, error } = await this.db.supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .insert({
           user_id: userId,
           name: templateData.name,
           platform: templateData.platform,
-          description: templateData.description,
-          steps: templateData.steps,
-          settings: templateData.settings || {},
-          active: true
+          status: 'template',
+          config: {
+            steps: templateData.steps,
+            settings: templateData.settings || {},
+            template_id: `template_${Date.now()}`
+          }
         })
         .select()
         .single();
@@ -239,7 +320,7 @@ export class ScenarioManager {
   async updateScenarioTemplate(templateId, updates) {
     try {
       const { data, error } = await this.db.supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .update({
           ...updates,
           updated_at: new Date().toISOString()
@@ -266,7 +347,7 @@ export class ScenarioManager {
   async deleteScenarioTemplate(templateId) {
     try {
       const { error } = await this.db.supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .delete()
         .eq('id', templateId);
 
@@ -288,7 +369,7 @@ export class ScenarioManager {
   // Валидация JSON конфигурации сценария
   validateScenarioConfig(config) {
     const requiredFields = ['name', 'platform', 'steps'];
-    const allowedStepTypes = ['navigate', 'click', 'type', 'scroll', 'wait', 'random_interaction'];
+    const allowedStepTypes = ['navigate', 'click', 'type', 'scroll', 'wait', 'random_interaction', 'submit_post', 'comment'];
 
     // Проверка обязательных полей
     for (const field of requiredFields) {
@@ -336,6 +417,16 @@ export class ScenarioManager {
         case 'wait':
           if (!step.minTime || !step.maxTime) {
             throw new Error(`Шаг ${index + 1}: отсутствуют времена ожидания`);
+          }
+          break;
+        case 'submit_post':
+          if (!step.title || !step.content) {
+            throw new Error(`Шаг ${index + 1}: отсутствует заголовок или содержание поста`);
+          }
+          break;
+        case 'comment':
+          if (!step.text) {
+            throw new Error(`Шаг ${index + 1}: отсутствует текст комментария`);
           }
           break;
       }

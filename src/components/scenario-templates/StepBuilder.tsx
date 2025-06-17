@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,8 @@ export interface StepForm {
   text?: string;
   minTime?: number;
   maxTime?: number;
+  title?: string;
+  content?: string;
   [key: string]: any; // Add index signature for Json compatibility
 }
 
@@ -47,6 +50,61 @@ export const StepBuilder: React.FC<StepBuilderProps> = ({
   const getCurrentStepFields = () => {
     const stepType = STEP_TYPES.find(t => t.value === currentStep.type);
     return stepType?.fields || [];
+  };
+
+  const renderFieldInput = (field: string) => {
+    const fieldLabels: Record<string, string> = {
+      url: 'URL',
+      selector: 'CSS селектор',
+      text: 'Текст',
+      minTime: 'Мин. время (мс)',
+      maxTime: 'Макс. время (мс)',
+      title: 'Заголовок поста',
+      content: 'Содержание поста'
+    };
+
+    const fieldPlaceholders: Record<string, string> = {
+      url: 'https://example.com',
+      selector: '.button, #element',
+      text: 'Текст для ввода',
+      minTime: '1000',
+      maxTime: '3000',
+      title: 'Заголовок поста',
+      content: 'Содержание поста'
+    };
+
+    if (field === 'content') {
+      return (
+        <div key={field}>
+          <label className="text-sm font-medium text-gray-300">{fieldLabels[field]}</label>
+          <Textarea
+            value={currentStep[field] || ''}
+            onChange={(e) => setCurrentStep({ ...currentStep, [field]: e.target.value })}
+            className="bg-gray-700 border-gray-600 text-white"
+            placeholder={fieldPlaceholders[field]}
+            rows={3}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div key={field}>
+        <label className="text-sm font-medium text-gray-300">{fieldLabels[field]}</label>
+        <Input
+          type={field === 'minTime' || field === 'maxTime' ? 'number' : 'text'}
+          value={currentStep[field] || ''}
+          onChange={(e) => {
+            const value = field === 'minTime' || field === 'maxTime' 
+              ? parseInt(e.target.value) || 0
+              : e.target.value;
+            setCurrentStep({ ...currentStep, [field]: value });
+          }}
+          className="bg-gray-700 border-gray-600 text-white"
+          placeholder={fieldPlaceholders[field]}
+        />
+      </div>
+    );
   };
 
   return (
@@ -96,27 +154,7 @@ export const StepBuilder: React.FC<StepBuilderProps> = ({
           {/* Dynamic fields based on step type */}
           {getCurrentStepFields().length > 0 && (
             <div className="grid grid-cols-2 gap-4">
-              {getCurrentStepFields().map((field) => (
-                <div key={field}>
-                  <label className="text-sm font-medium text-gray-300 capitalize">{field}</label>
-                  {field === 'minTime' || field === 'maxTime' ? (
-                    <Input
-                      type="number"
-                      value={currentStep[field] || ''}
-                      onChange={(e) => setCurrentStep({ ...currentStep, [field]: parseInt(e.target.value) })}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      placeholder={field === 'minTime' ? 'Мин. время (мс)' : 'Макс. время (мс)'}
-                    />
-                  ) : (
-                    <Input
-                      value={currentStep[field] || ''}
-                      onChange={(e) => setCurrentStep({ ...currentStep, [field]: e.target.value })}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      placeholder={field === 'selector' ? 'CSS селектор' : field === 'url' ? 'https://...' : 'Текст для ввода'}
-                    />
-                  )}
-                </div>
-              ))}
+              {getCurrentStepFields().map(renderFieldInput)}
             </div>
           )}
 
@@ -139,6 +177,10 @@ export const StepBuilder: React.FC<StepBuilderProps> = ({
                   <div>
                     <span className="text-white font-medium">{index + 1}. {step.name}</span>
                     <p className="text-sm text-gray-400">{step.type} - {step.description}</p>
+                    {step.url && <p className="text-xs text-gray-500">URL: {step.url}</p>}
+                    {step.selector && <p className="text-xs text-gray-500">Селектор: {step.selector}</p>}
+                    {step.text && <p className="text-xs text-gray-500">Текст: {step.text}</p>}
+                    {step.title && <p className="text-xs text-gray-500">Заголовок: {step.title}</p>}
                   </div>
                   <Button
                     onClick={() => onRemoveStep(index)}

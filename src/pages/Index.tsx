@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +11,14 @@ import {
   BarChart3, 
   Settings,
   LogOut,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import ImportAccountsPanel from '@/components/ImportAccountsPanel';
 import ProxyManagementPanel from '@/components/ProxyManagementPanel';
 import ScenarioLaunchPanel from '@/components/ScenarioLaunchPanel';
 import MonitoringPanel from '@/components/MonitoringPanel';
+import ScenarioTemplateManager from '@/components/ScenarioTemplateManager';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useProxies } from '@/hooks/useProxies';
@@ -56,6 +59,7 @@ const Index = () => {
   const activeAccounts = accounts.filter(a => a.status === 'working' || a.status === 'idle').length;
   const onlineProxies = proxies.filter(p => p.status === 'online').length;
   const runningScenarios = scenarios.filter(s => s.status === 'running').length;
+  const templateCount = scenarios.filter(s => s.status === 'template').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -141,19 +145,19 @@ const Index = () => {
           <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-orange-200 text-lg flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Активность
+                <FileText className="h-5 w-5" />
+                Шаблоны
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">{scenarios.length}</div>
-              <div className="text-sm text-orange-200">Всего сценариев</div>
+              <div className="text-3xl font-bold text-white">{templateCount}</div>
+              <div className="text-sm text-orange-200">Шаблонов сценариев</div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 border border-gray-700">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 border border-gray-700">
             <TabsTrigger 
               value="accounts" 
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
@@ -176,8 +180,15 @@ const Index = () => {
               Сценарии
             </TabsTrigger>
             <TabsTrigger 
-              value="monitoring" 
+              value="templates" 
               className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-300"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Шаблоны
+            </TabsTrigger>
+            <TabsTrigger 
+              value="monitoring" 
+              className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-gray-300"
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Мониторинг
@@ -195,6 +206,10 @@ const Index = () => {
 
             <TabsContent value="scenarios" className="space-y-6">
               <ScenarioLaunchPanel />
+            </TabsContent>
+
+            <TabsContent value="templates" className="space-y-6">
+              <ScenarioTemplateManager />
             </TabsContent>
 
             <TabsContent value="monitoring" className="space-y-6">
