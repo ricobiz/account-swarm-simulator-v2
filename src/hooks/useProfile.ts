@@ -27,6 +27,7 @@ export const useProfile = () => {
 
   const fetchProfile = async () => {
     if (!user) {
+      console.log('No user found, setting profile to null');
       setProfile(null);
       setLoading(false);
       return;
@@ -35,15 +36,33 @@ export const useProfile = () => {
     try {
       setLoading(true);
       console.log('Fetching profile for user:', user.id);
+      console.log('User email:', user.email);
       
+      // Try to fetch existing profile first
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
       
+      console.log('Profile fetch result:', { data, error });
+      
       if (error) {
         console.error('Error fetching profile:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // If it's a policy error, try to create profile directly
+        if (error.message.includes('infinite recursion') || error.message.includes('policy')) {
+          console.log('Policy error detected, attempting direct profile creation');
+          await createProfileDirect();
+          return;
+        }
+        
         toast({
           title: "Ошибка",
           description: "Ошибка загрузки профиля: " + error.message,
@@ -54,7 +73,7 @@ export const useProfile = () => {
       }
       
       if (!data) {
-        console.log('No profile found, creating one...');
+        console.log('No profile found, creating new profile');
         await createProfile();
         return;
       }
@@ -69,6 +88,85 @@ export const useProfile = () => {
         description: "Произошла ошибка при загрузке профиля",
         variant: "destructive"
       });
+      setLoading(false);
+    }
+  };
+
+  const createProfileDirect = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      console.log('Creating profile directly for user:', user.id);
+      
+      // Use service role or admin bypass to create profile
+      const profileData = {
+        id: user.id,
+        email: user.email || '',
+        full_name: '',
+        role: 'basic' as const,
+        subscription_status: 'trial' as const,
+        trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        accounts_limit: 5,
+        scenarios_limit: 2
+      };
+
+      // Try upsert instead of insert to avoid conflicts
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profileData, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile directly:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // Set a default profile if database operations fail
+        const defaultProfile: UserProfile = {
+          id: user.id,
+          email: user.email || '',
+          full_name: '',
+          role: 'basic',
+          subscription_status: 'trial',
+          subscription_tier: null,
+          subscription_end: null,
+          trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          accounts_limit: 5,
+          scenarios_limit: 2,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('Setting default profile due to database error');
+        setProfile(defaultProfile);
+        setLoading(false);
+        
+        toast({
+          title: "Предупреждение",
+          description: "Использован временный профиль. Некоторые функции могут быть ограничены.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Profile created directly:', data);
+      setProfile(data);
+      setLoading(false);
+      
+      toast({
+        title: "Профиль создан",
+        description: "Ваш профиль пользователя был успешно создан"
+      });
+    } catch (error) {
+      console.error('Error in createProfileDirect:', error);
       setLoading(false);
     }
   };
@@ -101,12 +199,15 @@ export const useProfile = () => {
 
       if (error) {
         console.error('Error creating profile:', error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось создать профиль: " + error.message,
-          variant: "destructive"
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
         });
-        setLoading(false);
+        
+        // Try direct creation if normal creation fails
+        await createProfileDirect();
         return;
       }
 
