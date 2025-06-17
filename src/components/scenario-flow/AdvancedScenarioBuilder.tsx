@@ -28,25 +28,28 @@ const nodeTypes = {
   action: AdvancedActionNode,
 };
 
+// Define proper initial nodes with all required Node properties
+const initialNodes: Node[] = [
+  {
+    id: 'start',
+    type: 'input',
+    data: { label: 'Начало сценария' },
+    position: { x: 250, y: 50 },
+    style: { 
+      background: '#4ade80', 
+      color: 'white',
+      border: '2px solid #22c55e',
+      borderRadius: '8px'
+    }
+  }
+];
+
 interface AdvancedScenarioBuilderContentProps {
   onSave: (nodes: Node[], edges: Edge[]) => void;
 }
 
 const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentProps> = ({ onSave }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([
-    {
-      id: 'start',
-      type: 'input',
-      data: { label: 'Начало сценария' },
-      position: { x: 250, y: 50 },
-      style: { 
-        background: '#4ade80', 
-        color: 'white',
-        border: '2px solid #22c55e',
-        borderRadius: '8px'
-      }
-    }
-  ]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets'>('blocks');

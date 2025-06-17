@@ -10,6 +10,7 @@ import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
 import { Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -41,20 +42,34 @@ const ScenarioTemplateManager = () => {
     refreshing
   });
 
-  const handleCreateTemplate = async () => {
-    const validationErrors = validateTemplate(formData);
-    if (validationErrors.length > 0) {
+  const handleCreateTemplate = async (template: any) => {
+    try {
+      // Создаем шаблон из визуальных данных
+      const templateData = {
+        name: template.name,
+        platform: 'visual',
+        description: template.description,
+        steps: [],
+        flowData: {
+          nodes: template.nodes,
+          edges: template.edges
+        },
+        settings: formData.settings
+      };
+
+      setFormData(prev => ({ ...prev, ...templateData }));
+      
+      const success = await createTemplate();
+      if (success) {
+        setIsCreateOpen(false);
+        resetForm();
+      }
+    } catch (error: any) {
       toast({
-        title: "Ошибка валидации",
-        description: validationErrors.join(', '),
+        title: "Ошибка создания",
+        description: error?.message || 'Не удалось создать шаблон',
         variant: "destructive"
       });
-      return;
-    }
-
-    const success = await createTemplate();
-    if (success) {
-      setIsCreateOpen(false);
     }
   };
 
@@ -123,13 +138,14 @@ const ScenarioTemplateManager = () => {
         />
       )}
 
-      <AdvancedVisualTemplateCreationForm
-        isOpen={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        formData={formData}
-        setFormData={setFormData}
-        onCreateTemplate={handleCreateTemplate}
-      />
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+          <AdvancedVisualTemplateCreationForm
+            onSave={handleCreateTemplate}
+            onCancel={() => setIsCreateOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       <TemplateViewer
         isOpen={isViewOpen}
