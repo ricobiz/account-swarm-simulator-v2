@@ -80,16 +80,15 @@ const Index = () => {
       <button
         onClick={onClick}
         className={`
-          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+          flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full
           ${isActive 
             ? 'bg-blue-600 text-white' 
-            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            : 'text-gray-300 hover:text-white hover:bg-gray-700'
           }
-          ${isMobile ? 'w-full justify-start' : ''}
         `}
       >
-        <IconComponent className="h-4 w-4 flex-shrink-0" />
-        <span className={isMobile ? 'block' : 'hidden sm:block'}>{tab.label}</span>
+        <IconComponent className="h-5 w-5 flex-shrink-0" />
+        <span>{tab.label}</span>
       </button>
     );
   };
@@ -98,40 +97,35 @@ const Index = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Mobile header */}
       {isMobile && (
-        <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+        <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-white"
+            className="text-white hover:bg-gray-700"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Account Swarm</h1>
+          <div className="flex items-center gap-2">
+            {activeTabData && <activeTabData.icon className="h-5 w-5 text-blue-400" />}
+            <h1 className="text-lg font-semibold">{activeTabData?.label || "Account Swarm"}</h1>
+          </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={signOut}
-            className="text-white"
+            className="text-white hover:bg-gray-700"
           >
-            Выход
+            <X className="h-4 w-4" />
           </Button>
         </div>
       )}
 
       <div className="flex h-screen">
-        {/* Sidebar */}
-        <div className={`
-          ${isMobile 
-            ? `fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out ${
-                mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-              }` 
-            : 'w-64'
-          }
-          bg-gray-800 border-r border-gray-700 flex flex-col
-        `}>
-          {/* Desktop header */}
-          {!isMobile && (
+        {/* Desktop Sidebar */}
+        {!isMobile && (
+          <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+            {/* Desktop header */}
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-xl font-bold">Account Swarm</h1>
@@ -146,32 +140,83 @@ const Index = () => {
               </div>
               <SubscriptionStatus />
             </div>
-          )}
 
-          {/* Mobile subscription status */}
-          {isMobile && (
-            <div className="p-4 border-b border-gray-700 mt-16">
-              <SubscriptionStatus />
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-1">
-              {allTabs.map((tab) => (
-                <TabButton
-                  key={tab.id}
-                  tab={tab}
-                  isActive={activeTab === tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    if (isMobile) setMobileMenuOpen(false);
-                  }}
-                />
-              ))}
+            {/* Navigation */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-1">
+                {allTabs.map((tab) => (
+                  <TabButton
+                    key={tab.id}
+                    tab={tab}
+                    isActive={activeTab === tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Mobile Sidebar Menu */}
+        {isMobile && mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-50"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            
+            {/* Compact Menu */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-800 border-t border-gray-700 rounded-t-xl max-h-[80vh] flex flex-col">
+              {/* Menu Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <h2 className="text-lg font-semibold text-white">Навигация</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-white hover:bg-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Subscription Status */}
+              <div className="p-3 border-b border-gray-700">
+                <SubscriptionStatus />
+              </div>
+
+              {/* Menu Items */}
+              <div className="flex-1 overflow-y-auto p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {allTabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`
+                          flex flex-col items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors
+                          ${isActive 
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                          }
+                        `}
+                      >
+                        <IconComponent className="h-6 w-6" />
+                        <span className="text-xs text-center">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -191,14 +236,6 @@ const Index = () => {
           </div>
         </div>
       </div>
-
-      {/* Mobile overlay */}
-      {isMobile && mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
     </div>
   );
 };
