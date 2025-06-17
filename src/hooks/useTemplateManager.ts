@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -64,7 +63,6 @@ export const useTemplateManager = () => {
       setLoading(true);
       console.log('Fetching templates...');
       
-      // Упрощенный запрос без RLS
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
@@ -79,8 +77,16 @@ export const useTemplateManager = () => {
         throw error;
       }
       
-      console.log('Successfully fetched templates:', data?.length || 0);
-      setTemplates(data || []);
+      // Фильтруем шаблоны с валидными именами и платформами
+      const validTemplates = (data || []).filter(template => 
+        template.name && 
+        template.name.trim() !== '' && 
+        template.platform && 
+        template.platform.trim() !== ''
+      );
+      
+      console.log('Successfully fetched valid templates:', validTemplates.length);
+      setTemplates(validTemplates);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
       
@@ -117,6 +123,34 @@ export const useTemplateManager = () => {
       return false;
     }
 
+    // Валидация перед созданием
+    if (!formData.name || formData.name.trim() === '') {
+      toast({
+        title: "Ошибка валидации",
+        description: "Название шаблона не может быть пустым",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!formData.platform || formData.platform.trim() === '') {
+      toast({
+        title: "Ошибка валидации",
+        description: "Необходимо выбрать платформу",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!formData.description || formData.description.trim() === '') {
+      toast({
+        title: "Ошибка валидации",
+        description: "Описание шаблона не может быть пустым",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     try {
       console.log('Creating template with data:', formData);
 
@@ -126,14 +160,15 @@ export const useTemplateManager = () => {
         template_id: `template_${Date.now()}`,
         description: formData.description,
         created_by: user.id,
-        version: '1.0'
+        version: '1.0',
+        flowData: formData.flowData
       };
 
       const { data, error } = await supabase
         .from('scenarios')
         .insert({
           user_id: user.id,
-          name: formData.name,
+          name: formData.name.trim(),
           platform: formData.platform,
           status: 'template',
           config: templateConfig as any

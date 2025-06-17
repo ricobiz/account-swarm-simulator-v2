@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ImprovedAdvancedScenarioBuilder } from '../scenario-flow/ImprovedAdvancedScenarioBuilder';
 import { Node, Edge } from '@xyflow/react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, X, AlertCircle } from 'lucide-react';
 
 const PLATFORMS = [
   { value: 'telegram', label: 'Telegram' },
@@ -43,6 +43,7 @@ export const ImprovedAdvancedVisualTemplateCreationForm: React.FC<ImprovedAdvanc
     nodes: [] as Node[],
     edges: [] as Edge[]
   });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   const isMobile = useIsMobile();
 
   const handleFlowSave = (nodes: Node[], edges: Edge[]) => {
@@ -50,11 +51,33 @@ export const ImprovedAdvancedVisualTemplateCreationForm: React.FC<ImprovedAdvanc
     setCurrentStep('info');
   };
 
-  const handleSaveTemplate = () => {
-    if (!templateData.name || !templateData.description) {
-      return;
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!templateData.name.trim()) {
+      newErrors.name = 'Название шаблона обязательно';
     }
-    onSave(templateData);
+    
+    if (!templateData.description.trim()) {
+      newErrors.description = 'Описание шаблона обязательно';
+    }
+    
+    if (!templateData.platform) {
+      newErrors.platform = 'Выберите платформу';
+    }
+    
+    if (templateData.nodes.length === 0) {
+      newErrors.scenario = 'Создайте хотя бы один блок в сценарии';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveTemplate = () => {
+    if (validateForm()) {
+      onSave(templateData);
+    }
   };
 
   const canSave = templateData.name && templateData.description && templateData.nodes.length > 0;
@@ -113,21 +136,37 @@ export const ImprovedAdvancedVisualTemplateCreationForm: React.FC<ImprovedAdvanc
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Название шаблона</label>
+              <label className="text-sm font-medium text-gray-300 block mb-2">
+                Название шаблона *
+              </label>
               <Input
                 value={templateData.name}
-                onChange={(e) => setTemplateData(prev => ({ ...prev, name: e.target.value }))}
-                className="bg-gray-700 border-gray-600 text-white"
+                onChange={(e) => {
+                  setTemplateData(prev => ({ ...prev, name: e.target.value }));
+                  if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                }}
+                className={`bg-gray-700 border-gray-600 text-white ${errors.name ? 'border-red-500' : ''}`}
                 placeholder="Введите название шаблона"
               />
+              {errors.name && (
+                <div className="flex items-center gap-1 mt-1 text-red-400 text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.name}
+                </div>
+              )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Платформа</label>
+              <label className="text-sm font-medium text-gray-300 block mb-2">
+                Платформа *
+              </label>
               <Select 
                 value={templateData.platform} 
-                onValueChange={(value) => setTemplateData(prev => ({ ...prev, platform: value }))}
+                onValueChange={(value) => {
+                  setTemplateData(prev => ({ ...prev, platform: value }));
+                  if (errors.platform) setErrors(prev => ({ ...prev, platform: '' }));
+                }}
               >
-                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className={`bg-gray-700 border-gray-600 text-white ${errors.platform ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Выберите платформу" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-600">
@@ -138,18 +177,35 @@ export const ImprovedAdvancedVisualTemplateCreationForm: React.FC<ImprovedAdvanc
                   ))}
                 </SelectContent>
               </Select>
+              {errors.platform && (
+                <div className="flex items-center gap-1 mt-1 text-red-400 text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.platform}
+                </div>
+              )}
             </div>
           </div>
           
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">Описание</label>
+            <label className="text-sm font-medium text-gray-300 block mb-2">
+              Описание *
+            </label>
             <Textarea
               value={templateData.description}
-              onChange={(e) => setTemplateData(prev => ({ ...prev, description: e.target.value }))}
-              className="bg-gray-700 border-gray-600 text-white"
+              onChange={(e) => {
+                setTemplateData(prev => ({ ...prev, description: e.target.value }));
+                if (errors.description) setErrors(prev => ({ ...prev, description: '' }));
+              }}
+              className={`bg-gray-700 border-gray-600 text-white ${errors.description ? 'border-red-500' : ''}`}
               placeholder="Опишите назначение шаблона"
               rows={3}
             />
+            {errors.description && (
+              <div className="flex items-center gap-1 mt-1 text-red-400 text-xs">
+                <AlertCircle className="h-3 w-3" />
+                {errors.description}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -171,6 +227,12 @@ export const ImprovedAdvancedVisualTemplateCreationForm: React.FC<ImprovedAdvanc
               <div className="text-gray-400 text-sm mb-4">
                 Используйте улучшенный визуальный конструктор с удобным интерфейсом
               </div>
+              {errors.scenario && (
+                <div className="flex items-center justify-center gap-1 mb-4 text-red-400 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  {errors.scenario}
+                </div>
+              )}
             </div>
             
             <Button 
