@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTemplateManager } from '@/hooks/useTemplateManager';
@@ -90,11 +89,7 @@ const ScenarioTemplateManager = () => {
 
   const fetchRPATasks = async () => {
     try {
-      const { data, error } = await supabase
-        .from('rpa_tasks')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data, error } = await supabase.functions.invoke('get-rpa-tasks');
 
       if (error) {
         console.error('Ошибка загрузки RPA задач:', error);
