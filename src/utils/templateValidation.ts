@@ -14,14 +14,11 @@ export const validateTemplate = (data: FormData): string[] => {
   }
   
   if (data.steps.length === 0) {
-    errors.push('Добавьте хотя бы один шаг');
+    errors.push('Добавьте хотя бы один шаг или действие');
   }
 
-  // Проверяем, что есть хотя бы один шаг навигации
-  const hasNavigationStep = data.steps.some(step => step.type === 'navigate');
-  if (!hasNavigationStep && data.steps.length > 0) {
-    errors.push('Рекомендуется добавить шаг навигации для начала сценария');
-  }
+  // Убираем обязательную проверку на шаг навигации
+  // так как пользователь может использовать готовые шаблоны действий
 
   return errors;
 };
