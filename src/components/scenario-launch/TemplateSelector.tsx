@@ -96,6 +96,11 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600 max-h-60">
               {validTemplates.map((template) => {
+                // Double check the value before rendering - this is the key fix
+                if (!template.id || template.id.trim() === '') {
+                  console.error('Skipping template with invalid ID:', template);
+                  return null;
+                }
                 console.log('Rendering SelectItem with value:', template.id);
                 return (
                   <SelectItem key={template.id} value={template.id}>

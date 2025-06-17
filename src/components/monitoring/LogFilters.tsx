@@ -80,7 +80,7 @@ const LogFilters = ({
           <SelectContent className="bg-gray-800 border-gray-600">
             <SelectItem value="all">Все аккаунты</SelectItem>
             {validAccounts.map((account) => {
-              // Double check the value before rendering
+              // Double check the value before rendering - this is the key fix
               if (!account.id || account.id.trim() === '') {
                 console.error('Skipping account with invalid ID:', account);
                 return null;

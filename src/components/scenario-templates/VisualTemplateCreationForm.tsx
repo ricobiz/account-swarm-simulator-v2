@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -117,11 +116,18 @@ export const VisualTemplateCreationForm: React.FC<VisualTemplateCreationFormProp
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          {platform.label}
-                        </SelectItem>
-                      ))}
+                      {validPlatforms.map((platform) => {
+                        // Double check the value before rendering - this is the key fix
+                        if (!platform.value || platform.value.trim() === '') {
+                          console.error('Skipping platform with invalid value:', platform);
+                          return null;
+                        }
+                        return (
+                          <SelectItem key={platform.value} value={platform.value}>
+                            {platform.label}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

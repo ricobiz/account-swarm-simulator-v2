@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -97,7 +96,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
                       {validPlatforms.map((platform) => {
-                        // Double check the value before rendering
+                        // Double check the value before rendering - this is the key fix
                         if (!platform.value || platform.value.trim() === '') {
                           console.error('Skipping platform with invalid value:', platform);
                           return null;
