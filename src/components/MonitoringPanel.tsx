@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ const MonitoringPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
   
-  const { logs, loading: logsLoading, refetch: refetchLogs } = useLogs();
+  const { logs, loading: logsLoading, fetchLogs } = useLogs();
   const { accounts } = useAccounts();
   const { scenarios } = useScenarios();
 
@@ -26,11 +25,11 @@ const MonitoringPanel = () => {
     if (!autoRefresh) return;
     
     const interval = setInterval(() => {
-      refetchLogs();
+      fetchLogs();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, refetchLogs]);
+  }, [autoRefresh, fetchLogs]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -162,7 +161,7 @@ const MonitoringPanel = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={refetchLogs}
+                    onClick={() => fetchLogs()}
                     className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
@@ -234,7 +233,7 @@ const MonitoringPanel = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-white font-medium">{log.action}</span>
-                              <Badge className={getStatusColor(log.status)} size="sm">
+                              <Badge className={getStatusColor(log.status)}>
                                 {log.status}
                               </Badge>
                             </div>
@@ -293,7 +292,7 @@ const MonitoringPanel = () => {
                       <div key={scenario.id} className="bg-gray-900/50 rounded p-2">
                         <div className="flex items-center justify-between">
                           <span className="text-white text-sm">{scenario.name}</span>
-                          <Badge className={getStatusColor(scenario.status)} size="sm">
+                          <Badge className={getStatusColor(scenario.status)}>
                             {scenario.status}
                           </Badge>
                         </div>
