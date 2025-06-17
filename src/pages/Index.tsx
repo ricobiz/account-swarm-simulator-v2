@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Users, Globe, Activity, BarChart3, Shield } from 'lucide-react';
+import { Play, Pause, Settings, Users, Globe, Activity, BarChart3, Shield, Upload, Zap, Monitor } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,10 @@ import AccountsPanel from '@/components/AccountsPanel';
 import ProxiesPanel from '@/components/ProxiesPanel';
 import ScenariosPanel from '@/components/ScenariosPanel';
 import MetricsPanel from '@/components/MetricsPanel';
+import ImportAccountsPanel from '@/components/ImportAccountsPanel';
+import ProxyManagementPanel from '@/components/ProxyManagementPanel';
+import ScenarioLaunchPanel from '@/components/ScenarioLaunchPanel';
+import MonitoringPanel from '@/components/MonitoringPanel';
 
 const Index = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -121,18 +125,34 @@ const Index = () => {
         <Card className="bg-black/20 border-gray-700 backdrop-blur-sm">
           <CardContent className="p-6">
             <Tabs defaultValue="accounts" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-gray-800/50">
+              <TabsList className="grid w-full grid-cols-8 bg-gray-800/50">
                 <TabsTrigger value="accounts" className="text-white data-[state=active]:bg-blue-500">
                   <Users className="mr-2 h-4 w-4" />
                   Accounts
+                </TabsTrigger>
+                <TabsTrigger value="import" className="text-white data-[state=active]:bg-purple-500">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
                 </TabsTrigger>
                 <TabsTrigger value="proxies" className="text-white data-[state=active]:bg-green-500">
                   <Globe className="mr-2 h-4 w-4" />
                   Proxies
                 </TabsTrigger>
+                <TabsTrigger value="proxy-mgmt" className="text-white data-[state=active]:bg-teal-500">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Proxy Mgmt
+                </TabsTrigger>
                 <TabsTrigger value="scenarios" className="text-white data-[state=active]:bg-purple-500">
                   <Settings className="mr-2 h-4 w-4" />
                   Scenarios
+                </TabsTrigger>
+                <TabsTrigger value="launch" className="text-white data-[state=active]:bg-yellow-500">
+                  <Zap className="mr-2 h-4 w-4" />
+                  Launch
+                </TabsTrigger>
+                <TabsTrigger value="monitoring" className="text-white data-[state=active]:bg-cyan-500">
+                  <Monitor className="mr-2 h-4 w-4" />
+                  Monitor
                 </TabsTrigger>
                 <TabsTrigger value="metrics" className="text-white data-[state=active]:bg-orange-500">
                   <BarChart3 className="mr-2 h-4 w-4" />
@@ -144,12 +164,28 @@ const Index = () => {
                 <AccountsPanel isRunning={isRunning} />
               </TabsContent>
 
+              <TabsContent value="import" className="mt-6">
+                <ImportAccountsPanel />
+              </TabsContent>
+
               <TabsContent value="proxies" className="mt-6">
                 <ProxiesPanel />
               </TabsContent>
 
+              <TabsContent value="proxy-mgmt" className="mt-6">
+                <ProxyManagementPanel />
+              </TabsContent>
+
               <TabsContent value="scenarios" className="mt-6">
                 <ScenariosPanel />
+              </TabsContent>
+
+              <TabsContent value="launch" className="mt-6">
+                <ScenarioLaunchPanel />
+              </TabsContent>
+
+              <TabsContent value="monitoring" className="mt-6">
+                <MonitoringPanel />
               </TabsContent>
 
               <TabsContent value="metrics" className="mt-6">
