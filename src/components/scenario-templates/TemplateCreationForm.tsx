@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormData } from '@/hooks/useTemplateManager';
 
-export { FormData } from '@/hooks/useTemplateManager';
+export type { FormData } from '@/hooks/useTemplateManager';
 
 const PLATFORMS = [
   { value: 'telegram', label: 'Telegram' },
