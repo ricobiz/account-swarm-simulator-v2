@@ -1,5 +1,6 @@
 
 import { DatabaseService } from './supabase.js';
+import { TemplateExecutor } from './template-executor.js';
 
 export class ScenarioManager {
   constructor() {
@@ -80,7 +81,6 @@ export class ScenarioManager {
   async executeCustomScenario(scenario, account, automation) {
     const template = this.customScenarios.get(scenario.config.template_id);
     if (!template && scenario.config?.steps) {
-      // Если шаблон не найден, но есть steps в конфиге, используем их напрямую
       console.log(`Выполняем сценарий напрямую из конфига для аккаунта ${account.username}`);
       return await this.executeStepsFromConfig(scenario, account, automation);
     } else if (!template) {
@@ -92,19 +92,25 @@ export class ScenarioManager {
 
     console.log(`Начинаем выполнение сценария "${template.name}" для аккаунта ${account.username}`);
 
+    // Создаем исполнитель шаблонов
+    const templateExecutor = new TemplateExecutor(automation, automation.humanBehavior);
+
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const progress = Math.round(((i + 1) / steps.length) * 100);
 
-      // Обновляем прогресс сценария
       await this.db.updateScenarioStatus(scenario.id, 'running', progress);
 
       try {
         console.log(`Выполняем шаг ${i + 1}/${steps.length}: ${step.name}`);
         
-        await this.executeStep(step, automation, actions);
+        // Проверяем тип шага - шаблонный или обычный
+        if (step.type === 'template') {
+          await templateExecutor.executeTemplateAction(step, account, actions);
+        } else {
+          await this.executeStep(step, automation, actions);
+        }
         
-        // Логируем успешное выполнение шага
         await this.db.createLog(
           scenario.user_id,
           account.id,
@@ -119,7 +125,6 @@ export class ScenarioManager {
       } catch (error) {
         console.error(`✗ Ошибка в шаге ${i + 1}: ${step.name}`, error);
         
-        // Логируем ошибку
         await this.db.createLog(
           scenario.user_id,
           account.id,
@@ -146,19 +151,25 @@ export class ScenarioManager {
 
     console.log(`Начинаем выполнение сценария "${scenario.name}" для аккаунта ${account.username}`);
 
+    // Создаем исполнитель шаблонов
+    const templateExecutor = new TemplateExecutor(automation, automation.humanBehavior);
+
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const progress = Math.round(((i + 1) / steps.length) * 100);
 
-      // Обновляем прогресс сценария
       await this.db.updateScenarioStatus(scenario.id, 'running', progress);
 
       try {
         console.log(`Выполняем шаг ${i + 1}/${steps.length}: ${step.name}`);
         
-        await this.executeStep(step, automation, actions);
+        // Проверяем тип шага - шаблонный или обычный
+        if (step.type === 'template') {
+          await templateExecutor.executeTemplateAction(step, account, actions);
+        } else {
+          await this.executeStep(step, automation, actions);
+        }
         
-        // Логируем успешное выполнение шага
         await this.db.createLog(
           scenario.user_id,
           account.id,
@@ -173,7 +184,6 @@ export class ScenarioManager {
       } catch (error) {
         console.error(`✗ Ошибка в шаге ${i + 1}: ${step.name}`, error);
         
-        // Логируем ошибку
         await this.db.createLog(
           scenario.user_id,
           account.id,

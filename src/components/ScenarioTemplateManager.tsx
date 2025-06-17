@@ -8,7 +8,7 @@ import TemplateCreationForm from './scenario-templates/TemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
-import { StepManager } from './scenario-templates/StepManager';
+import { TemplateActionManager } from './scenario-templates/TemplateActionManager';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -91,8 +91,8 @@ const ScenarioTemplateManager = () => {
         formData={formData}
         setFormData={setFormData}
         onCreateTemplate={handleCreateTemplate}
-        stepManager={
-          <StepManager
+        actionManager={
+          <TemplateActionManager
             formData={formData}
             setFormData={setFormData}
           />

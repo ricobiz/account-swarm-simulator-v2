@@ -25,7 +25,7 @@ interface TemplateCreationFormProps {
   formData: FormData;
   setFormData: (data: FormData) => void;
   onCreateTemplate: () => void;
-  stepManager: React.ReactNode;
+  actionManager: React.ReactNode;
 }
 
 const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
@@ -34,9 +34,8 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
   formData,
   setFormData,
   onCreateTemplate,
-  stepManager
+  actionManager
 }) => {
-  // More robust filtering for platforms
   const validPlatforms = PLATFORMS.filter(platform => {
     const hasValidValue = platform.value && 
                          typeof platform.value === 'string' && 
@@ -48,20 +47,8 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                          typeof platform.label === 'string' && 
                          platform.label.trim() !== '';
     
-    if (!hasValidValue) {
-      console.warn('Platform filtered out due to invalid value:', platform);
-      return false;
-    }
-    
-    if (!hasValidLabel) {
-      console.warn('Platform filtered out due to invalid label:', platform);
-      return false;
-    }
-    
-    return true;
+    return hasValidValue && hasValidLabel;
   });
-
-  console.log('Valid platforms after filtering:', validPlatforms);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -69,7 +56,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
         <DialogHeader>
           <DialogTitle className="text-white">Создать новый шаблон сценария</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Настройте параметры и шаги для автоматизации действий на выбранной платформе
+            Настройте параметры и выберите готовые действия для автоматизации
           </DialogDescription>
         </DialogHeader>
         
@@ -97,14 +84,11 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => {
-                        console.log('Rendering platform SelectItem with value:', platform.value);
-                        return (
-                          <SelectItem key={platform.value} value={platform.value}>
-                            {platform.label}
-                          </SelectItem>
-                        );
-                      })}
+                      {validPlatforms.map((platform) => (
+                        <SelectItem key={platform.value} value={platform.value}>
+                          {platform.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -190,8 +174,8 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
             </CardContent>
           </Card>
 
-          {/* Шаги сценария */}
-          {stepManager}
+          {/* Готовые действия */}
+          {actionManager}
 
           {/* Кнопки действий */}
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-700">
