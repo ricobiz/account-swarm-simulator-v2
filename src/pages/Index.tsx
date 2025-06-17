@@ -1,169 +1,204 @@
 
-import React, { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { Loader2, LogOut, Crown, AlertCircle } from "lucide-react";
-
-// Импортируем все панели
-import AccountsPanel from "@/components/AccountsPanel";
-import ProxiesPanel from "@/components/ProxiesPanel";
-import ScenariosPanel from "@/components/ScenariosPanel";
-import ScenarioLaunchPanel from "@/components/ScenarioLaunchPanel";
-import MonitoringPanel from "@/components/MonitoringPanel";
-import MetricsPanel from "@/components/MetricsPanel";
-import SubscriptionStatus from "@/components/SubscriptionStatus";
-import AdminDashboard from "@/components/admin/AdminDashboard";
+import { AccountsPanel } from "@/components/AccountsPanel";
+import { ScenariosPanel } from "@/components/ScenariosPanel";
+import { ProxiesPanel } from "@/components/ProxiesPanel";
+import { MonitoringPanel } from "@/components/MonitoringPanel";
+import { MetricsPanel } from "@/components/MetricsPanel";
+import { ScenarioTemplateManager } from "@/components/ScenarioTemplateManager";
+import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
+import { SubscriptionManagementPanel } from "@/components/admin/SubscriptionManagementPanel";
+import { PasswordManagementPanel } from "@/components/admin/PasswordManagementPanel";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { SubscriptionStatus } from "@/components/SubscriptionStatus";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  Users, 
+  Play, 
+  Wifi, 
+  BarChart3, 
+  Activity, 
+  FileText, 
+  UserCog, 
+  CreditCard, 
+  KeyRound, 
+  Settings,
+  Menu,
+  X
+} from "lucide-react";
 
 const Index = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
   const [activeTab, setActiveTab] = useState("accounts");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
-  console.log('Auth state:', { user: !!user, authLoading, profile: !!profile, profileLoading });
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-300">Проверка аутентификации...</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!user) {
+      window.location.href = '/auth';
+    }
+  }, [user]);
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return null;
   }
 
-  if (profileLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-300">Загрузка профиля...</p>
-          <p className="text-gray-400 text-sm mt-2">Это может занять несколько секунд</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
-  // Если пользователь админ, показываем админ-панель по умолчанию
   const isAdmin = profile?.role === 'admin';
 
+  const tabs = [
+    { id: "accounts", label: "Аккаунты", icon: Users, component: AccountsPanel },
+    { id: "scenarios", label: "Сценарии", icon: Play, component: ScenariosPanel },
+    { id: "proxies", label: "Прокси", icon: Wifi, component: ProxiesPanel },
+    { id: "monitoring", label: "Мониторинг", icon: Activity, component: MonitoringPanel },
+    { id: "metrics", label: "Метрики", icon: BarChart3, component: MetricsPanel },
+    { id: "templates", label: "Шаблоны", icon: FileText, component: ScenarioTemplateManager },
+  ];
+
+  const adminTabs = [
+    { id: "admin-dashboard", label: "Панель админа", icon: Settings, component: AdminDashboard },
+    { id: "users", label: "Пользователи", icon: UserCog, component: UserManagementPanel },
+    { id: "subscriptions", label: "Подписки", icon: CreditCard, component: SubscriptionManagementPanel },
+    { id: "passwords", label: "Пароли", icon: KeyRound, component: PasswordManagementPanel },
+  ];
+
+  const allTabs = isAdmin ? [...tabs, ...adminTabs] : tabs;
+  const activeTabData = allTabs.find(tab => tab.id === activeTab);
+  const ActiveComponent = activeTabData?.component;
+
+  const TabButton = ({ tab, isActive, onClick }: { tab: any, isActive: boolean, onClick: () => void }) => {
+    const IconComponent = tab.icon;
+    return (
+      <button
+        onClick={onClick}
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+          ${isActive 
+            ? 'bg-blue-600 text-white' 
+            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }
+          ${isMobile ? 'w-full justify-start' : ''}
+        `}
+      >
+        <IconComponent className="h-4 w-4 flex-shrink-0" />
+        <span className={isMobile ? 'block' : 'hidden sm:block'}>{tab.label}</span>
+      </button>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-      <div className="container mx-auto p-4">
-        {/* Заголовок */}
-        <Card className="bg-gray-800/50 border-gray-700 mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-2xl text-white">SMM Farm</CardTitle>
-                {isAdmin && (
-                  <div className="flex items-center gap-1 bg-yellow-600 px-2 py-1 rounded-full text-xs text-white">
-                    <Crown className="h-3 w-3" />
-                    Администратор
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-gray-300">{user.email}</span>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSignOut}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Мобильная шапка */}
+      {isMobile && (
+        <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-white"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          <h1 className="text-lg font-semibold">Account Swarm</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="text-white"
+          >
+            Выход
+          </Button>
+        </div>
+      )}
+
+      <div className="flex h-screen">
+        {/* Боковая панель */}
+        <div className={`
+          ${isMobile 
+            ? `fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out ${
+                mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+              }` 
+            : 'w-64'
+          }
+          bg-gray-800 border-r border-gray-700 flex flex-col
+        `}>
+          {/* Десктопная шапка */}
+          {!isMobile && (
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-xl font-bold">Account Swarm</h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="text-white hover:bg-gray-700"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Выйти
+                  Выход
                 </Button>
               </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Основной контент */}
-        {profile ? (
-          <>
-            {/* Статус подписки */}
-            <div className="mb-6">
               <SubscriptionStatus />
             </div>
+          )}
 
-            {/* Основной контент */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-7 bg-gray-800/50 mb-6">
-                {isAdmin && (
-                  <TabsTrigger value="admin" className="text-white">
-                    <Crown className="h-4 w-4 mr-2" />
-                    Админ
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="accounts" className="text-white">Аккаунты</TabsTrigger>
-                <TabsTrigger value="proxies" className="text-white">Прокси</TabsTrigger>
-                <TabsTrigger value="scenarios" className="text-white">Сценарии</TabsTrigger>
-                <TabsTrigger value="launch" className="text-white">Запуск</TabsTrigger>
-                <TabsTrigger value="monitoring" className="text-white">Мониторинг</TabsTrigger>
-                <TabsTrigger value="metrics" className="text-white">Метрики</TabsTrigger>
-              </TabsList>
+          {/* Мобильный статус подписки */}
+          {isMobile && (
+            <div className="p-4 border-b border-gray-700">
+              <SubscriptionStatus />
+            </div>
+          )}
 
-              {isAdmin && (
-                <TabsContent value="admin">
-                  <AdminDashboard />
-                </TabsContent>
-              )}
+          {/* Навигация */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-1">
+              {allTabs.map((tab) => (
+                <TabButton
+                  key={tab.id}
+                  tab={tab}
+                  isActive={activeTab === tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (isMobile) setMobileMenuOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
 
-              <TabsContent value="accounts">
-                <AccountsPanel />
-              </TabsContent>
+        {/* Основной контент */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Десктопная шапка с активной вкладкой */}
+          {!isMobile && (
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center gap-2">
+                {activeTabData && <activeTabData.icon className="h-5 w-5" />}
+                <h2 className="text-lg font-semibold">{activeTabData?.label}</h2>
+              </div>
+            </div>
+          )}
 
-              <TabsContent value="proxies">
-                <ProxiesPanel />
-              </TabsContent>
-
-              <TabsContent value="scenarios">
-                <ScenariosPanel />
-              </TabsContent>
-
-              <TabsContent value="launch">
-                <ScenarioLaunchPanel />
-              </TabsContent>
-
-              <TabsContent value="monitoring">
-                <MonitoringPanel />
-              </TabsContent>
-
-              <TabsContent value="metrics">
-                <MetricsPanel />
-              </TabsContent>
-            </Tabs>
-          </>
-        ) : (
-          <Card className="bg-red-900/20 border-red-500 mb-6">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">Ошибка загрузки профиля</h3>
-              <p className="text-gray-400 mb-4">
-                Не удалось загрузить или создать профиль пользователя.
-              </p>
-              <Button 
-                onClick={() => window.location.reload()} 
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Обновить страницу
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          {/* Контент вкладки */}
+          <div className="flex-1 overflow-auto p-4">
+            {ActiveComponent && <ActiveComponent />}
+          </div>
+        </div>
       </div>
+
+      {/* Мобильный оверлей */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
     </div>
   );
 };
