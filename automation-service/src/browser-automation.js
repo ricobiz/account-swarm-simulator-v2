@@ -1,119 +1,131 @@
 
-import { CONFIG } from './config.js';
-import { AntiDetectManager } from './anti-detect.js';
-import { HumanBehaviorSimulator } from './human-behavior.js';
-import { ErrorHandler } from './error-handler.js';
-import { SessionManager } from './browser/session-manager.js';
 import { BrowserLauncher } from './browser/browser-launcher.js';
+import { HumanBehaviorSimulator } from './human-behavior.js';
+import { SessionManager } from './browser/session-manager.js';
 import { TelegramAutomation } from './platforms/telegram-automation.js';
 import { TikTokAutomation } from './platforms/tiktok-automation.js';
 import { YouTubeAutomation } from './platforms/youtube-automation.js';
+import { RedditAutomation } from './platforms/reddit-automation.js';
+import { InstagramAutomation } from './platforms/instagram-automation.js';
+import { ScenarioManager } from './scenario-manager.js';
 
 export class BrowserAutomation {
-  constructor(proxy = null, accountId = null) {
+  constructor(proxy = null) {
     this.proxy = proxy;
-    this.accountId = accountId;
     this.browser = null;
     this.context = null;
     this.page = null;
-    this.antiDetect = new AntiDetectManager();
     this.humanBehavior = null;
-    this.errorHandler = new ErrorHandler();
     this.sessionManager = new SessionManager();
-    this.browserLauncher = new BrowserLauncher(proxy);
+    this.scenarioManager = new ScenarioManager();
   }
 
   async initialize() {
     try {
-      const fingerprint = this.antiDetect.generateFingerprint(this.accountId);
+      console.log('Инициализация браузерной автоматизации...');
       
-      this.browser = await this.browserLauncher.launch();
-
-      // Создаём persistent context для сохранения сессии
-      const contextOptions = this.browserLauncher.createContextOptions(
-        fingerprint, 
-        this.sessionManager.getStorageState(this.accountId)
-      );
-
-      this.context = await this.browser.newContext(contextOptions);
-      this.page = await this.context.newPage();
-      this.humanBehavior = new HumanBehaviorSimulator(this.page);
-
-      // Применяем anti-detect меры
-      await this.antiDetect.applyFingerprint(this.page, fingerprint);
-      await this.browserLauncher.setupAdvancedAntiDetect(this.page);
+      const launcher = new BrowserLauncher();
+      this.browser = await launcher.launch(this.proxy);
       
-      console.log(`Браузер инициализирован для аккаунта ${this.accountId}`);
-      
+      console.log('Браузер успешно запущен');
     } catch (error) {
       console.error('Ошибка инициализации браузера:', error);
       throw error;
     }
   }
 
-  async executeScenario(scenario, account) {
-    const actions = [];
-    const context = {
-      userId: scenario.user_id,
-      accountId: account.id,
-      scenarioId: scenario.id
-    };
-    
+  async createContext(account) {
     try {
-      // Получаем конфигурацию сценария
-      const scenarioConfig = CONFIG.automation.scenarios[scenario.platform.toLowerCase()];
-      const scenarioType = scenario.config?.scenario_type || 'default';
+      // Получаем сохраненное состояние сессии
+      const storageState = this.sessionManager.getStorageState(account.id);
       
-      console.log(`Выполнение сценария ${scenarioType} для платформы ${scenario.platform}`);
+      const launcher = new BrowserLauncher();
+      const contextOptions = await launcher.createContextOptions(account, this.proxy);
       
-      const platformAutomation = this.createPlatformAutomation(scenario.platform.toLowerCase());
-      await platformAutomation.executeScenario(scenario, account, actions, scenarioConfig);
+      if (storageState) {
+        contextOptions.storageState = storageState;
+        console.log(`Восстановлена сессия для аккаунта ${account.username}`);
+      }
 
-      await this.sessionManager.saveSessionState(this.accountId, this.context);
+      this.context = await this.browser.newContext(contextOptions);
+      this.page = await this.context.newPage();
+      this.humanBehavior = new HumanBehaviorSimulator(this.page);
 
-      return {
-        success: true,
-        actions,
-        message: 'Сценарий выполнен успешно'
-      };
-      
+      console.log(`Контекст создан для аккаунта ${account.username}`);
     } catch (error) {
-      console.error('Ошибка выполнения сценария:', error);
-      
-      // Обрабатываем ошибку через ErrorHandler
-      const recoveryResult = await this.errorHandler.handleError(error, context);
-      
-      return {
-        success: false,
-        actions,
-        message: error.message,
-        recovery: recoveryResult
-      };
+      console.error('Ошибка создания контекста:', error);
+      throw error;
     }
   }
 
   createPlatformAutomation(platform) {
-    switch (platform) {
+    switch (platform.toLowerCase()) {
       case 'telegram':
         return new TelegramAutomation(this.page, this.humanBehavior);
       case 'tiktok':
         return new TikTokAutomation(this.page, this.humanBehavior);
       case 'youtube':
         return new YouTubeAutomation(this.page, this.humanBehavior);
+      case 'reddit':
+        return new RedditAutomation(this.page, this.humanBehavior);
+      case 'instagram':
+        return new InstagramAutomation(this.page, this.humanBehavior);
       default:
         throw new Error(`Неподдерживаемая платформа: ${platform}`);
     }
   }
 
+  async executeScenario(scenario, account) {
+    try {
+      console.log(`Выполнение сценария: ${scenario.name} для аккаунта: ${account.username}`);
+
+      await this.createContext(account);
+
+      // Загружаем кастомные сценарии если еще не загружены
+      if (this.scenarioManager.customScenarios.size === 0) {
+        await this.scenarioManager.loadCustomScenarios();
+      }
+
+      let result;
+
+      // Проверяем, является ли сценарий кастомным (из JSON)
+      if (scenario.config && scenario.config.template_id) {
+        console.log('Выполняем кастомный сценарий из JSON конфигурации');
+        result = await this.scenarioManager.executeCustomScenario(scenario, account, this);
+      } else {
+        // Стандартные предустановленные сценарии
+        console.log('Выполняем стандартный сценарий');
+        const platformAutomation = this.createPlatformAutomation(scenario.platform);
+        result = await platformAutomation.executeScenario(scenario, account, [], scenario.config);
+      }
+
+      // Сохраняем состояние сессии
+      await this.sessionManager.saveSessionState(account.id, this.context);
+
+      console.log(`Сценарий завершен для аккаунта ${account.username}:`, result.message);
+      return result;
+
+    } catch (error) {
+      console.error(`Ошибка выполнения сценария для аккаунта ${account.username}:`, error);
+      throw error;
+    }
+  }
+
   async cleanup() {
     try {
-      if (this.context && this.accountId) {
-        await this.sessionManager.saveSessionState(this.accountId, this.context);
+      if (this.context) {
         await this.context.close();
+        this.context = null;
+        this.page = null;
+        this.humanBehavior = null;
       }
+      
       if (this.browser) {
         await this.browser.close();
+        this.browser = null;
       }
+      
+      console.log('Браузер закрыт');
     } catch (error) {
       console.error('Ошибка при закрытии браузера:', error);
     }
