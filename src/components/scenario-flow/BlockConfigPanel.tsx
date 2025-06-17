@@ -148,6 +148,20 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
         </CardHeader>
         
         <CardContent className="space-y-4">
+          {/* RPA опция */}
+          <div className="space-y-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded">
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.executeViaRPA || false}
+                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, executeViaRPA: checked }))}
+              />
+              <Label className="text-orange-300 font-medium">Выполнить через RPA</Label>
+            </div>
+            <p className="text-xs text-orange-200/70">
+              Использовать внешний RPA-бот для реальных движений мыши и клавиатуры
+            </p>
+          </div>
+
           {Object.entries(blockType.config).map(([fieldName, fieldConfig]) => (
             <div key={fieldName} className="space-y-2">
               <Label className="text-sm font-medium text-gray-300">

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTemplateManager } from '@/hooks/useTemplateManager';
 import { useToast } from '@/hooks/use-toast';
 import { validateTemplate } from '@/utils/templateValidation';
@@ -12,6 +11,7 @@ import { Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { RPATaskMonitor } from '@/components/rpa/RPATaskMonitor';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -19,6 +19,7 @@ const ScenarioTemplateManager = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ScenarioTemplate | null>(null);
+  const [rpaTasks, setRpaTasks] = useState([]);
   const isMobile = useIsMobile();
   
   const {
@@ -85,6 +86,31 @@ const ScenarioTemplateManager = () => {
     setIsCreateOpen(true);
   };
 
+  const fetchRPATasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rpa_tasks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Ошибка загрузки RPA задач:', error);
+        return;
+      }
+
+      setRpaTasks(data || []);
+    } catch (error) {
+      console.error('Ошибка при загрузке RPA задач:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRPATasks();
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -129,6 +155,9 @@ const ScenarioTemplateManager = () => {
         onCreateNew={handleCreateNew}
       />
 
+      {/* RPA Task Monitor */}
+      <RPATaskMonitor tasks={rpaTasks} onRefresh={fetchRPATasks} />
+
       {templates.length === 0 ? (
         <div className="text-center py-8">
           <div className="bg-gray-800/50 rounded-lg p-8 border border-gray-700">
@@ -152,7 +181,7 @@ const ScenarioTemplateManager = () => {
         />
       )}
 
-      {/* Десктопная версия диалога */}
+      {/* Dialogs */}
       {!isMobile && (
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">

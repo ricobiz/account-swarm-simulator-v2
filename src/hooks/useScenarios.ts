@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -96,6 +95,42 @@ export const useScenarios = () => {
     }
   };
 
+  const executeScenarioWithRPA = async (scenarioId: string): Promise<boolean> => {
+    try {
+      // Получаем сценарий
+      const { data: scenario, error: scenarioError } = await supabase
+        .from('scenarios')
+        .select('*')
+        .eq('id', scenarioId)
+        .single();
+
+      if (scenarioError) {
+        console.error('Ошибка получения сценария:', scenarioError);
+        return false;
+      }
+
+      // Проверяем конфигурацию на наличие RPA блоков
+      const config = scenario.config as any;
+      if (!config?.flowData?.nodes) {
+        return false;
+      }
+
+      const rpaBlocks = config.flowData.nodes.filter((node: any) => 
+        node.data?.config?.executeViaRPA === true
+      );
+
+      console.log(`Найдено ${rpaBlocks.length} RPA блоков в сценарии ${scenarioId}`);
+
+      // Обновляем статус сценария
+      await updateScenario(scenarioId, { status: 'running', progress: 0 });
+
+      return true;
+    } catch (error) {
+      console.error('Ошибка выполнения сценария с RPA:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchScenarios();
@@ -108,6 +143,7 @@ export const useScenarios = () => {
     addScenario,
     updateScenario,
     deleteScenario,
+    executeScenarioWithRPA,
     refetch: fetchScenarios
   };
 };
