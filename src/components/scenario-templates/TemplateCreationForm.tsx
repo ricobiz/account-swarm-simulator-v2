@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormData } from '@/hooks/useTemplateManager';
+import { StepManager } from './StepManager';
 
 export type { FormData } from '@/hooks/useTemplateManager';
 
@@ -66,7 +68,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
         <DialogHeader>
           <DialogTitle className="text-white">Создать новый шаблон сценария</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Настройте параметры и выберите готовые действия для автоматизации
+            Настройте параметры и добавьте шаги для автоматизации
           </DialogDescription>
         </DialogHeader>
         
@@ -191,8 +193,31 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
             </CardContent>
           </Card>
 
-          {/* Готовые действия */}
-          {actionManager}
+          {/* Шаги сценария - используем вкладки для разделения */}
+          <Card className="bg-gray-900 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Шаги сценария</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="manual" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-800">
+                  <TabsTrigger value="manual" className="text-gray-300">Создать шаги вручную</TabsTrigger>
+                  <TabsTrigger value="templates" className="text-gray-300">Готовые шаблоны</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="manual" className="mt-4">
+                  <StepManager
+                    formData={formData}
+                    setFormData={setFormData}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="templates" className="mt-4">
+                  {actionManager}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
           {/* Кнопки действий */}
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-700">
