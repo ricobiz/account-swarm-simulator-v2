@@ -274,6 +274,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      audit_sensitive_operation: {
+        Args: {
+          operation_type: string
+          table_name: string
+          record_id: string
+          details?: Json
+        }
+        Returns: undefined
+      }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
