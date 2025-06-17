@@ -52,6 +52,11 @@ const ScenarioTemplateManager = () => {
   }, [user]);
 
   const fetchTemplates = async () => {
+    if (!user) {
+      console.warn('No user found, skipping template fetch');
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -61,7 +66,11 @@ const ScenarioTemplateManager = () => {
         .not('config', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
       setTemplates(data || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -106,7 +115,14 @@ const ScenarioTemplateManager = () => {
   };
 
   const handleCreateTemplate = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Ошибка",
+        description: "Пользователь не авторизован",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const validationErrors = validateTemplate(formData);
     if (validationErrors.length > 0) {
@@ -140,7 +156,10 @@ const ScenarioTemplateManager = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error creating template:', error);
+        throw error;
+      }
 
       setTemplates(prev => [data, ...prev]);
       setIsCreateOpen(false);
@@ -161,13 +180,25 @@ const ScenarioTemplateManager = () => {
   };
 
   const handleDeleteTemplate = async (templateId: string) => {
+    if (!user) {
+      toast({
+        title: "Ошибка",
+        description: "Пользователь не авторизован",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('scenarios')
         .delete()
         .eq('id', templateId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error deleting template:', error);
+        throw error;
+      }
 
       setTemplates(prev => prev.filter(t => t.id !== templateId));
 
@@ -292,6 +323,14 @@ const ScenarioTemplateManager = () => {
 
   if (loading) {
     return <div className="text-white">Загрузка шаблонов сценариев...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-white">Для работы с шаблонами сценариев необходимо войти в систему</p>
+      </div>
+    );
   }
 
   return (

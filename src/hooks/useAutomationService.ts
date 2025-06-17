@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import type { Database } from '@/integrations/supabase/types';
 
 interface LaunchScenarioRequest {
@@ -25,9 +25,16 @@ type ScenarioConfig = {
 
 export const useAutomationService = () => {
   const [isLaunching, setIsLaunching] = useState(false);
-  const { toast } = useToast();
+  const { handleError, handleSuccess } = useErrorHandler();
 
   const launchScenario = async (request: LaunchScenarioRequest): Promise<AutomationServiceResponse> => {
+    if (!request.userId) {
+      return {
+        success: false,
+        message: 'Пользователь не авторизован'
+      };
+    }
+
     setIsLaunching(true);
     try {
       // В реальном приложении здесь был бы вызов к automation-service
@@ -35,14 +42,15 @@ export const useAutomationService = () => {
       const scenarios = [];
       
       for (const accountId of request.accountIds) {
-        const { data: template } = await supabase
+        const { data: template, error: templateError } = await supabase
           .from('scenarios')
           .select('*')
           .eq('id', request.templateId)
           .eq('status', 'template')
           .single();
 
-        if (!template) {
+        if (templateError) {
+          console.error('Template fetch error:', templateError);
           throw new Error('Шаблон сценария не найден');
         }
 
@@ -59,7 +67,7 @@ export const useAutomationService = () => {
           settings: templateConfig.settings || {}
         };
 
-        const { data: scenario, error } = await supabase
+        const { data: scenario, error: scenarioError } = await supabase
           .from('scenarios')
           .insert({
             user_id: request.userId,
@@ -73,15 +81,15 @@ export const useAutomationService = () => {
           .select()
           .single();
 
-        if (error) {
-          console.error('Ошибка создания сценария:', error);
+        if (scenarioError) {
+          console.error('Scenario creation error:', scenarioError);
           continue;
         }
 
         scenarios.push(scenario);
 
         // Обновляем статус аккаунта
-        await supabase
+        const { error: accountUpdateError } = await supabase
           .from('accounts')
           .update({ 
             status: 'working',
@@ -89,8 +97,12 @@ export const useAutomationService = () => {
           })
           .eq('id', accountId);
 
+        if (accountUpdateError) {
+          console.error('Account update error:', accountUpdateError);
+        }
+
         // Создаем лог
-        await supabase
+        const { error: logError } = await supabase
           .from('logs')
           .insert({
             user_id: request.userId,
@@ -100,19 +112,26 @@ export const useAutomationService = () => {
             details: `Сценарий "${template.name}" добавлен в очередь`,
             status: 'info'
           });
+
+        if (logError) {
+          console.error('Log creation error:', logError);
+        }
       }
+
+      const message = `Создано ${scenarios.length} сценариев`;
+      handleSuccess(message);
 
       return {
         success: true,
-        message: `Создано ${scenarios.length} сценариев`,
+        message,
         scenarioIds: scenarios.map(s => s.id)
       };
 
     } catch (error) {
-      console.error('Ошибка запуска сценария:', error);
+      const errorMessage = handleError(error, 'launchScenario');
       return {
         success: false,
-        message: `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+        message: errorMessage
       };
     } finally {
       setIsLaunching(false);
@@ -126,20 +145,17 @@ export const useAutomationService = () => {
         .update({ status: 'stopped' })
         .eq('id', scenarioId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Stop scenario error:', error);
+        throw error;
+      }
 
-      toast({
-        title: "Сценарий остановлен",
-        description: "Выполнение сценария было прервано",
-      });
-
+      handleSuccess("Выполнение сценария было прервано", "Сценарий остановлен");
       return true;
     } catch (error) {
-      console.error('Ошибка остановки сценария:', error);
-      toast({
+      handleError(error, 'stopScenario', {
         title: "Ошибка",
-        description: "Не удалось остановить сценарий",
-        variant: "destructive"
+        showToast: true
       });
       return false;
     }
