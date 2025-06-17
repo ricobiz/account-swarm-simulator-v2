@@ -1,221 +1,129 @@
 
-import { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  Globe, 
-  Play, 
-  BarChart3, 
-  Settings,
-  LogOut,
-  User,
-  FileText
-} from 'lucide-react';
-import ImportAccountsPanel from '@/components/ImportAccountsPanel';
-import ProxyManagementPanel from '@/components/ProxyManagementPanel';
-import ScenarioLaunchPanel from '@/components/ScenarioLaunchPanel';
-import MonitoringPanel from '@/components/MonitoringPanel';
-import ScenarioTemplateManager from '@/components/ScenarioTemplateManager';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useProxies } from '@/hooks/useProxies';
-import { useScenarios } from '@/hooks/useScenarios';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useProfile } from "@/hooks/useProfile";
+import { Loader2, LogOut, Crown } from "lucide-react";
+
+// Импортируем все панели
+import AccountsPanel from "@/components/AccountsPanel";
+import ProxiesPanel from "@/components/ProxiesPanel";
+import ScenariosPanel from "@/components/ScenariosPanel";
+import ScenarioLaunchPanel from "@/components/ScenarioLaunchPanel";
+import MonitoringPanel from "@/components/MonitoringPanel";
+import MetricsPanel from "@/components/MetricsPanel";
+import SubscriptionStatus from "@/components/SubscriptionStatus";
+import AdminDashboard from "@/components/admin/AdminDashboard";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('accounts');
-  const { user, loading, signOut } = useAuth();
-  const { accounts } = useAccounts();
-  const { proxies } = useProxies();
-  const { scenarios } = useScenarios();
-  const navigate = useNavigate();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const [activeTab, setActiveTab] = useState("accounts");
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
-
-  if (loading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-white text-xl">Загрузка...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
       </div>
     );
   }
 
   if (!user) {
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
-  const activeAccounts = accounts.filter(a => a.status === 'working' || a.status === 'idle').length;
-  const onlineProxies = proxies.filter(p => p.status === 'online').length;
-  const runningScenarios = scenarios.filter(s => s.status === 'running').length;
-  const templateCount = scenarios.filter(s => s.status === 'template').length;
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  // Если пользователь админ, показываем админ-панель по умолчанию
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-      <header className="border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl font-bold text-white">SMM Farm</div>
-              <Badge variant="outline" className="border-green-500 text-green-400">
-                v2.0
-              </Badge>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-gray-300">
-                <User className="h-4 w-4" />
-                <span>{user.email}</span>
+      <div className="container mx-auto p-4">
+        {/* Заголовок */}
+        <Card className="bg-gray-800/50 border-gray-700 mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-2xl text-white">SMM Farm</CardTitle>
+                {isAdmin && (
+                  <div className="flex items-center gap-1 bg-yellow-600 px-2 py-1 rounded-full text-xs text-white">
+                    <Crown className="h-3 w-3" />
+                    Администратор
+                  </div>
+                )}
               </div>
-              <Button 
-                onClick={handleSignOut}
-                variant="outline" 
-                size="sm"
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Выйти
-              </Button>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-300">{user.email}</span>
+                <Button 
+                  variant="outline" 
+                  onClick={handleSignOut}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Выйти
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
+          </CardHeader>
+        </Card>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Панель управления SMM автоматизацией
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Управляйте аккаунтами, прокси и сценариями из единого интерфейса
-          </p>
+        {/* Статус подписки */}
+        <div className="mb-6">
+          <SubscriptionStatus />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-blue-200 text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Аккаунты
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{activeAccounts}</div>
-              <div className="text-sm text-blue-200">Активных аккаунтов</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-green-200 text-lg flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Прокси
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{onlineProxies}</div>
-              <div className="text-sm text-green-200">Онлайн прокси</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-purple-200 text-lg flex items-center gap-2">
-                <Play className="h-5 w-5" />
-                Сценарии
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{runningScenarios}</div>
-              <div className="text-sm text-purple-200">Запущенных</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-orange-200 text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Шаблоны
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{templateCount}</div>
-              <div className="text-sm text-orange-200">Шаблонов сценариев</div>
-            </CardContent>
-          </Card>
-        </div>
-
+        {/* Основной контент */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 border border-gray-700">
-            <TabsTrigger 
-              value="accounts" 
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Аккаунты
-            </TabsTrigger>
-            <TabsTrigger 
-              value="proxies" 
-              className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-300"
-            >
-              <Globe className="mr-2 h-4 w-4" />
-              Прокси
-            </TabsTrigger>
-            <TabsTrigger 
-              value="scenarios" 
-              className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300"
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Сценарии
-            </TabsTrigger>
-            <TabsTrigger 
-              value="templates" 
-              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-300"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Шаблоны
-            </TabsTrigger>
-            <TabsTrigger 
-              value="monitoring" 
-              className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-gray-300"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Мониторинг
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7 bg-gray-800/50 mb-6">
+            {isAdmin && (
+              <TabsTrigger value="admin" className="text-white">
+                <Crown className="h-4 w-4 mr-2" />
+                Админ
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="accounts" className="text-white">Аккаунты</TabsTrigger>
+            <TabsTrigger value="proxies" className="text-white">Прокси</TabsTrigger>
+            <TabsTrigger value="scenarios" className="text-white">Сценарии</TabsTrigger>
+            <TabsTrigger value="launch" className="text-white">Запуск</TabsTrigger>
+            <TabsTrigger value="monitoring" className="text-white">Мониторинг</TabsTrigger>
+            <TabsTrigger value="metrics" className="text-white">Метрики</TabsTrigger>
           </TabsList>
 
-          <div className="mt-6">
-            <TabsContent value="accounts" className="space-y-6">
-              <ImportAccountsPanel />
+          {isAdmin && (
+            <TabsContent value="admin">
+              <AdminDashboard />
             </TabsContent>
+          )}
 
-            <TabsContent value="proxies" className="space-y-6">
-              <ProxyManagementPanel />
-            </TabsContent>
+          <TabsContent value="accounts">
+            <AccountsPanel />
+          </TabsContent>
 
-            <TabsContent value="scenarios" className="space-y-6">
-              <ScenarioLaunchPanel />
-            </TabsContent>
+          <TabsContent value="proxies">
+            <ProxiesPanel />
+          </TabsContent>
 
-            <TabsContent value="templates" className="space-y-6">
-              <ScenarioTemplateManager />
-            </TabsContent>
+          <TabsContent value="scenarios">
+            <ScenariosPanel />
+          </TabsContent>
 
-            <TabsContent value="monitoring" className="space-y-6">
-              <MonitoringPanel />
-            </TabsContent>
-          </div>
+          <TabsContent value="launch">
+            <ScenarioLaunchPanel />
+          </TabsContent>
+
+          <TabsContent value="monitoring">
+            <MonitoringPanel />
+          </TabsContent>
+
+          <TabsContent value="metrics">
+            <MetricsPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
