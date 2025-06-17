@@ -39,22 +39,22 @@ export const useTemplateManager = () => {
     }
   });
 
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      console.log('User authenticated, fetching templates for user:', user.id);
+    if (user && session) {
+      console.log('User and session available, fetching templates for user:', user.id);
       fetchTemplates();
     } else {
-      console.log('No user found, skipping template fetch');
+      console.log('No user or session found, skipping template fetch');
       setLoading(false);
     }
-  }, [user]);
+  }, [user, session]);
 
   const fetchTemplates = async () => {
-    if (!user) {
-      console.warn('No user found, skipping template fetch');
+    if (!user || !session) {
+      console.warn('No user or session found, skipping template fetch');
       setLoading(false);
       return;
     }
@@ -63,13 +63,7 @@ export const useTemplateManager = () => {
       setLoading(true);
       console.log('Fetching templates for user:', user.id);
       
-      // Verify user session is valid
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('No active session found');
-        throw new Error('Пользователь не авторизован');
-      }
-
+      // Простой запрос без дополнительных проверок
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
@@ -87,9 +81,22 @@ export const useTemplateManager = () => {
       setTemplates(data || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
+      
+      // Более детальная обработка ошибок
+      let errorMessage = 'Неизвестная ошибка';
+      if (error.message) {
+        if (error.message.includes('infinite recursion')) {
+          errorMessage = 'Проблема с политиками доступа к данным. Обратитесь к администратору.';
+        } else if (error.message.includes('permission denied')) {
+          errorMessage = 'Нет прав доступа к данным';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Ошибка",
-        description: `Не удалось загрузить шаблоны сценариев: ${error.message || 'Неизвестная ошибка'}`,
+        description: `Не удалось загрузить шаблоны сценариев: ${errorMessage}`,
         variant: "destructive"
       });
       setTemplates([]);
@@ -105,7 +112,7 @@ export const useTemplateManager = () => {
   };
 
   const createTemplate = async () => {
-    if (!user) {
+    if (!user || !session) {
       toast({
         title: "Ошибка",
         description: "Пользователь не авторизован",
@@ -155,9 +162,19 @@ export const useTemplateManager = () => {
       return true;
     } catch (error: any) {
       console.error('Error creating template:', error);
+      
+      let errorMessage = 'Неизвестная ошибка';
+      if (error.message) {
+        if (error.message.includes('infinite recursion')) {
+          errorMessage = 'Проблема с политиками доступа к данным';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Ошибка",
-        description: `Не удалось создать шаблон сценария: ${error.message || 'Неизвестная ошибка'}`,
+        description: `Не удалось создать шаблон сценария: ${errorMessage}`,
         variant: "destructive"
       });
       return false;
@@ -165,7 +182,7 @@ export const useTemplateManager = () => {
   };
 
   const deleteTemplate = async (templateId: string) => {
-    if (!user) {
+    if (!user || !session) {
       toast({
         title: "Ошибка",
         description: "Пользователь не авторизован",
@@ -195,9 +212,19 @@ export const useTemplateManager = () => {
       });
     } catch (error: any) {
       console.error('Error deleting template:', error);
+      
+      let errorMessage = 'Неизвестная ошибка';
+      if (error.message) {
+        if (error.message.includes('infinite recursion')) {
+          errorMessage = 'Проблема с политиками доступа к данным';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Ошибка",
-        description: `Не удалось удалить шаблон сценария: ${error.message || 'Неизвестная ошибка'}`,
+        description: `Не удалось удалить шаблон сценария: ${errorMessage}`,
         variant: "destructive"
       });
     }

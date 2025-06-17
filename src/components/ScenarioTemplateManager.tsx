@@ -9,7 +9,8 @@ import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { TemplateActions } from './scenario-templates/TemplateActions';
 import { TemplateActionManager } from './scenario-templates/TemplateActionManager';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'];
 
@@ -79,7 +80,9 @@ const ScenarioTemplateManager = () => {
   if (!user) {
     return (
       <div className="text-center py-8">
-        <p className="text-white">Для работы с шаблонами сценариев необходимо войти в систему</p>
+        <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <p className="text-white mb-2">Для работы с шаблонами сценариев необходимо войти в систему</p>
+        <p className="text-gray-400 text-sm">Пожалуйста, авторизуйтесь для продолжения работы</p>
       </div>
     );
   }
@@ -94,8 +97,18 @@ const ScenarioTemplateManager = () => {
 
       {templates.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-white mb-2">У вас пока нет шаблонов сценариев</p>
-          <p className="text-gray-400 text-sm">Создайте свой первый шаблон, нажав кнопку "Создать шаблон"</p>
+          <div className="bg-gray-800/50 rounded-lg p-8 border border-gray-700">
+            <p className="text-white mb-2">У вас пока нет шаблонов сценариев</p>
+            <p className="text-gray-400 text-sm mb-4">Создайте свой первый шаблон, нажав кнопку "Создать шаблон"</p>
+            <Button 
+              onClick={() => refreshTemplates()}
+              variant="outline"
+              className="border-gray-600 text-gray-400 hover:bg-gray-700"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Попробовать загрузить снова
+            </Button>
+          </div>
         </div>
       ) : (
         <TemplateList
