@@ -44,10 +44,10 @@ export const AdvancedVisualTemplateCreationForm: React.FC<AdvancedVisualTemplate
         const nodeData = node.data;
         return {
           id: node.id,
-          type: nodeData.type,
-          name: nodeData.label,
-          description: `Блок: ${nodeData.label}`,
-          ...nodeData.config
+          type: nodeData?.type || 'unknown',
+          name: nodeData?.label || 'Unnamed step',
+          description: `Блок: ${nodeData?.label || 'Unnamed'}`,
+          ...(nodeData?.config || {})
         };
       });
 

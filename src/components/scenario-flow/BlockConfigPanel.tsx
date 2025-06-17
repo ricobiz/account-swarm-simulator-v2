@@ -10,6 +10,17 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { getBlockTypeById } from './BlockTypes';
 
+interface BlockConfigField {
+  type: string;
+  label: string;
+  placeholder?: string;
+  default?: any;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  options?: string[];
+}
+
 interface BlockConfigPanelProps {
   node: Node;
   onSave: (config: Record<string, any>) => void;
@@ -17,8 +28,8 @@ interface BlockConfigPanelProps {
 }
 
 export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave, onCancel }) => {
-  const blockType = getBlockTypeById(node.data.type);
-  const [config, setConfig] = useState(node.data.config || {});
+  const blockType = getBlockTypeById(node.data?.type as string);
+  const [config, setConfig] = useState<Record<string, any>>(node.data?.config || {});
 
   if (!blockType) {
     return (
@@ -30,7 +41,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
 
   const IconComponent = blockType.icon;
 
-  const renderConfigField = (fieldName: string, fieldConfig: any) => {
+  const renderConfigField = (fieldName: string, fieldConfig: BlockConfigField) => {
     const value = config[fieldName] ?? fieldConfig.default;
 
     switch (fieldConfig.type) {
@@ -40,7 +51,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
           <Input
             type={fieldConfig.type}
             value={value || ''}
-            onChange={(e) => setConfig({ ...config, [fieldName]: e.target.value })}
+            onChange={(e) => setConfig(prev => ({ ...prev, [fieldName]: e.target.value }))}
             placeholder={fieldConfig.placeholder}
             className="bg-gray-700 border-gray-600 text-white"
           />
@@ -50,7 +61,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
         return (
           <Textarea
             value={value || ''}
-            onChange={(e) => setConfig({ ...config, [fieldName]: e.target.value })}
+            onChange={(e) => setConfig(prev => ({ ...prev, [fieldName]: e.target.value }))}
             placeholder={fieldConfig.placeholder}
             rows={3}
             className="bg-gray-700 border-gray-600 text-white"
@@ -62,7 +73,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
           <Input
             type="number"
             value={value || fieldConfig.default}
-            onChange={(e) => setConfig({ ...config, [fieldName]: parseInt(e.target.value) || fieldConfig.default })}
+            onChange={(e) => setConfig(prev => ({ ...prev, [fieldName]: parseInt(e.target.value) || fieldConfig.default }))}
             min={fieldConfig.min}
             max={fieldConfig.max}
             className="bg-gray-700 border-gray-600 text-white"
@@ -71,7 +82,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
 
       case 'select':
         return (
-          <Select value={value} onValueChange={(newValue) => setConfig({ ...config, [fieldName]: newValue })}>
+          <Select value={value} onValueChange={(newValue) => setConfig(prev => ({ ...prev, [fieldName]: newValue }))}>
             <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
               <SelectValue placeholder={`Выберите ${fieldConfig.label.toLowerCase()}`} />
             </SelectTrigger>
@@ -90,7 +101,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
           <div className="flex items-center space-x-2">
             <Switch
               checked={value}
-              onCheckedChange={(checked) => setConfig({ ...config, [fieldName]: checked })}
+              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, [fieldName]: checked }))}
             />
             <Label className="text-gray-300">{value ? 'Включено' : 'Выключено'}</Label>
           </div>
@@ -100,7 +111,7 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
         return (
           <Input
             value={value || ''}
-            onChange={(e) => setConfig({ ...config, [fieldName]: e.target.value })}
+            onChange={(e) => setConfig(prev => ({ ...prev, [fieldName]: e.target.value }))}
             className="bg-gray-700 border-gray-600 text-white"
           />
         );
@@ -140,10 +151,10 @@ export const BlockConfigPanel: React.FC<BlockConfigPanelProps> = ({ node, onSave
           {Object.entries(blockType.config).map(([fieldName, fieldConfig]) => (
             <div key={fieldName} className="space-y-2">
               <Label className="text-sm font-medium text-gray-300">
-                {fieldConfig.label}
-                {fieldConfig.required && <span className="text-red-400 ml-1">*</span>}
+                {(fieldConfig as BlockConfigField).label}
+                {(fieldConfig as BlockConfigField).required && <span className="text-red-400 ml-1">*</span>}
               </Label>
-              {renderConfigField(fieldName, fieldConfig)}
+              {renderConfigField(fieldName, fieldConfig as BlockConfigField)}
             </div>
           ))}
 

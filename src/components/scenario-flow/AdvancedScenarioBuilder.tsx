@@ -76,7 +76,7 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
       });
 
       // Импортируем BLOCK_TYPES здесь чтобы избежать циклических зависимостей
-      import('./BlockTypes').then(({ BLOCK_TYPES, getBlockTypeById }) => {
+      import('./BlockTypes').then(({ getBlockTypeById }) => {
         const blockType = getBlockTypeById(blockTypeId);
         if (!blockType) return;
 
@@ -95,7 +95,7 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
           },
         };
 
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => [...nds, newNode]);
       });
     },
     [screenToFlowPosition, setNodes]
@@ -226,7 +226,11 @@ const AdvancedScenarioBuilderContent: React.FC<AdvancedScenarioBuilderContentPro
       </div>
 
       {/* Основная область конструктора */}
-      <div className="flex-1 relative" ref={ref => ref && (ref.onDrop = onDrop, ref.onDragOver = onDragOver)}>
+      <div 
+        className="flex-1 relative" 
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
