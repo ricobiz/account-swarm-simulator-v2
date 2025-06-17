@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import AccountsPanel from "@/components/AccountsPanel";
@@ -98,18 +99,75 @@ const Index = () => {
       {/* Mobile header */}
       {isMobile && (
         <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-white hover:bg-gray-700"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          {/* Мобильное меню с Drawer */}
+          <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <DrawerTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-gray-700"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="bg-gray-800 border-gray-700 max-h-[60vh]">
+              <DrawerHeader className="border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <DrawerTitle className="text-white">Меню</DrawerTitle>
+                  <div className="mb-2">
+                    <SubscriptionStatus />
+                  </div>
+                </div>
+              </DrawerHeader>
+              
+              <div className="p-4 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3">
+                  {allTabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`
+                          flex flex-col items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors
+                          ${isActive 
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                          }
+                        `}
+                      >
+                        <IconComponent className="h-5 w-5" />
+                        <span className="text-xs text-center leading-tight">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      signOut();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full text-white border-gray-600 hover:bg-gray-700"
+                  >
+                    Выйти
+                  </Button>
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
+
           <div className="flex items-center gap-2">
             {activeTabData && <activeTabData.icon className="h-5 w-5 text-blue-400" />}
-            <h1 className="text-lg font-semibold">{activeTabData?.label || "Account Swarm"}</h1>
+            <h1 className="text-lg font-semibold truncate">{activeTabData?.label || "Account Swarm"}</h1>
           </div>
+          
           <Button
             variant="ghost"
             size="sm"
@@ -155,66 +213,6 @@ const Index = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Mobile Sidebar Menu */}
-        {isMobile && mobileMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-50"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            
-            {/* Side Menu */}
-            <div className="fixed top-0 left-0 bottom-0 z-50 w-80 bg-gray-800 border-r border-gray-700 flex flex-col transform translate-x-0 transition-transform">
-              {/* Menu Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-700">
-                <h2 className="text-lg font-semibold text-white">Account Swarm</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-white hover:bg-gray-700"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Subscription Status */}
-              <div className="p-3 border-b border-gray-700">
-                <SubscriptionStatus />
-              </div>
-
-              {/* Navigation Menu */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-2">
-                  {allTabs.map((tab) => (
-                    <TabButton
-                      key={tab.id}
-                      tab={tab}
-                      isActive={activeTab === tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id);
-                        setMobileMenuOpen(false);
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Menu Footer */}
-              <div className="p-4 border-t border-gray-700">
-                <Button
-                  variant="outline"
-                  onClick={signOut}
-                  className="w-full text-white border-gray-600 hover:bg-gray-700"
-                >
-                  Выйти
-                </Button>
-              </div>
-            </div>
-          </>
         )}
 
         {/* Main content */}
