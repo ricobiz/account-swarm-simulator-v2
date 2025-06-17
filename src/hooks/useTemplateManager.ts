@@ -63,7 +63,7 @@ export const useTemplateManager = () => {
       setLoading(true);
       console.log('Fetching templates for user:', user.id);
       
-      // First check if user is authenticated
+      // Verify user session is valid
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('No active session found');
