@@ -192,7 +192,7 @@ export const AdvancedVisualTemplateCreationForm: React.FC<AdvancedVisualTemplate
                     .slice(0, 5)
                     .map((node, index) => (
                       <Badge key={node.id} variant="secondary" className="text-xs">
-                        {node.data?.label || `Блок ${index + 1}`}
+                        {(node.data as any)?.label || `Блок ${index + 1}`}
                       </Badge>
                     ))}
                   {templateData.nodes.filter(node => node.type === 'action').length > 5 && (
