@@ -25,22 +25,69 @@ export const useProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const createProfile = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('Creating profile for user:', user.id, user.email);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: '',
+          role: 'basic',
+          subscription_status: 'trial',
+          trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          accounts_limit: 5,
+          scenarios_limit: 2
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        return;
+      }
+
+      console.log('Profile created successfully:', data);
+      setProfile(data);
+      
+      toast({
+        title: "Профиль создан",
+        description: "Ваш профиль пользователя был успешно создан"
+      });
+    } catch (error) {
+      console.error('Error creating profile:', error);
+    }
+  };
+
   const fetchProfile = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
+      console.log('Fetching profile for user:', user.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
       
+      if (!data) {
+        console.log('No profile found, creating one...');
+        await createProfile();
+        return;
+      }
+      
+      console.log('Profile fetched successfully:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -101,6 +148,9 @@ export const useProfile = () => {
   useEffect(() => {
     if (user) {
       fetchProfile();
+    } else {
+      setProfile(null);
+      setLoading(false);
     }
   }, [user]);
 

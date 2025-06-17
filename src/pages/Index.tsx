@@ -25,7 +25,6 @@ const Index = () => {
 
   console.log('Auth state:', { user: !!user, authLoading, profile: !!profile, profileLoading });
 
-  // Показываем экран загрузки только первые 3 секунды, потом показываем ошибку
   const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
   
   React.useEffect(() => {
@@ -69,13 +68,7 @@ const Index = () => {
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-4" />
           <p className="text-gray-300">Загрузка профиля пользователя...</p>
-          {showLoadingTimeout && (
-            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-yellow-400 mx-auto mb-2" />
-              <p className="text-yellow-400 text-sm">Возможно, профиль не создан</p>
-              <p className="text-gray-400 text-xs mt-1">Пользователь: {user.email}</p>
-            </div>
-          )}
+          <p className="text-gray-400 text-sm mt-2">Создаем профиль если необходимо...</p>
         </div>
       </div>
     );
@@ -103,10 +96,9 @@ const Index = () => {
                     Администратор
                   </div>
                 )}
-                {!profile && (
-                  <div className="flex items-center gap-1 bg-red-600 px-2 py-1 rounded-full text-xs text-white">
-                    <AlertCircle className="h-3 w-3" />
-                    Профиль не найден
+                {profile && (
+                  <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded-full text-xs text-white">
+                    Профиль загружен
                   </div>
                 )}
               </div>
@@ -125,22 +117,8 @@ const Index = () => {
           </CardHeader>
         </Card>
 
-        {/* Показываем уведомление если профиль не загружен */}
-        {!profile ? (
-          <Card className="bg-red-900/20 border-red-500 mb-6">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">Профиль не найден</h3>
-              <p className="text-gray-400 mb-4">
-                Ваш профиль пользователя не был создан в базе данных. 
-                Это может произойти при первом входе.
-              </p>
-              <p className="text-sm text-gray-500">
-                Пользователь: {user.email} (ID: {user.id})
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
+        {/* Основной контент */}
+        {profile ? (
           <>
             {/* Статус подписки */}
             <div className="mb-6">
@@ -195,6 +173,16 @@ const Index = () => {
               </TabsContent>
             </Tabs>
           </>
+        ) : (
+          <Card className="bg-yellow-900/20 border-yellow-500 mb-6">
+            <CardContent className="p-6 text-center">
+              <Loader2 className="h-12 w-12 text-yellow-400 mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-medium text-white mb-2">Создание профиля...</h3>
+              <p className="text-gray-400 mb-4">
+                Пожалуйста, подождите, мы создаем ваш профиль пользователя.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
