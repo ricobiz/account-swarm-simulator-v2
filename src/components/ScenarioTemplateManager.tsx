@@ -32,6 +32,13 @@ const ScenarioTemplateManager = () => {
 
   const { toast } = useToast();
 
+  console.log('ScenarioTemplateManager render state:', {
+    loading,
+    templatesCount: templates.length,
+    user: user?.id,
+    refreshing
+  });
+
   const handleCreateTemplate = async () => {
     const validationErrors = validateTemplate(formData);
     if (validationErrors.length > 0) {
@@ -60,7 +67,11 @@ const ScenarioTemplateManager = () => {
   };
 
   if (loading) {
-    return <div className="text-white">Загрузка шаблонов сценариев...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-white">Загрузка шаблонов сценариев...</div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -79,11 +90,18 @@ const ScenarioTemplateManager = () => {
         onCreateNew={handleCreateNew}
       />
 
-      <TemplateList
-        templates={templates}
-        onViewTemplate={handleViewTemplate}
-        onDeleteTemplate={deleteTemplate}
-      />
+      {templates.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-white mb-2">У вас пока нет шаблонов сценариев</p>
+          <p className="text-gray-400 text-sm">Создайте свой первый шаблон, нажав кнопку "Создать шаблон"</p>
+        </div>
+      ) : (
+        <TemplateList
+          templates={templates}
+          onViewTemplate={handleViewTemplate}
+          onDeleteTemplate={deleteTemplate}
+        />
+      )}
 
       <TemplateCreationForm
         isOpen={isCreateOpen}

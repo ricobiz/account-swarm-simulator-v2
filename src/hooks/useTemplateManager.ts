@@ -44,38 +44,50 @@ export const useTemplateManager = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('User authenticated, fetching templates for user:', user.id);
       fetchTemplates();
+    } else {
+      console.log('No user found, skipping template fetch');
+      setLoading(false);
     }
   }, [user]);
 
   const fetchTemplates = async () => {
     if (!user) {
       console.warn('No user found, skipping template fetch');
+      setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      console.log('Fetching templates for user:', user.id);
+      
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
         .eq('status', 'template')
-        .not('config', 'is', null)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      console.log('Supabase query result:', { data, error });
 
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
       
+      console.log('Successfully fetched templates:', data?.length || 0);
       setTemplates(data || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить шаблоны сценариев",
+        description: `Не удалось загрузить шаблоны сценариев: ${error.message || 'Неизвестная ошибка'}`,
         variant: "destructive"
       });
+      // Устанавливаем пустой массив в случае ошибки
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -98,6 +110,8 @@ export const useTemplateManager = () => {
     }
 
     try {
+      console.log('Creating template with data:', formData);
+
       const templateConfig = {
         steps: formData.steps,
         settings: formData.settings,
@@ -124,6 +138,7 @@ export const useTemplateManager = () => {
         throw error;
       }
 
+      console.log('Template created successfully:', data);
       setTemplates(prev => [data, ...prev]);
       resetForm();
 
@@ -137,7 +152,7 @@ export const useTemplateManager = () => {
       console.error('Error creating template:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось создать шаблон сценария",
+        description: `Не удалось создать шаблон сценария: ${error.message || 'Неизвестная ошибка'}`,
         variant: "destructive"
       });
       return false;
@@ -155,10 +170,13 @@ export const useTemplateManager = () => {
     }
 
     try {
+      console.log('Deleting template:', templateId);
+
       const { error } = await supabase
         .from('scenarios')
         .delete()
-        .eq('id', templateId);
+        .eq('id', templateId)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Supabase error deleting template:', error);
@@ -175,7 +193,7 @@ export const useTemplateManager = () => {
       console.error('Error deleting template:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить шаблон сценария",
+        description: `Не удалось удалить шаблон сценария: ${error.message || 'Неизвестная ошибка'}`,
         variant: "destructive"
       });
     }
