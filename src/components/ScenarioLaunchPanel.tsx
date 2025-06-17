@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useAutomationService } from '@/hooks/useAutomationService';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type ScenarioRow = Database['public']['Tables']['scenarios']['Row'];
 
 interface ScenarioTemplate {
   id: string;
@@ -31,7 +33,7 @@ interface ScenarioTemplate {
   config?: {
     steps: any[];
     settings: any;
-  };
+  } | null;
 }
 
 const ScenarioLaunchPanel = () => {
@@ -60,7 +62,16 @@ const ScenarioLaunchPanel = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setTemplates(data || []);
+        
+        // Преобразуем данные в правильный формат
+        const templatesData: ScenarioTemplate[] = (data || []).map((row: ScenarioRow) => ({
+          id: row.id,
+          name: row.name,
+          platform: row.platform,
+          config: row.config && typeof row.config === 'object' ? row.config as { steps: any[]; settings: any; } : null
+        }));
+        
+        setTemplates(templatesData);
       } catch (error) {
         console.error('Ошибка загрузки шаблонов:', error);
         toast({

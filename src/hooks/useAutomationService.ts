@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
 interface LaunchScenarioRequest {
   templateId: string;
@@ -14,6 +15,13 @@ interface AutomationServiceResponse {
   message: string;
   scenarioIds?: string[];
 }
+
+type ScenarioConfig = {
+  template_id: string;
+  account_id: string;
+  steps: any[];
+  settings: any;
+};
 
 export const useAutomationService = () => {
   const [isLaunching, setIsLaunching] = useState(false);
@@ -38,6 +46,19 @@ export const useAutomationService = () => {
           throw new Error('Шаблон сценария не найден');
         }
 
+        // Безопасно извлекаем конфигурацию
+        let templateConfig: any = {};
+        if (template.config && typeof template.config === 'object') {
+          templateConfig = template.config;
+        }
+
+        const scenarioConfig: ScenarioConfig = {
+          template_id: request.templateId,
+          account_id: accountId,
+          steps: templateConfig.steps || [],
+          settings: templateConfig.settings || {}
+        };
+
         const { data: scenario, error } = await supabase
           .from('scenarios')
           .insert({
@@ -47,12 +68,7 @@ export const useAutomationService = () => {
             status: 'waiting',
             progress: 0,
             accounts_count: 1,
-            config: {
-              template_id: request.templateId,
-              account_id: accountId,
-              steps: template.config?.steps || [],
-              settings: template.config?.settings || {}
-            }
+            config: scenarioConfig as any
           })
           .select()
           .single();

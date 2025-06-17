@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
-import { TemplateCreationForm } from './scenario-templates/TemplateCreationForm';
+import { TemplateCreationForm, FormData } from './scenario-templates/TemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { StepForm } from './scenario-templates/StepBuilder';
@@ -25,11 +25,11 @@ const ScenarioTemplateManager = () => {
   const { toast } = useToast();
 
   // Form data for creating templates
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     platform: '',
     description: '',
-    steps: [] as StepForm[],
+    steps: [],
     settings: {
       minDelay: 1000,
       maxDelay: 3000,
@@ -81,7 +81,7 @@ const ScenarioTemplateManager = () => {
     setRefreshing(false);
   };
 
-  const validateTemplate = (data: typeof formData): string[] => {
+  const validateTemplate = (data: FormData): string[] => {
     const errors = [];
     
     if (!data.name.trim()) {
