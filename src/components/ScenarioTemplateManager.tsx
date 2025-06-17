@@ -12,18 +12,15 @@ import { Plus, Edit, Trash2, Play, Copy, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-interface ScenarioTemplate {
-  id: string;
-  name: string;
-  platform: string;
-  description: string;
-  steps: any[];
-  settings: any;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Use the existing scenarios table from the database types
+type ScenarioTemplate = Database['public']['Tables']['scenarios']['Row'] & {
+  template_config?: {
+    steps: any[];
+    settings: any;
+  };
+};
 
 interface StepForm {
   type: string;
@@ -51,7 +48,9 @@ const STEP_TYPES = [
   { value: 'type', label: 'Ввод текста', fields: ['selector', 'text'] },
   { value: 'scroll', label: 'Скроллинг', fields: [] },
   { value: 'wait', label: 'Ожидание', fields: ['minTime', 'maxTime'] },
-  { value: 'random_interaction', label: 'Случайное взаимодействие', fields: [] }
+  { value: 'random_interaction', label: 'Случайное взаимодействие', fields: [] },
+  { value: 'submit_post', label: 'Отправить пост (Reddit)', fields: ['title', 'content'] },
+  { value: 'comment', label: 'Комментарий', fields: ['text'] }
 ];
 
 const ScenarioTemplateManager = () => {
@@ -64,7 +63,7 @@ const ScenarioTemplateManager = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Форма создания/редактирования
+  // Form data for creating/editing templates
   const [formData, setFormData] = useState({
     name: '',
     platform: '',
@@ -92,9 +91,12 @@ const ScenarioTemplateManager = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
+      // Fetch scenarios that have JSON config (template scenarios)
       const { data, error } = await supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .select('*')
+        .not('config', 'is', null)
+        .eq('status', 'template')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -115,16 +117,20 @@ const ScenarioTemplateManager = () => {
     if (!user) return;
 
     try {
+      const templateConfig = {
+        steps: formData.steps,
+        settings: formData.settings,
+        template_id: `template_${Date.now()}`
+      };
+
       const { data, error } = await supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .insert({
           user_id: user.id,
           name: formData.name,
           platform: formData.platform,
-          description: formData.description,
-          steps: formData.steps,
-          settings: formData.settings,
-          active: true
+          status: 'template', // Special status for templates
+          config: templateConfig
         })
         .select()
         .single();
@@ -152,7 +158,7 @@ const ScenarioTemplateManager = () => {
   const handleDeleteTemplate = async (templateId: string) => {
     try {
       const { error } = await supabase
-        .from('scenario_templates')
+        .from('scenarios')
         .delete()
         .eq('id', templateId);
 
@@ -239,6 +245,13 @@ const ScenarioTemplateManager = () => {
     return colors[platform] || 'bg-gray-500';
   };
 
+  const getStepsCount = (template: ScenarioTemplate) => {
+    if (template.config && typeof template.config === 'object' && 'steps' in template.config) {
+      return (template.config as any).steps?.length || 0;
+    }
+    return 0;
+  };
+
   if (loading) {
     return <div className="text-white">Загрузка шаблонов сценариев...</div>;
   }
@@ -266,7 +279,7 @@ const ScenarioTemplateManager = () => {
             </DialogHeader>
             
             <div className="space-y-6">
-              {/* Основная информация */}
+              {/* Basic information */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-300">Название</label>
@@ -304,7 +317,7 @@ const ScenarioTemplateManager = () => {
                 />
               </div>
 
-              {/* Добавление шагов */}
+              {/* Add steps section */}
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
                   <CardTitle className="text-white">Добавить шаг</CardTitle>
@@ -346,7 +359,7 @@ const ScenarioTemplateManager = () => {
                     </div>
                   </div>
 
-                  {/* Динамические поля в зависимости от типа шага */}
+                  {/* Dynamic fields based on step type */}
                   {getCurrentStepFields().length > 0 && (
                     <div className="grid grid-cols-2 gap-4">
                       {getCurrentStepFields().map((field) => (
@@ -379,7 +392,7 @@ const ScenarioTemplateManager = () => {
                 </CardContent>
               </Card>
 
-              {/* Список добавленных шагов */}
+              {/* List of added steps */}
               {formData.steps.length > 0 && (
                 <Card className="bg-gray-900 border-gray-700">
                   <CardHeader>
@@ -425,7 +438,7 @@ const ScenarioTemplateManager = () => {
         </Dialog>
       </div>
 
-      {/* Таблица шаблонов */}
+      {/* Templates table */}
       <Card className="bg-gray-800/50 border-gray-700">
         <CardContent className="p-0">
           <Table>
@@ -445,7 +458,6 @@ const ScenarioTemplateManager = () => {
                   <TableCell>
                     <div>
                       <div className="text-white font-medium">{template.name}</div>
-                      <div className="text-sm text-gray-400">{template.description}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -453,10 +465,10 @@ const ScenarioTemplateManager = () => {
                       {template.platform}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-300">{template.steps.length}</TableCell>
+                  <TableCell className="text-gray-300">{getStepsCount(template)}</TableCell>
                   <TableCell>
-                    <Badge variant={template.active ? 'default' : 'secondary'}>
-                      {template.active ? 'Активен' : 'Неактивен'}
+                    <Badge variant="default">
+                      Шаблон
                     </Badge>
                   </TableCell>
                   <TableCell className="text-gray-300">
@@ -478,13 +490,6 @@ const ScenarioTemplateManager = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
                         className="border-red-600 text-red-400 hover:bg-red-900"
                         onClick={() => handleDeleteTemplate(template.id)}
                       >
@@ -499,7 +504,7 @@ const ScenarioTemplateManager = () => {
         </CardContent>
       </Card>
 
-      {/* Диалог просмотра шаблона */}
+      {/* View template dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
           <DialogHeader>
@@ -522,13 +527,8 @@ const ScenarioTemplateManager = () => {
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-300">Шагов:</span>
-                  <span className="ml-2 text-white">{selectedTemplate.steps.length}</span>
+                  <span className="ml-2 text-white">{getStepsCount(selectedTemplate)}</span>
                 </div>
-              </div>
-
-              <div>
-                <span className="text-sm font-medium text-gray-300">Описание:</span>
-                <p className="text-white mt-1">{selectedTemplate.description}</p>
               </div>
 
               <Card className="bg-gray-900 border-gray-700">
@@ -537,7 +537,7 @@ const ScenarioTemplateManager = () => {
                 </CardHeader>
                 <CardContent>
                   <pre className="text-xs text-gray-300 bg-gray-800 p-4 rounded overflow-x-auto">
-                    {JSON.stringify(selectedTemplate, null, 2)}
+                    {JSON.stringify(selectedTemplate.config, null, 2)}
                   </pre>
                 </CardContent>
               </Card>
