@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
-import { TemplateCreationForm, FormData } from './scenario-templates/TemplateCreationForm';
+import TemplateCreationForm, { FormData } from './scenario-templates/TemplateCreationForm';
 import { TemplateList } from './scenario-templates/TemplateList';
 import { TemplateViewer } from './scenario-templates/TemplateViewer';
 import { StepForm } from './scenario-templates/StepBuilder';
