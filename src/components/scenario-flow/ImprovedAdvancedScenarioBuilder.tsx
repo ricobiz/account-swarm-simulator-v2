@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -58,6 +58,40 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
   const { screenToFlowPosition } = useReactFlow();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+
+  // Слушаем события добавления блоков для мобильных устройств
+  useEffect(() => {
+    const handleAddBlock = (event: CustomEvent) => {
+      const { blockType } = event.detail;
+      
+      import('./BlockTypes').then(({ getBlockTypeById }) => {
+        const blockTypeData = getBlockTypeById(blockType);
+        if (!blockTypeData) return;
+
+        const newNode: Node = {
+          id: `${blockTypeData.id}-${Date.now()}`,
+          type: 'action',
+          position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+          data: {
+            id: `${blockTypeData.id}-${Date.now()}`,
+            type: blockTypeData.id,
+            label: blockTypeData.name,
+            icon: blockTypeData.icon.name,
+            config: {},
+            isConfigured: false,
+            blockType: blockTypeData,
+          },
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+      });
+    };
+
+    window.addEventListener('addBlock', handleAddBlock as EventListener);
+    return () => {
+      window.removeEventListener('addBlock', handleAddBlock as EventListener);
+    };
+  }, [setNodes]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -200,12 +234,19 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
         <ImprovedBlocksSidebar 
           isVisible={sidebarVisible}
           onToggle={() => setSidebarVisible(!sidebarVisible)}
+          isMobile={isMobile}
         />
       )}
 
       {/* Боковая панель с пресетами */}
       {activeTab === 'presets' && sidebarVisible && (
-        <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+        <div className={`
+          ${isMobile 
+            ? 'fixed inset-0 z-50 bg-gray-900' 
+            : 'w-80 bg-gray-800 border-r border-gray-700'
+          } 
+          flex flex-col
+        `}>
           <div className="p-4 border-b border-gray-700 flex items-center justify-between">
             <h3 className="text-white font-medium">Пресеты</h3>
             <Button
@@ -214,7 +255,7 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
               size="sm"
               className="text-white hover:bg-gray-700"
             >
-              ←
+              {isMobile ? '×' : '←'}
             </Button>
           </div>
           <div className="flex-1 overflow-hidden">
@@ -249,52 +290,88 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
           )}
           <Background gap={20} size={1} color="#374151" />
           
-          {/* Панель управления */}
-          <Panel position="top-left" className="space-y-2">
-            {/* Переключатель вкладок */}
-            <div className="flex bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-              <button
-                onClick={() => {
-                  setActiveTab('blocks');
-                  setSidebarVisible(true);
-                }}
-                className={`px-3 py-2 text-sm font-medium flex items-center gap-2 ${
-                  activeTab === 'blocks' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                Блоки
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('presets');
-                  setSidebarVisible(true);
-                }}
-                className={`px-3 py-2 text-sm font-medium ${
-                  activeTab === 'presets' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                }`}
-              >
-                Пресеты
-              </button>
-            </div>
-          </Panel>
+          {/* Панель управления - только для десктопа */}
+          {!isMobile && (
+            <Panel position="top-left" className="space-y-2">
+              {/* Переключатель вкладок */}
+              <div className="flex bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <button
+                  onClick={() => {
+                    setActiveTab('blocks');
+                    setSidebarVisible(true);
+                  }}
+                  className={`px-3 py-2 text-sm font-medium flex items-center gap-2 ${
+                    activeTab === 'blocks' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  Блоки
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('presets');
+                    setSidebarVisible(true);
+                  }}
+                  className={`px-3 py-2 text-sm font-medium ${
+                    activeTab === 'presets' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Пресеты
+                </button>
+              </div>
+            </Panel>
+          )}
+
+          {/* Мобильная панель управления */}
+          {isMobile && (
+            <Panel position="top-center" className="space-y-2">
+              <div className="flex bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <button
+                  onClick={() => {
+                    setActiveTab('blocks');
+                    setSidebarVisible(true);
+                  }}
+                  className={`px-3 py-2 text-sm font-medium ${
+                    activeTab === 'blocks' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Блоки
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('presets');
+                    setSidebarVisible(true);
+                  }}
+                  className={`px-3 py-2 text-sm font-medium ${
+                    activeTab === 'presets' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Пресеты
+                </button>
+              </div>
+            </Panel>
+          )}
 
           <Panel position="top-right" className="space-x-2">
-            <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700" size={isMobile ? "sm" : "default"}>
               <Upload className="mr-2 h-4 w-4" />
-              Импорт
+              {!isMobile && 'Импорт'}
             </Button>
-            <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700">
+            <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700" size={isMobile ? "sm" : "default"}>
               <Download className="mr-2 h-4 w-4" />
-              Экспорт
+              {!isMobile && 'Экспорт'}
             </Button>
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700" size={isMobile ? "sm" : "default"}>
               <Save className="mr-2 h-4 w-4" />
-              Сохранить
+              {!isMobile && 'Сохранить'}
             </Button>
           </Panel>
         </ReactFlow>
@@ -308,9 +385,42 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
         />
       </div>
 
-      {/* Панель настроек выбранного блока */}
-      {selectedNode && configPanelVisible && (
+      {/* Панель настроек выбранного блока - только для десктопа */}
+      {selectedNode && configPanelVisible && !isMobile && (
         <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+          <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h3 className="text-white font-medium flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Настройки блока
+            </h3>
+            <Button
+              onClick={() => {
+                setSelectedNode(null);
+                setConfigPanelVisible(false);
+              }}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-gray-700"
+            >
+              ×
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <BlockConfigPanel
+              node={selectedNode}
+              onSave={(config) => updateNodeConfig(selectedNode.id, config)}
+              onCancel={() => {
+                setSelectedNode(null);
+                setConfigPanelVisible(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Мобильная панель настроек */}
+      {selectedNode && configPanelVisible && isMobile && (
+        <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
           <div className="p-4 border-b border-gray-700 flex items-center justify-between">
             <h3 className="text-white font-medium flex items-center gap-2">
               <Settings className="w-4 h-4" />

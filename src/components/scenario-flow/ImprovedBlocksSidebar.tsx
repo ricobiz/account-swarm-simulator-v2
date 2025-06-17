@@ -4,16 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BLOCK_TYPES, BLOCK_CATEGORIES } from './BlockTypes';
-import { ChevronDown, ChevronRight, Grip } from 'lucide-react';
+import { ChevronDown, ChevronRight, Grip, X } from 'lucide-react';
 
 interface ImprovedBlocksSidebarProps {
   isVisible: boolean;
   onToggle: () => void;
+  isMobile?: boolean;
 }
 
 export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
   isVisible,
-  onToggle
+  onToggle,
+  isMobile = false
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['basic']);
 
@@ -45,7 +47,7 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
 
   if (!isVisible) {
     return (
-      <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50">
+      <div className={`${isMobile ? 'fixed top-4 left-4' : 'fixed left-4 top-1/2 transform -translate-y-1/2'} z-50`}>
         <Button
           onClick={onToggle}
           variant="outline"
@@ -59,9 +61,15 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
   }
 
   return (
-    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full relative">
+    <div className={`
+      ${isMobile 
+        ? 'fixed inset-0 z-50 bg-gray-900' 
+        : 'w-80 bg-gray-800 border-r border-gray-700'
+      } 
+      flex flex-col h-full
+    `}>
       {/* Заголовок с кнопкой скрытия */}
-      <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
         <h3 className="text-white font-medium">Блоки действий</h3>
         <Button
           onClick={onToggle}
@@ -69,7 +77,7 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
           size="sm"
           className="text-white hover:bg-gray-700"
         >
-          ←
+          {isMobile ? <X className="h-4 w-4" /> : '←'}
         </Button>
       </div>
 
@@ -104,6 +112,16 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
                       key={block.id}
                       draggable
                       onDragStart={(event) => onDragStart(event, block.id)}
+                      onClick={() => {
+                        if (isMobile) {
+                          // На мобильных устройствах добавляем блок по клику
+                          const customEvent = new CustomEvent('addBlock', {
+                            detail: { blockType: block.id }
+                          });
+                          window.dispatchEvent(customEvent);
+                          onToggle(); // Закрываем сайдбар после добавления
+                        }
+                      }}
                       className="p-3 bg-gray-800 rounded-lg border border-gray-600 cursor-grab active:cursor-grabbing hover:border-gray-500 transition-all duration-200 group hover:shadow-lg"
                     >
                       <div className="flex items-start gap-3">
@@ -140,6 +158,11 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
                           </div>
                         </div>
                       </div>
+                      {isMobile && (
+                        <div className="mt-2 text-xs text-blue-400 text-center">
+                          Нажмите, чтобы добавить
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -156,7 +179,7 @@ export const ImprovedBlocksSidebar: React.FC<ImprovedBlocksSidebarProps> = ({
           <CardContent className="text-xs text-gray-400 space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Перетащите блоки в рабочую область</span>
+              <span>{isMobile ? 'Нажмите на блок, чтобы добавить' : 'Перетащите блоки в рабочую область'}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
