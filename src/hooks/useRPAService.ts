@@ -38,7 +38,7 @@ export const useRPAService = () => {
           operation_type: 'RPA_TASK_ERROR',
           table_name: 'rpa_tasks',
           record_id: task.taskId,
-          details: { error: error.message, taskType: task.type }
+          details: { error: error.message, taskId: task.taskId, url: task.url }
         });
 
         toast({
@@ -56,7 +56,7 @@ export const useRPAService = () => {
         operation_type: 'RPA_TASK_SUBMITTED',
         table_name: 'rpa_tasks',
         record_id: data.taskId,
-        details: { taskType: task.type, status: 'submitted' }
+        details: { taskId: task.taskId, url: task.url, actionsCount: task.actions.length, status: 'submitted' }
       });
 
       toast({
