@@ -27,7 +27,9 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   onTemplateChange,
   loading
 }) => {
-  const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
+  // Фильтруем шаблоны с валидными ID
+  const validTemplates = templates.filter(template => template.id && template.id.trim() !== '');
+  const selectedTemplateData = validTemplates.find(t => t.id === selectedTemplate);
 
   return (
     <div className="space-y-4">
@@ -46,7 +48,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <SelectValue placeholder="Выберите шаблон для запуска" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600">
-              {templates.map((template) => (
+              {validTemplates.map((template) => (
                 <SelectItem key={template.id} value={template.id}>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />

@@ -69,7 +69,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {PLATFORMS.map((platform) => (
+                      {PLATFORMS.filter(platform => platform.value && platform.value.trim() !== '').map((platform) => (
                         <SelectItem key={platform.value} value={platform.value}>
                           {platform.label}
                         </SelectItem>
