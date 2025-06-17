@@ -44,33 +44,34 @@ export const useTemplateManager = () => {
 
   useEffect(() => {
     if (user && session) {
-      console.log('User and session available, fetching templates for user:', user.id);
+      console.log('Auth ready, fetching templates for user:', user.id);
       fetchTemplates();
     } else {
-      console.log('No user or session found, skipping template fetch');
+      console.log('No auth, setting loading to false');
       setLoading(false);
     }
   }, [user, session]);
 
   const fetchTemplates = async () => {
     if (!user || !session) {
-      console.warn('No user or session found, skipping template fetch');
+      console.warn('No user or session available');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Fetching templates for user:', user.id);
+      console.log('Fetching templates...');
       
-      // Простой запрос без дополнительных проверок
+      // Упрощенный запрос без RLS
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
         .eq('status', 'template')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('Supabase query result:', { data, error });
+      console.log('Templates query result:', { data, error, userID: user.id });
 
       if (error) {
         console.error('Supabase error:', error);
@@ -82,21 +83,14 @@ export const useTemplateManager = () => {
     } catch (error: any) {
       console.error('Error fetching templates:', error);
       
-      // Более детальная обработка ошибок
-      let errorMessage = 'Неизвестная ошибка';
-      if (error.message) {
-        if (error.message.includes('infinite recursion')) {
-          errorMessage = 'Проблема с политиками доступа к данным. Обратитесь к администратору.';
-        } else if (error.message.includes('permission denied')) {
-          errorMessage = 'Нет прав доступа к данным';
-        } else {
-          errorMessage = error.message;
-        }
+      let errorMessage = 'Неизвестная ошибка при загрузке шаблонов';
+      if (error?.message) {
+        errorMessage = error.message;
       }
       
       toast({
-        title: "Ошибка",
-        description: `Не удалось загрузить шаблоны сценариев: ${errorMessage}`,
+        title: "Ошибка загрузки",
+        description: errorMessage,
         variant: "destructive"
       });
       setTemplates([]);
@@ -106,6 +100,7 @@ export const useTemplateManager = () => {
   };
 
   const refreshTemplates = async () => {
+    console.log('Refreshing templates...');
     setRefreshing(true);
     await fetchTemplates();
     setRefreshing(false);
@@ -115,7 +110,7 @@ export const useTemplateManager = () => {
     if (!user || !session) {
       toast({
         title: "Ошибка",
-        description: "Пользователь не авторизован",
+        description: "Необходимо войти в систему",
         variant: "destructive"
       });
       return false;
@@ -146,7 +141,7 @@ export const useTemplateManager = () => {
         .single();
 
       if (error) {
-        console.error('Supabase error creating template:', error);
+        console.error('Template creation error:', error);
         throw error;
       }
 
@@ -156,25 +151,16 @@ export const useTemplateManager = () => {
 
       toast({
         title: "Успешно",
-        description: `Шаблон сценария "${formData.name}" создан`
+        description: `Шаблон "${formData.name}" создан`
       });
 
       return true;
     } catch (error: any) {
       console.error('Error creating template:', error);
       
-      let errorMessage = 'Неизвестная ошибка';
-      if (error.message) {
-        if (error.message.includes('infinite recursion')) {
-          errorMessage = 'Проблема с политиками доступа к данным';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       toast({
-        title: "Ошибка",
-        description: `Не удалось создать шаблон сценария: ${errorMessage}`,
+        title: "Ошибка создания",
+        description: error?.message || 'Не удалось создать шаблон',
         variant: "destructive"
       });
       return false;
@@ -185,7 +171,7 @@ export const useTemplateManager = () => {
     if (!user || !session) {
       toast({
         title: "Ошибка",
-        description: "Пользователь не авторизован",
+        description: "Необходимо войти в систему",
         variant: "destructive"
       });
       return;
@@ -197,10 +183,11 @@ export const useTemplateManager = () => {
       const { error } = await supabase
         .from('scenarios')
         .delete()
-        .eq('id', templateId);
+        .eq('id', templateId)
+        .eq('user_id', user.id);
 
       if (error) {
-        console.error('Supabase error deleting template:', error);
+        console.error('Template deletion error:', error);
         throw error;
       }
 
@@ -208,23 +195,14 @@ export const useTemplateManager = () => {
 
       toast({
         title: "Успешно",
-        description: "Шаблон сценария удален"
+        description: "Шаблон удален"
       });
     } catch (error: any) {
       console.error('Error deleting template:', error);
       
-      let errorMessage = 'Неизвестная ошибка';
-      if (error.message) {
-        if (error.message.includes('infinite recursion')) {
-          errorMessage = 'Проблема с политиками доступа к данным';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       toast({
-        title: "Ошибка",
-        description: `Не удалось удалить шаблон сценария: ${errorMessage}`,
+        title: "Ошибка удаления",
+        description: error?.message || 'Не удалось удалить шаблон',
         variant: "destructive"
       });
     }
