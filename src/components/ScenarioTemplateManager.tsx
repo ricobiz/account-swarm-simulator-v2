@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useTemplateManager } from '@/hooks/useTemplateManager';
 import { useToast } from '@/hooks/use-toast';
 import { validateTemplate } from '@/utils/templateValidation';
