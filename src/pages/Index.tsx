@@ -166,11 +166,11 @@ const Index = () => {
               onClick={() => setMobileMenuOpen(false)}
             />
             
-            {/* Compact Menu */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-800 border-t border-gray-700 rounded-t-xl max-h-[80vh] flex flex-col">
+            {/* Side Menu */}
+            <div className="fixed top-0 left-0 bottom-0 z-50 w-80 bg-gray-800 border-r border-gray-700 flex flex-col transform translate-x-0 transition-transform">
               {/* Menu Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-700">
-                <h2 className="text-lg font-semibold text-white">Навигация</h2>
+                <h2 className="text-lg font-semibold text-white">Account Swarm</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -186,33 +186,32 @@ const Index = () => {
                 <SubscriptionStatus />
               </div>
 
-              {/* Menu Items */}
-              <div className="flex-1 overflow-y-auto p-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {allTabs.map((tab) => {
-                    const IconComponent = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => {
-                          setActiveTab(tab.id);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`
-                          flex flex-col items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors
-                          ${isActive 
-                            ? 'bg-blue-600 text-white' 
-                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                          }
-                        `}
-                      >
-                        <IconComponent className="h-6 w-6" />
-                        <span className="text-xs text-center">{tab.label}</span>
-                      </button>
-                    );
-                  })}
+              {/* Navigation Menu */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-2">
+                  {allTabs.map((tab) => (
+                    <TabButton
+                      key={tab.id}
+                      tab={tab}
+                      isActive={activeTab === tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setMobileMenuOpen(false);
+                      }}
+                    />
+                  ))}
                 </div>
+              </div>
+
+              {/* Menu Footer */}
+              <div className="p-4 border-t border-gray-700">
+                <Button
+                  variant="outline"
+                  onClick={signOut}
+                  className="w-full text-white border-gray-600 hover:bg-gray-700"
+                >
+                  Выйти
+                </Button>
               </div>
             </div>
           </>
