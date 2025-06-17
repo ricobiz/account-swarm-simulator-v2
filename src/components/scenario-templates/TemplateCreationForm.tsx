@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,33 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
   onCreateTemplate,
   stepManager
 }) => {
+  // More robust filtering for platforms
+  const validPlatforms = PLATFORMS.filter(platform => {
+    const hasValidValue = platform.value && 
+                         typeof platform.value === 'string' && 
+                         platform.value.trim() !== '' && 
+                         platform.value !== 'undefined' && 
+                         platform.value !== 'null';
+    
+    const hasValidLabel = platform.label && 
+                         typeof platform.label === 'string' && 
+                         platform.label.trim() !== '';
+    
+    if (!hasValidValue) {
+      console.warn('Platform filtered out due to invalid value:', platform);
+      return false;
+    }
+    
+    if (!hasValidLabel) {
+      console.warn('Platform filtered out due to invalid label:', platform);
+      return false;
+    }
+    
+    return true;
+  });
+
+  console.log('Valid platforms after filtering:', validPlatforms);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
@@ -69,11 +97,14 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {PLATFORMS.filter(platform => platform.value && platform.value.trim() !== '').map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          {platform.label}
-                        </SelectItem>
-                      ))}
+                      {validPlatforms.map((platform) => {
+                        console.log('Rendering platform SelectItem with value:', platform.value);
+                        return (
+                          <SelectItem key={platform.value} value={platform.value}>
+                            {platform.label}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

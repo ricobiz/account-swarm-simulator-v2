@@ -27,8 +27,33 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   onTemplateChange,
   loading
 }) => {
-  // Фильтруем шаблоны с валидными ID
-  const validTemplates = templates.filter(template => template.id && template.id.trim() !== '');
+  // More robust filtering for templates
+  const validTemplates = templates.filter(template => {
+    const hasValidId = template.id && 
+                      typeof template.id === 'string' && 
+                      template.id.trim() !== '' && 
+                      template.id !== 'undefined' && 
+                      template.id !== 'null';
+    
+    const hasValidName = template.name && 
+                        typeof template.name === 'string' && 
+                        template.name.trim() !== '';
+    
+    if (!hasValidId) {
+      console.warn('Template filtered out due to invalid ID:', template);
+      return false;
+    }
+    
+    if (!hasValidName) {
+      console.warn('Template filtered out due to invalid name:', template);
+      return false;
+    }
+    
+    return true;
+  });
+
+  console.log('Valid templates after filtering:', validTemplates);
+  
   const selectedTemplateData = validTemplates.find(t => t.id === selectedTemplate);
 
   return (
@@ -48,17 +73,20 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <SelectValue placeholder="Выберите шаблон для запуска" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600">
-              {validTemplates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span>{template.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {template.platform}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))}
+              {validTemplates.map((template) => {
+                console.log('Rendering SelectItem with value:', template.id);
+                return (
+                  <SelectItem key={template.id} value={template.id}>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span>{template.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {template.platform}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         )}
