@@ -8,17 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { AccountsPanel } from "@/components/AccountsPanel";
-import { ScenariosPanel } from "@/components/ScenariosPanel";
-import { ProxiesPanel } from "@/components/ProxiesPanel";
-import { MonitoringPanel } from "@/components/MonitoringPanel";
-import { MetricsPanel } from "@/components/MetricsPanel";
-import { ScenarioTemplateManager } from "@/components/ScenarioTemplateManager";
-import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
-import { SubscriptionManagementPanel } from "@/components/admin/SubscriptionManagementPanel";
-import { PasswordManagementPanel } from "@/components/admin/PasswordManagementPanel";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
-import { SubscriptionStatus } from "@/components/SubscriptionStatus";
+import AccountsPanel from "@/components/AccountsPanel";
+import ScenariosPanel from "@/components/ScenariosPanel";
+import ProxiesPanel from "@/components/ProxiesPanel";
+import MonitoringPanel from "@/components/MonitoringPanel";
+import MetricsPanel from "@/components/MetricsPanel";
+import ScenarioTemplateManager from "@/components/ScenarioTemplateManager";
+import UserManagementPanel from "@/components/UserManagementPanel";
+import SubscriptionManagementPanel from "@/components/admin/SubscriptionManagementPanel";
+import PasswordManagementPanel from "@/components/admin/PasswordManagementPanel";
+import AdminDashboard from "@/components/admin/AdminDashboard";
+import SubscriptionStatus from "@/components/SubscriptionStatus";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Users, 
@@ -37,7 +37,7 @@ import {
 
 const Index = () => {
   const { user, signOut } = useAuth();
-  const { data: profile } = useProfile();
+  const { profile } = useProfile();
   const [activeTab, setActiveTab] = useState("accounts");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -96,7 +96,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Мобильная шапка */}
+      {/* Mobile header */}
       {isMobile && (
         <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
           <Button
@@ -120,7 +120,7 @@ const Index = () => {
       )}
 
       <div className="flex h-screen">
-        {/* Боковая панель */}
+        {/* Sidebar */}
         <div className={`
           ${isMobile 
             ? `fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out ${
@@ -130,7 +130,7 @@ const Index = () => {
           }
           bg-gray-800 border-r border-gray-700 flex flex-col
         `}>
-          {/* Десктопная шапка */}
+          {/* Desktop header */}
           {!isMobile && (
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
@@ -148,14 +148,14 @@ const Index = () => {
             </div>
           )}
 
-          {/* Мобильный статус подписки */}
+          {/* Mobile subscription status */}
           {isMobile && (
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-gray-700 mt-16">
               <SubscriptionStatus />
             </div>
           )}
 
-          {/* Навигация */}
+          {/* Navigation */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-1">
               {allTabs.map((tab) => (
@@ -173,9 +173,9 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Основной контент */}
+        {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Десктопная шапка с активной вкладкой */}
+          {/* Desktop header with active tab */}
           {!isMobile && (
             <div className="bg-gray-800 border-b border-gray-700 p-4">
               <div className="flex items-center gap-2">
@@ -185,14 +185,14 @@ const Index = () => {
             </div>
           )}
 
-          {/* Контент вкладки */}
+          {/* Tab content */}
           <div className="flex-1 overflow-auto p-4">
             {ActiveComponent && <ActiveComponent />}
           </div>
         </div>
       </div>
 
-      {/* Мобильный оверлей */}
+      {/* Mobile overlay */}
       {isMobile && mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
