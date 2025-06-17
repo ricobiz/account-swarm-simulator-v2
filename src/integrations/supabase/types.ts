@@ -56,6 +56,54 @@ export type Database = {
           },
         ]
       }
+      logs: {
+        Row: {
+          account_id: string | null
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          scenario_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          scenario_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          scenario_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logs_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proxies: {
         Row: {
           country: string | null
