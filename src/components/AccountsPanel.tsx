@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Play, Pause, Plus, Search, Filter } from 'lucide-react';
 
-interface AccountsPanelProps {
-  isRunning: boolean;
-}
-
-const AccountsPanel: React.FC<AccountsPanelProps> = ({ isRunning }) => {
+const AccountsPanel: React.FC = () => {
   const [accounts] = useState([
     { id: 1, username: '@socialmedia_user1', platform: 'Instagram', status: 'active', proxy: '192.168.1.1', lastAction: '2 min ago' },
     { id: 2, username: '@twitter_account2', platform: 'Twitter', status: 'idle', proxy: '192.168.1.2', lastAction: '5 min ago' },
