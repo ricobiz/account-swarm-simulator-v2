@@ -27,7 +27,7 @@ const nodeTypes = {
   action: ActionNode,
 };
 
-export interface ActionNodeData {
+export interface ActionNodeData extends Record<string, unknown> {
   id: string;
   type: 'navigate' | 'click' | 'type' | 'wait' | 'view';
   label: string;
@@ -36,7 +36,7 @@ export interface ActionNodeData {
   isConfigured: boolean;
 }
 
-const initialNodes: Node<ActionNodeData>[] = [
+const initialNodes: Node[] = [
   {
     id: 'start',
     type: 'input',
@@ -56,7 +56,7 @@ const ScenarioFlowBuilderContent: React.FC<{
 }> = ({ onSave }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState<Node<ActionNodeData> | null>(null);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const { screenToFlowPosition } = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -93,7 +93,7 @@ const ScenarioFlowBuilderContent: React.FC<{
       const actionConfig = actionTypes[type as keyof typeof actionTypes];
       if (!actionConfig) return;
 
-      const newNode: Node<ActionNodeData> = {
+      const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type: 'action',
         position,
@@ -104,7 +104,7 @@ const ScenarioFlowBuilderContent: React.FC<{
           icon: actionConfig.icon,
           config: {},
           isConfigured: false,
-        },
+        } as ActionNodeData,
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -114,7 +114,7 @@ const ScenarioFlowBuilderContent: React.FC<{
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'action') {
-      setSelectedNode(node as Node<ActionNodeData>);
+      setSelectedNode(node);
     }
   }, []);
 
@@ -140,6 +140,8 @@ const ScenarioFlowBuilderContent: React.FC<{
   const handleSave = () => {
     onSave(nodes, edges);
   };
+
+  const selectedNodeData = selectedNode?.data as ActionNodeData | undefined;
 
   return (
     <div className="flex h-[800px] bg-gray-900 rounded-lg overflow-hidden">
@@ -178,13 +180,13 @@ const ScenarioFlowBuilderContent: React.FC<{
       </div>
 
       {/* Панель настроек выбранного узла */}
-      {selectedNode && (
+      {selectedNode && selectedNodeData && (
         <div className="w-80 bg-gray-800 border-l border-gray-700 p-4 overflow-y-auto">
           <Card className="bg-gray-900 border-gray-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <selectedNode.data.icon className="h-5 w-5 text-blue-400" />
-                {selectedNode.data.label}
+                <selectedNodeData.icon className="h-5 w-5 text-blue-400" />
+                {selectedNodeData.label}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -202,14 +204,15 @@ const ScenarioFlowBuilderContent: React.FC<{
 };
 
 const NodeConfigPanel: React.FC<{
-  node: Node<ActionNodeData>;
+  node: Node;
   onSave: (config: Record<string, any>) => void;
   onCancel: () => void;
 }> = ({ node, onSave, onCancel }) => {
-  const [config, setConfig] = useState(node.data.config);
+  const nodeData = node.data as ActionNodeData;
+  const [config, setConfig] = useState(nodeData.config);
 
   const renderConfigFields = () => {
-    switch (node.data.type) {
+    switch (nodeData.type) {
       case 'navigate':
         return (
           <div className="space-y-3">

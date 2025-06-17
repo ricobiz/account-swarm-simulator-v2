@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormData } from '@/hooks/useTemplateManager';
-import { ScenarioFlowBuilder } from '../scenario-flow/ScenarioFlowBuilder';
+import { ScenarioFlowBuilder, ActionNodeData } from '../scenario-flow/ScenarioFlowBuilder';
 import { Node, Edge } from '@xyflow/react';
 
 const PLATFORMS = [
@@ -40,13 +40,16 @@ export const VisualTemplateCreationForm: React.FC<VisualTemplateCreationFormProp
     // Преобразуем граф в массив шагов
     const steps = nodes
       .filter(node => node.type === 'action')
-      .map(node => ({
-        id: node.id,
-        type: node.data.type,
-        name: node.data.label,
-        description: `Автоматически создано из визуального конструктора`,
-        ...node.data.config
-      }));
+      .map(node => {
+        const nodeData = node.data as ActionNodeData;
+        return {
+          id: node.id,
+          type: nodeData.type,
+          name: nodeData.label,
+          description: `Автоматически создано из визуального конструктора`,
+          ...nodeData.config
+        };
+      });
 
     setFormData({
       ...formData,
