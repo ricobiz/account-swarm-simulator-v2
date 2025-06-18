@@ -195,6 +195,7 @@ const Index = () => {
     );
   }
 
+  // Main application interface for authenticated users
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
       <div className="container mx-auto px-4 py-8">
@@ -216,7 +217,9 @@ const Index = () => {
           </div>
         </div>
 
-        <SubscriptionStatus />
+        <div className="mb-6">
+          <SubscriptionStatus />
+        </div>
 
         <Tabs defaultValue="launch" className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 mb-6">
