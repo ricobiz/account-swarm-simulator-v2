@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
 
 interface Scenario {
   id: string;
@@ -12,6 +13,7 @@ interface Scenario {
   progress: number;
   next_run: string | null;
   config: any;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +22,7 @@ export const useScenarios = () => {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const fetchScenarios = async () => {
     if (!user) {
@@ -48,12 +51,17 @@ export const useScenarios = () => {
     } catch (error) {
       console.error('Error in fetchScenarios:', error);
       setScenarios([]);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить сценарии",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const addScenario = async (scenarioData: Omit<Scenario, 'id' | 'created_at' | 'updated_at'>) => {
+  const addScenario = async (scenarioData: Omit<Scenario, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     if (!user) {
       console.error('No user for adding scenario');
       return { data: null, error: { message: 'No authenticated user' } };
@@ -77,9 +85,18 @@ export const useScenarios = () => {
       
       console.log('Scenario added successfully:', data);
       setScenarios(prev => [data, ...prev]);
+      toast({
+        title: "Успешно",
+        description: "Сценарий добавлен"
+      });
       return { data, error: null };
     } catch (error) {
       console.error('Error in addScenario:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось добавить сценарий",
+        variant: "destructive"
+      });
       return { data: null, error };
     }
   };
@@ -96,7 +113,6 @@ export const useScenarios = () => {
         .from('scenarios')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -107,9 +123,18 @@ export const useScenarios = () => {
       
       console.log('Scenario updated successfully:', data);
       setScenarios(prev => prev.map(scenario => scenario.id === id ? data : scenario));
+      toast({
+        title: "Успешно",
+        description: "Сценарий обновлен"
+      });
       return { data, error: null };
     } catch (error) {
       console.error('Error in updateScenario:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить сценарий",
+        variant: "destructive"
+      });
       return { data: null, error };
     }
   };
@@ -125,8 +150,7 @@ export const useScenarios = () => {
       const { error } = await supabase
         .from('scenarios')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) {
         console.error('Error deleting scenario:', error);
@@ -135,9 +159,18 @@ export const useScenarios = () => {
       
       console.log('Scenario deleted successfully');
       setScenarios(prev => prev.filter(scenario => scenario.id !== id));
+      toast({
+        title: "Успешно",
+        description: "Сценарий удален"
+      });
       return { error: null };
     } catch (error) {
       console.error('Error in deleteScenario:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить сценарий",
+        variant: "destructive"
+      });
       return { error };
     }
   };

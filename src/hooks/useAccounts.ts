@@ -2,15 +2,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
 
 interface Account {
   id: string;
   username: string;
-  password: string;
   platform: string;
+  password: string;
   status: string;
+  last_action: string | null;
   proxy_id: string | null;
-  last_action: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +21,7 @@ export const useAccounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const fetchAccounts = async () => {
     if (!user) {
@@ -47,19 +50,24 @@ export const useAccounts = () => {
     } catch (error) {
       console.error('Error in fetchAccounts:', error);
       setAccounts([]);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить аккаунты",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const addAccount = async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => {
+  const addAccount = async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     if (!user) {
       console.error('No user for adding account');
       return { data: null, error: { message: 'No authenticated user' } };
     }
 
     try {
-      console.log('Adding account:', { ...accountData, password: '[HIDDEN]' });
+      console.log('Adding account:', accountData);
       const { data, error } = await supabase
         .from('accounts')
         .insert([{
@@ -74,11 +82,20 @@ export const useAccounts = () => {
         return { data: null, error };
       }
       
-      console.log('Account added successfully:', { ...data, password: '[HIDDEN]' });
+      console.log('Account added successfully:', data);
       setAccounts(prev => [data, ...prev]);
+      toast({
+        title: "Успешно",
+        description: "Аккаунт добавлен"
+      });
       return { data, error: null };
     } catch (error) {
       console.error('Error in addAccount:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось добавить аккаунт",
+        variant: "destructive"
+      });
       return { data: null, error };
     }
   };
@@ -90,12 +107,11 @@ export const useAccounts = () => {
     }
 
     try {
-      console.log('Updating account:', id, { ...updates, password: updates.password ? '[HIDDEN]' : undefined });
+      console.log('Updating account:', id, updates);
       const { data, error } = await supabase
         .from('accounts')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -104,11 +120,20 @@ export const useAccounts = () => {
         return { data: null, error };
       }
       
-      console.log('Account updated successfully:', { ...data, password: '[HIDDEN]' });
-      setAccounts(prev => prev.map(acc => acc.id === id ? data : acc));
+      console.log('Account updated successfully:', data);
+      setAccounts(prev => prev.map(account => account.id === id ? data : account));
+      toast({
+        title: "Успешно",
+        description: "Аккаунт обновлен"
+      });
       return { data, error: null };
     } catch (error) {
       console.error('Error in updateAccount:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить аккаунт",
+        variant: "destructive"
+      });
       return { data: null, error };
     }
   };
@@ -124,8 +149,7 @@ export const useAccounts = () => {
       const { error } = await supabase
         .from('accounts')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) {
         console.error('Error deleting account:', error);
@@ -133,10 +157,19 @@ export const useAccounts = () => {
       }
       
       console.log('Account deleted successfully');
-      setAccounts(prev => prev.filter(acc => acc.id !== id));
+      setAccounts(prev => prev.filter(account => account.id !== id));
+      toast({
+        title: "Успешно",
+        description: "Аккаунт удален"
+      });
       return { error: null };
     } catch (error) {
       console.error('Error in deleteAccount:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить аккаунт",
+        variant: "destructive"
+      });
       return { error };
     }
   };
