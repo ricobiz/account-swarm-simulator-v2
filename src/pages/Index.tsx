@@ -26,6 +26,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('launch');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  console.log('Index render - User:', !!user, 'Loading:', loading);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -71,6 +73,7 @@ const Index = () => {
   };
 
   if (loading) {
+    console.log('Showing loading screen');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
         <div className="flex items-center gap-2 text-white">
@@ -82,6 +85,7 @@ const Index = () => {
   }
 
   if (!user) {
+    console.log('User not authenticated, showing login');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-gray-800/50 border-gray-700">
@@ -196,6 +200,8 @@ const Index = () => {
       </div>
     );
   }
+
+  console.log('User authenticated, showing main app');
 
   // Main application interface for authenticated users
   return (
