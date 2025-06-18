@@ -1,0 +1,22 @@
+
+version: '3.8'
+
+services:
+  rpa-bot:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DISPLAY=:99
+      - PYTHONUNBUFFERED=1
+      - SUPABASE_URL=https://izmgzstdgoswlozinmyk.supabase.co
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+    volumes:
+      - ./screenshots:/app/screenshots
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

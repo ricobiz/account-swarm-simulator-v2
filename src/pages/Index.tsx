@@ -1,6 +1,7 @@
 
 import { TestRPAButton } from "@/components/TestRPAButton";
 import { ProcessMonitorProvider } from "@/components/ProcessMonitorProvider";
+import { CloudRPAStatus } from "@/components/rpa/CloudRPAStatus";
 
 const Index = () => {
   return (
@@ -14,6 +15,11 @@ const Index = () => {
             <p className="text-xl text-gray-300 mb-8">
               Автоматизируйте ваши социальные сети с помощью RPA технологий
             </p>
+          </div>
+
+          {/* Статус облачного RPA-бота */}
+          <div className="max-w-md mx-auto mb-8">
+            <CloudRPAStatus />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
