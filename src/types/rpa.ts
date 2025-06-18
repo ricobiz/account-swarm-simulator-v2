@@ -1,5 +1,4 @@
 
-
 export interface RPATask {
   taskId: string;
   url: string;
@@ -11,13 +10,15 @@ export interface RPATask {
 }
 
 export interface RPAAction {
-  type: 'move' | 'click' | 'type' | 'wait' | 'scroll' | 'key';
+  type: 'move' | 'click' | 'type' | 'wait' | 'scroll' | 'key' | 'navigate' | 'check_element';
   x?: number;
   y?: number;
   button?: 'left' | 'right' | 'middle';
   text?: string;
   duration?: number;
   key?: string;
+  url?: string;
+  selector?: string;
   [key: string]: any; // Индексная сигнатура для совместимости с Json
 }
 
@@ -43,4 +44,3 @@ export interface RPATaskInfo {
   result?: RPAResult;
   task: RPATask;
 }
-

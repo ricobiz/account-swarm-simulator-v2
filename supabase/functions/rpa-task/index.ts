@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
@@ -31,10 +32,10 @@ serve(async (req) => {
       const body = await req.json();
       const task: RPATask = body.task;
 
-      console.log('Получена RPA задача:', task);
+      console.log('Получена RPA задача:', JSON.stringify(task, null, 2));
 
       if (!task || !task.taskId) {
-        console.error('Недопустимые данные задачи:', body);
+        console.error('Недопустимые данные задачи:', JSON.stringify(body, null, 2));
         return new Response(
           JSON.stringify({ error: 'Недопустимые данные задачи' }),
           { 
@@ -60,6 +61,7 @@ serve(async (req) => {
       const rpaEndpoint = Deno.env.get('RPA_BOT_ENDPOINT');
       if (rpaEndpoint) {
         try {
+          console.log('Отправка задачи внешнему RPA-боту...');
           const response = await fetch(`${rpaEndpoint}/execute`, {
             method: 'POST',
             headers: {
@@ -77,7 +79,56 @@ serve(async (req) => {
           console.error('Ошибка отправки задачи RPA-боту:', error);
         }
       } else {
-        console.log('RPA_BOT_ENDPOINT не настроен, задача только сохранена в БД');
+        console.log('RPA_BOT_ENDPOINT не настроен, имитируем выполнение задачи...');
+        
+        // Имитируем выполнение задачи для демонстрации
+        setTimeout(async () => {
+          try {
+            const mockResult = {
+              success: true,
+              message: 'Имитация проверки аккаунта выполнена успешно',
+              executionTime: 5000,
+              completedActions: task.actions.length,
+              data: {
+                accountChecked: true,
+                loginAttempted: true,
+                status: 'working'
+              }
+            };
+
+            console.log('Обновление результата имитации задачи:', task.taskId);
+
+            const { error: updateError } = await supabase
+              .from('rpa_tasks')
+              .update({
+                status: 'completed',
+                result_data: mockResult,
+                updated_at: new Date().toISOString()
+              })
+              .eq('task_id', task.taskId);
+
+            if (updateError) {
+              console.error('Ошибка обновления результата имитации:', updateError);
+            } else {
+              console.log('Результат имитации успешно сохранен');
+            }
+
+            // Логируем результат
+            await supabase
+              .from('logs')
+              .insert({
+                user_id: null,
+                account_id: task.accountId,
+                scenario_id: task.scenarioId,
+                action: 'RPA задача выполнена (имитация)',
+                details: mockResult.message,
+                status: 'success'
+              });
+
+          } catch (error) {
+            console.error('Ошибка при имитации выполнения:', error);
+          }
+        }, 3000); // Имитируем задержку в 3 секунды
       }
 
       // Логируем отправку задачи
@@ -88,7 +139,7 @@ serve(async (req) => {
           account_id: task.accountId,
           scenario_id: task.scenarioId,
           action: 'RPA задача отправлена',
-          details: `Задача ${task.taskId} отправлена RPA-боту для выполнения`,
+          details: `Задача ${task.taskId} принята в обработку`,
           status: 'info'
         });
 
