@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,8 +37,11 @@ export const useAutomationService = () => {
 
       // Создаем сценарии для каждого аккаунта
       const scenarioPromises = accountIds.map(async (accountId) => {
+        // Safely handle template config
+        const baseConfig = template.config && typeof template.config === 'object' ? template.config : {};
+        
         const scenarioConfig = {
-          ...(template.config || {}), // Safely handle null config
+          ...baseConfig,
           executionConfig: config,
           accountId,
           userId,
