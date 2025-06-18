@@ -24,29 +24,16 @@ export const VisualBasicInfoSection: React.FC<VisualBasicInfoSectionProps> = ({
   formData,
   setFormData
 }) => {
-  // Robust platform filtering to prevent empty values
+  // Ensure all platforms have valid values
   const validPlatforms = PLATFORMS.filter(platform => {
-    const hasValidValue = platform?.value && 
-                         typeof platform.value === 'string' && 
-                         platform.value.trim() !== '' && 
-                         platform.value !== 'undefined' && 
-                         platform.value !== 'null' &&
-                         platform.value.length > 0;
-    
-    const hasValidLabel = platform?.label && 
-                         typeof platform.label === 'string' && 
-                         platform.label.trim() !== '' &&
-                         platform.label.length > 0;
-    
-    if (!hasValidValue || !hasValidLabel) {
-      console.warn('Platform filtered out in VisualBasicInfoSection:', platform);
-      return false;
-    }
-    
-    return true;
+    return platform && 
+           typeof platform.value === 'string' && 
+           platform.value.trim().length > 0 &&
+           typeof platform.label === 'string' && 
+           platform.label.trim().length > 0;
   });
 
-  console.log('VisualBasicInfoSection - Valid platforms:', validPlatforms.length);
+  console.log('VisualBasicInfoSection - Valid platforms:', validPlatforms);
 
   return (
     <Card className="bg-gray-900 border-gray-700">
