@@ -2,6 +2,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useProcessMonitor, ProcessStatus } from '@/hooks/useProcessMonitor';
 
+// Экспортируем тип ProcessStatus
+export type { ProcessStatus };
+
 interface ProcessMonitorContextType {
   processes: ProcessStatus[];
   startProcess: (type: ProcessStatus['type'], name: string, details?: string) => string;
