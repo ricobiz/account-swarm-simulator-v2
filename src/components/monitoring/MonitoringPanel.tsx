@@ -14,7 +14,7 @@ const MonitoringPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
   
-  const { logs, loading: logsLoading, fetchLogs } = useLogs();
+  const { logs, loading: logsLoading, refetch: refetchLogs } = useLogs();
   const { accounts } = useAccounts();
   const { scenarios } = useScenarios();
 
@@ -23,11 +23,11 @@ const MonitoringPanel = () => {
     if (!autoRefresh) return;
     
     const interval = setInterval(() => {
-      fetchLogs();
+      refetchLogs();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchLogs]);
+  }, [autoRefresh, refetchLogs]);
 
   // Статистика
   const stats = {
@@ -76,7 +76,7 @@ const MonitoringPanel = () => {
             setFilterAccount={setFilterAccount}
             autoRefresh={autoRefresh}
             setAutoRefresh={setAutoRefresh}
-            onRefresh={() => fetchLogs()}
+            onRefresh={() => refetchLogs()}
           />
         </TabsContent>
 

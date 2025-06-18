@@ -160,6 +160,8 @@ const ImportAccountsPanel = () => {
         
         if (addLog) {
           await addLog({
+            account_id: null,
+            scenario_id: null,
             action: 'Импорт аккаунта',
             details: `Попытка добавить дубликат: ${account.username} (${account.platform})`,
             status: 'warning'
@@ -187,6 +189,8 @@ const ImportAccountsPanel = () => {
             
             if (addLog) {
               await addLog({
+                account_id: null,
+                scenario_id: null,
                 action: 'Импорт аккаунта',
                 details: `Ошибка при добавлении ${account.username}: ${result.error.message}`,
                 status: 'error'
@@ -199,7 +203,8 @@ const ImportAccountsPanel = () => {
             
             if (addLog) {
               await addLog({
-                account_id: result.data?.id,
+                account_id: result.data?.id || null,
+                scenario_id: null,
                 action: 'Импорт аккаунта',
                 details: `Успешно добавлен аккаунт ${account.username} (${account.platform})`,
                 status: 'success'
@@ -213,6 +218,8 @@ const ImportAccountsPanel = () => {
           
           if (addLog) {
             await addLog({
+              account_id: null,
+              scenario_id: null,
               action: 'Импорт аккаунта',
               details: `Критическая ошибка при добавлении ${account.username}: ${error.message}`,
               status: 'error'
