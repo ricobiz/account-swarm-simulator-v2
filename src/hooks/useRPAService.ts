@@ -2,158 +2,165 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import type { RPATask, RPAResult, RPATaskInfo, RPATaskStatus } from '@/types/rpa';
+import type { RPATask, RPATaskStatus, RPATaskResult } from '@/types/rpa';
 
 export const useRPAService = () => {
-  const [loading, setLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  const submitRPATask = async (task: RPATask): Promise<{ success: boolean; taskId?: string; error?: string }> => {
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    setLoading(true);
+  const submitRPATask = async (task: RPATask): Promise<{ success: boolean; error?: string }> => {
     try {
+      setIsProcessing(true);
       console.log('Отправка RPA задачи:', task);
 
-      // Add user context to task data for security
-      const secureTask = {
-        ...task,
-        userId: user.id,
-        timestamp: new Date().toISOString()
-      };
+      // Получаем текущего пользователя
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Пользователь не авторизован');
+      }
 
+      // Сохраняем задачу в базу данных с user_id
+      const { error: insertError } = await supabase
+        .from('rpa_tasks')
+        .insert({
+          task_id: task.taskId,
+          user_id: user.id, // Добавляем user_id
+          status: 'pending',
+          task_data: {
+            url: task.url,
+            actions: task.actions,
+            accountId: task.accountId,
+            scenarioId: task.scenarioId,
+            blockId: task.blockId,
+            timeout: task.timeout
+          }
+        });
+
+      if (insertError) {
+        console.error('Ошибка сохранения RPA задачи:', insertError);
+        throw new Error(`Не удалось сохранить задачу: ${insertError.message}`);
+      }
+
+      // Отправляем задачу через Edge Function
       const { data, error } = await supabase.functions.invoke('rpa-task', {
-        body: { task: secureTask }
+        body: {
+          taskId: task.taskId,
+          url: task.url,
+          actions: task.actions,
+          accountId: task.accountId,
+          scenarioId: task.scenarioId,
+          blockId: task.blockId,
+          timeout: task.timeout
+        }
       });
 
       if (error) {
         console.error('Ошибка отправки RPA задачи:', error);
         
-        // Log security event
-        await supabase.rpc('audit_sensitive_operation', {
-          operation_type: 'RPA_TASK_ERROR',
-          table_name: 'rpa_tasks',
-          record_id: task.taskId,
-          details: { error: error.message, taskId: task.taskId, url: task.url }
-        });
+        // Обновляем статус задачи на failed
+        await supabase
+          .from('rpa_tasks')
+          .update({ 
+            status: 'failed',
+            result_data: { error: error.message, message: 'Ошибка отправки задачи' }
+          })
+          .eq('task_id', task.taskId);
 
-        toast({
-          title: "Ошибка RPA",
-          description: "Не удалось отправить задачу RPA-боту",
-          variant: "destructive"
-        });
-        return { success: false, error: error.message };
+        throw new Error(`Ошибка отправки: ${error.message}`);
       }
 
       console.log('RPA задача успешно отправлена:', data);
       
-      // Log successful task submission
-      await supabase.rpc('audit_sensitive_operation', {
-        operation_type: 'RPA_TASK_SUBMITTED',
-        table_name: 'rpa_tasks',
-        record_id: data.taskId,
-        details: { taskId: task.taskId, url: task.url, actionsCount: task.actions.length, status: 'submitted' }
-      });
-
       toast({
         title: "RPA задача отправлена",
-        description: `Задача ${task.taskId} отправлена RPA-боту`
+        description: `Задача ${task.taskId} отправлена на выполнение`,
       });
 
-      return { success: true, taskId: data.taskId };
+      return { success: true };
+
     } catch (error: any) {
-      console.error('Ошибка при отправке RPA задачи:', error);
+      console.error('Ошибка submitRPATask:', error);
+      
       toast({
-        title: "Ошибка",
-        description: error.message || "Произошла ошибка при отправке RPA задачи",
+        title: "Ошибка отправки RPA задачи",
+        description: error.message,
         variant: "destructive"
       });
+
       return { success: false, error: error.message };
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  const getRPATaskStatus = async (taskId: string): Promise<RPATaskInfo | null> => {
-    if (!user) {
-      console.error('User not authenticated');
-      return null;
-    }
-
+  const getRPATaskStatus = async (taskId: string): Promise<RPATaskStatus | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('rpa-status', {
-        body: { taskId, userId: user.id }
+      const { data } = await supabase.functions.invoke('rpa-status', {
+        body: { taskId }
       });
 
-      if (error) {
-        console.error('Ошибка получения статуса RPA:', error);
-        return null;
-      }
-
-      return data as RPATaskInfo;
+      return data?.status || null;
     } catch (error) {
-      console.error('Ошибка при получении статуса RPA:', error);
+      console.error('Ошибка получения статуса RPA задачи:', error);
       return null;
     }
   };
 
-  const waitForRPACompletion = async (taskId: string, maxWaitTime = 300000): Promise<RPAResult | null> => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
+  const waitForRPACompletion = async (taskId: string, timeout: number = 60000): Promise<RPATaskResult | null> => {
     const startTime = Date.now();
-    const pollInterval = 2000;
+    
+    while (Date.now() - startTime < timeout) {
+      try {
+        // Проверяем статус в локальной базе данных
+        const { data: taskData, error } = await supabase
+          .from('rpa_tasks')
+          .select('status, result_data')
+          .eq('task_id', taskId)
+          .single();
 
-    while (Date.now() - startTime < maxWaitTime) {
-      const taskInfo = await getRPATaskStatus(taskId);
-      
-      if (taskInfo?.status === 'completed') {
-        // Log successful completion
-        await supabase.rpc('audit_sensitive_operation', {
-          operation_type: 'RPA_TASK_COMPLETED',
-          table_name: 'rpa_tasks',
-          record_id: taskId,
-          details: { duration: Date.now() - startTime, status: 'completed' }
-        });
-        
-        return taskInfo.result || null;
-      }
-      
-      if (taskInfo?.status === 'failed') {
-        // Log failure
-        await supabase.rpc('audit_sensitive_operation', {
-          operation_type: 'RPA_TASK_FAILED',
-          table_name: 'rpa_tasks',
-          record_id: taskId,
-          details: { duration: Date.now() - startTime, error: taskInfo.result?.error }
-        });
-        
-        throw new Error(taskInfo.result?.error || 'RPA задача завершилась с ошибкой');
-      }
+        if (error) {
+          console.error('Ошибка получения статуса задачи:', error);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
 
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+        if (taskData.status === 'completed') {
+          return {
+            success: true,
+            message: taskData.result_data?.message || 'Задача выполнена успешно',
+            data: taskData.result_data
+          };
+        }
+
+        if (taskData.status === 'failed' || taskData.status === 'timeout') {
+          return {
+            success: false,
+            error: taskData.result_data?.error || 'Задача завершилась с ошибкой',
+            data: taskData.result_data
+          };
+        }
+
+        // Ждем 2 секунды перед следующей проверкой
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+      } catch (error) {
+        console.error('Ошибка ожидания выполнения RPA:', error);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
 
-    // Log timeout
-    await supabase.rpc('audit_sensitive_operation', {
-      operation_type: 'RPA_TASK_TIMEOUT',
-      table_name: 'rpa_tasks',
-      record_id: taskId,
-      details: { duration: maxWaitTime, status: 'timeout' }
-    });
-
-    throw new Error('Превышено время ожидания выполнения RPA задачи');
+    // Таймаут
+    return {
+      success: false,
+      error: 'Таймаут ожидания выполнения RPA задачи'
+    };
   };
 
   return {
-    loading,
     submitRPATask,
     getRPATaskStatus,
-    waitForRPACompletion
+    waitForRPACompletion,
+    isProcessing
   };
 };

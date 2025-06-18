@@ -13,18 +13,49 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Создаем клиент с анонимным ключом для пользовательского доступа
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: req.headers.get('Authorization') ?? '' },
+      },
+    });
 
     if (req.method === 'GET') {
       console.log('Получение RPA задач...');
       
-      // Получаем все RPA задачи с результатами
+      // Получаем текущего пользователя
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Ошибка аутентификации:', userError);
+        return new Response(
+          JSON.stringify({ error: 'Не авторизован', details: userError?.message }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 401 
+          }
+        );
+      }
+
+      // Получаем RPA задачи пользователя
       const { data: tasks, error } = await supabase
         .from('rpa_tasks')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -39,7 +70,7 @@ serve(async (req) => {
         );
       }
 
-      console.log(`Получено ${tasks?.length || 0} RPA задач`);
+      console.log(`Получено ${tasks?.length || 0} RPA задач для пользователя ${user.id}`);
 
       // Преобразуем данные в нужный формат
       const formattedTasks = (tasks || []).map(task => ({
