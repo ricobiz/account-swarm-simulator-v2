@@ -113,7 +113,7 @@ export const useTemplateManager = () => {
     setRefreshing(false);
   };
 
-  const createTemplate = async () => {
+  const createTemplate = async (templateData?: Partial<FormData>) => {
     if (!user || !session) {
       toast({
         title: "Ошибка",
@@ -123,8 +123,11 @@ export const useTemplateManager = () => {
       return false;
     }
 
+    // Используем переданные данные или текущие formData
+    const dataToUse = templateData || formData;
+
     // Валидация перед созданием
-    if (!formData.name || formData.name.trim() === '') {
+    if (!dataToUse.name || dataToUse.name.trim() === '') {
       toast({
         title: "Ошибка валидации",
         description: "Название шаблона не может быть пустым",
@@ -133,7 +136,7 @@ export const useTemplateManager = () => {
       return false;
     }
 
-    if (!formData.platform || formData.platform.trim() === '') {
+    if (!dataToUse.platform || dataToUse.platform.trim() === '') {
       toast({
         title: "Ошибка валидации",
         description: "Необходимо выбрать платформу",
@@ -142,7 +145,7 @@ export const useTemplateManager = () => {
       return false;
     }
 
-    if (!formData.description || formData.description.trim() === '') {
+    if (!dataToUse.description || dataToUse.description.trim() === '') {
       toast({
         title: "Ошибка валидации",
         description: "Описание шаблона не может быть пустым",
@@ -152,24 +155,24 @@ export const useTemplateManager = () => {
     }
 
     try {
-      console.log('Creating template with data:', formData);
+      console.log('Creating template with data:', dataToUse);
 
       const templateConfig = {
-        steps: formData.steps,
-        settings: formData.settings,
+        steps: dataToUse.steps,
+        settings: dataToUse.settings,
         template_id: `template_${Date.now()}`,
-        description: formData.description,
+        description: dataToUse.description,
         created_by: user.id,
         version: '1.0',
-        flowData: formData.flowData
+        flowData: dataToUse.flowData
       };
 
       const { data, error } = await supabase
         .from('scenarios')
         .insert({
           user_id: user.id,
-          name: formData.name.trim(),
-          platform: formData.platform,
+          name: dataToUse.name.trim(),
+          platform: dataToUse.platform,
           status: 'template',
           config: templateConfig as any
         })
@@ -183,11 +186,15 @@ export const useTemplateManager = () => {
 
       console.log('Template created successfully:', data);
       setTemplates(prev => [data, ...prev]);
-      resetForm();
+      
+      // Только сбрасываем форму, если использовали formData
+      if (!templateData) {
+        resetForm();
+      }
 
       toast({
         title: "Успешно",
-        description: `Шаблон "${formData.name}" создан`
+        description: `Шаблон "${dataToUse.name}" создан`
       });
 
       return true;
