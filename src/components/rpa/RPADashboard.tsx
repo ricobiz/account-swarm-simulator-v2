@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,7 @@ export const RPADashboard: React.FC = () => {
     const checkAuth = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
-        console.log('Проверка авторизации:', { user: !!user, error });
+        console.log('Проверка авторизации в RPA Dashboard:', { user: !!user, error });
         setUser(user);
         setAuthLoading(false);
       } catch (error: any) {
@@ -62,24 +61,39 @@ export const RPADashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Загрузка RPA задач для пользователя:', user.id);
+      console.log('Загрузка RPA задач напрямую из таблицы для пользователя:', user.id);
       
-      const { data, error } = await supabase.functions.invoke('get-rpa-tasks');
+      // Загружаем задачи напрямую из таблицы rpa_tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('rpa_tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Ошибка Edge Function:', error);
-        setError(`Ошибка загрузки: ${error.message}`);
+      if (tasksError) {
+        console.error('Ошибка загрузки RPA задач из таблицы:', tasksError);
+        setError(`Ошибка загрузки: ${tasksError.message}`);
         toast({
           title: "Ошибка загрузки RPA задач",
-          description: error.message,
+          description: tasksError.message,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('Получены RPA задачи:', data);
+      console.log('Получены RPA задачи из таблицы:', tasksData);
       
-      const tasks = Array.isArray(data) ? data : [];
+      // Преобразуем данные в нужный формат
+      const tasks = (tasksData || []).map((task: any) => ({
+        id: task.id,
+        taskId: task.task_id,
+        status: task.status,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+        result: task.result_data,
+        task: task.task_data
+      }));
+      
       setRpaTasks(tasks);
 
       // Подсчитываем статистику
