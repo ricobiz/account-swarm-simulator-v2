@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Upload, Trash2, Edit, Eye, EyeOff, Users, Loader2 } from 'lucide-react';
+import { Plus, Upload, Trash2, Edit, Eye, EyeOff, Users, Loader2, RefreshCw } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useProxies } from '@/hooks/useProxies';
 import { useToast } from '@/hooks/use-toast';
+import { AccountCheckButton } from '@/components/account-check/AccountCheckButton';
 
 const PLATFORMS = [
   { value: 'telegram', label: 'Telegram' },
@@ -134,8 +134,21 @@ const AccountsPanel = () => {
     switch (status) {
       case 'idle': return 'bg-green-500';
       case 'working': return 'bg-yellow-500';
+      case 'checking': return 'bg-blue-500';
       case 'error': return 'bg-red-500';
+      case 'banned': return 'bg-red-800';
       default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'idle': return 'Свободен';
+      case 'working': return 'Работает';
+      case 'checking': return 'Проверяется';
+      case 'error': return 'Ошибка';
+      case 'banned': return 'Заблокирован';
+      default: return status;
     }
   };
 
@@ -320,7 +333,7 @@ const AccountsPanel = () => {
                       </td>
                       <td className="py-3 px-4">
                         <Badge className={getStatusColor(account.status)}>
-                          {account.status}
+                          {getStatusText(account.status)}
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-gray-300">
@@ -334,14 +347,21 @@ const AccountsPanel = () => {
                         {new Date(account.last_action).toLocaleString()}
                       </td>
                       <td className="py-3 px-4">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteAccount(account.id)}
-                          className="border-red-600 text-red-400 hover:bg-red-900"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <AccountCheckButton
+                            accountId={account.id}
+                            platform={account.platform}
+                            disabled={account.status === 'checking' || account.status === 'working'}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteAccount(account.id)}
+                            className="border-red-600 text-red-400 hover:bg-red-900"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
