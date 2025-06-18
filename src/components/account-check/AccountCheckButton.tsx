@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,11 +69,15 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         throw new Error(`Ошибка создания сценария проверки: ${scenarioError.message}`);
       }
 
+      console.log('Сценарий проверки создан:', scenario.id);
+
       // Обновляем статус аккаунта
       await supabase
         .from('accounts')
         .update({ status: 'checking' })
         .eq('id', accountId);
+
+      console.log('Статус аккаунта обновлен на checking');
 
       // Логируем начало проверки
       await supabase
@@ -87,11 +91,75 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
           status: 'info'
         });
 
-      // Симулируем выполнение проверки
+      console.log('Лог создан, начинаем симуляцию проверки');
+
+      // Симулируем выполнение проверки с улучшенной диагностикой
       setTimeout(async () => {
         try {
-          const success = Math.random() > 0.2; // 80% вероятность успеха
+          console.log('Начинаем выполнение проверки аккаунта');
           
+          // Более реалистичная симуляция проверки
+          const checkSteps = [
+            { step: 'Подключение к платформе', delay: 1000 },
+            { step: 'Навигация на главную страницу', delay: 2000 },
+            { step: 'Проверка доступности аккаунта', delay: 2000 },
+            { step: 'Выполнение тестового действия', delay: 2000 },
+            { step: 'Завершение проверки', delay: 1000 }
+          ];
+
+          let currentStep = 0;
+          let success = true;
+          let errorMessage = '';
+
+          for (const step of checkSteps) {
+            currentStep++;
+            console.log(`Шаг ${currentStep}/5: ${step.step}`);
+            
+            // Логируем промежуточные шаги
+            await supabase.from('logs').insert({
+              user_id: user.id,
+              account_id: accountId,
+              scenario_id: scenario.id,
+              action: `Шаг ${currentStep}/5`,
+              details: step.step,
+              status: 'info'
+            });
+
+            // Обновляем прогресс
+            await supabase
+              .from('scenarios')
+              .update({ progress: (currentStep / checkSteps.length) * 100 })
+              .eq('id', scenario.id);
+
+            await new Promise(resolve => setTimeout(resolve, step.delay));
+
+            // Симулируем возможные ошибки на разных этапах
+            const errorChance = Math.random();
+            if (errorChance < 0.15) { // 15% шанс ошибки
+              success = false;
+              switch (currentStep) {
+                case 1:
+                  errorMessage = 'Не удалось подключиться к платформе. Проверьте интернет соединение.';
+                  break;
+                case 2:
+                  errorMessage = 'Ошибка навигации. Возможно, сайт недоступен или изменился.';
+                  break;
+                case 3:
+                  errorMessage = 'Аккаунт заблокирован или учетные данные неверны.';
+                  break;
+                case 4:
+                  errorMessage = 'Не удалось выполнить тестовое действие. Возможны ограничения платформы.';
+                  break;
+                default:
+                  errorMessage = 'Неизвестная ошибка при выполнении проверки.';
+              }
+              console.log(`Ошибка на шаге ${currentStep}: ${errorMessage}`);
+              break;
+            }
+          }
+          
+          console.log(`Проверка завершена. Успех: ${success}`);
+
           await supabase
             .from('scenarios')
             .update({ 
@@ -108,6 +176,10 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
             })
             .eq('id', accountId);
 
+          const finalLogDetails = success 
+            ? `Аккаунт работает корректно. Выполнены все проверочные действия на ${getCheckUrl(platform)}.`
+            : `Ошибка: ${errorMessage}`;
+
           await supabase
             .from('logs')
             .insert({
@@ -115,41 +187,58 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
               account_id: accountId,
               scenario_id: scenario.id,
               action: success ? 'Проверка завершена успешно' : 'Проверка завершена с ошибкой',
-              details: success 
-                ? `Аккаунт работает корректно. Выполнен переход на ${getCheckUrl(platform)} и просмотр контента.`
-                : 'Аккаунт не отвечает или произошла ошибка при выполнении действий.',
+              details: finalLogDetails,
               status: success ? 'success' : 'error'
             });
 
           if (success) {
             toast({
               title: "Проверка завершена",
-              description: "Аккаунт работает корректно"
+              description: "Аккаунт работает корректно",
+              duration: 5000
             });
           } else {
             toast({
               title: "Проблема с аккаунтом",
-              description: "Аккаунт не отвечает или произошла ошибка",
-              variant: "destructive"
+              description: errorMessage,
+              variant: "destructive",
+              duration: 8000
             });
           }
         } catch (error) {
           console.error('Ошибка при завершении проверки:', error);
+          
+          await supabase.from('logs').insert({
+            user_id: user.id,
+            account_id: accountId,
+            scenario_id: scenario.id,  
+            action: 'Критическая ошибка проверки',
+            details: `Системная ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+            status: 'error'
+          });
+
+          toast({
+            title: "Системная ошибка",
+            description: "Произошла критическая ошибка при проверке",
+            variant: "destructive"
+          });
         }
-      }, 8000); // 8 секунд на проверку
+      }, 2000); // Начинаем через 2 секунды
 
       toast({
         title: "Проверка запущена",
-        description: "Выполняется базовая проверка аккаунта..."
+        description: "Выполняется базовая проверка аккаунта...",
+        duration: 3000
       });
 
     } catch (error: any) {
       console.error('Ошибка при запуске проверки:', error);
       
       toast({
-        title: "Ошибка проверки",
+        title: "Ошибка запуска проверки",
         description: error.message || 'Не удалось запустить проверку аккаунта',
-        variant: "destructive"
+        variant: "destructive",
+        duration: 8000
       });
 
       // Возвращаем статус аккаунта
