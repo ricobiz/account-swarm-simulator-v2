@@ -29,19 +29,28 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   // More robust filtering of templates with valid data
   const validTemplates = templates.filter(template => {
-    const hasValidId = template?.id && 
+    // Check if template exists and is an object
+    if (!template || typeof template !== 'object') {
+      console.warn('Template is not a valid object:', template);
+      return false;
+    }
+
+    // Check if ID is valid (not empty, null, undefined, or whitespace)
+    const hasValidId = template.id && 
                       typeof template.id === 'string' && 
                       template.id.trim() !== '' && 
                       template.id !== 'undefined' && 
                       template.id !== 'null' &&
                       template.id.length > 0;
     
-    const hasValidName = template?.name && 
+    // Check if name is valid
+    const hasValidName = template.name && 
                         typeof template.name === 'string' && 
                         template.name.trim() !== '' &&
                         template.name.length > 0;
     
-    const hasValidPlatform = template?.platform && 
+    // Check if platform is valid
+    const hasValidPlatform = template.platform && 
                             typeof template.platform === 'string' && 
                             template.platform.trim() !== '' &&
                             template.platform.length > 0;
@@ -49,10 +58,10 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     const isValid = hasValidId && hasValidName && hasValidPlatform;
     
     if (!isValid) {
-      console.warn('Template filtered out:', {
-        id: template?.id,
-        name: template?.name,
-        platform: template?.platform,
+      console.warn('Template filtered out due to invalid data:', {
+        id: template.id,
+        name: template.name,
+        platform: template.platform,
         hasValidId,
         hasValidName,
         hasValidPlatform
@@ -92,17 +101,30 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <SelectValue placeholder="Выберите шаблон для запуска" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600 max-h-60">
-              {validTemplates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
-                  <div className="flex items-center gap-2 w-full">
-                    <FileText className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate flex-1">{template.name}</span>
-                    <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {template.platform}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))}
+              {validTemplates.map((template) => {
+                // Additional safety check before rendering SelectItem
+                const safeId = template.id?.toString().trim() || `template-${Date.now()}`;
+                const safeName = template.name?.toString().trim() || 'Unnamed Template';
+                const safePlatform = template.platform?.toString().trim() || 'Unknown';
+                
+                // Skip if ID is still empty after safety checks
+                if (!safeId || safeId === '') {
+                  console.warn('Skipping template with empty ID:', template);
+                  return null;
+                }
+                
+                return (
+                  <SelectItem key={safeId} value={safeId}>
+                    <div className="flex items-center gap-2 w-full">
+                      <FileText className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate flex-1">{safeName}</span>
+                      <Badge variant="outline" className="text-xs flex-shrink-0">
+                        {safePlatform}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         )}
