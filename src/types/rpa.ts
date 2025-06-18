@@ -17,6 +17,7 @@ export interface RPAAction {
   text?: string;
   duration?: number;
   key?: string;
+  [key: string]: any; // Добавляем индексную сигнатуру для совместимости с Json
 }
 
 export interface RPAResult {
@@ -41,6 +42,3 @@ export interface RPATaskInfo {
   result?: RPAResult;
   task: RPATask;
 }
-
-// Добавляем RPATaskResult как алиас для обратной совместимости
-export type RPATaskResult = RPAResult;

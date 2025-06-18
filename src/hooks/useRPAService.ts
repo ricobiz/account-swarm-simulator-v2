@@ -26,7 +26,7 @@ export const useRPAService = () => {
         .insert({
           task_id: task.taskId,
           user_id: user.id,
-          status: 'pending',
+          status: 'pending' as const,
           task_data: {
             url: task.url,
             actions: task.actions,
@@ -62,7 +62,7 @@ export const useRPAService = () => {
         await supabase
           .from('rpa_tasks')
           .update({ 
-            status: 'failed',
+            status: 'failed' as const,
             result_data: { error: error.message, message: 'Ошибка отправки задачи' } as any
           })
           .eq('task_id', task.taskId);
@@ -126,7 +126,7 @@ export const useRPAService = () => {
         }
 
         if (taskData.status === 'completed') {
-          const resultData = taskData.result_data as any;
+          const resultData = taskData.result_data as Record<string, any> | null;
           return {
             success: true,
             message: resultData?.message || 'Задача выполнена успешно',
@@ -135,7 +135,7 @@ export const useRPAService = () => {
         }
 
         if (taskData.status === 'failed' || taskData.status === 'timeout') {
-          const resultData = taskData.result_data as any;
+          const resultData = taskData.result_data as Record<string, any> | null;
           return {
             success: false,
             error: resultData?.error || 'Задача завершилась с ошибкой',
