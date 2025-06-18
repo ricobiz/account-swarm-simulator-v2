@@ -27,6 +27,7 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/rpa" element={<RPA />} />
                   <Route path="/launch" element={<ScenarioLaunch />} />
+                  <Route path="/scenario-launch" element={<ScenarioLaunch />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />
