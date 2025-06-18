@@ -63,7 +63,7 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/be782e9a-87fb-4bcd-845c-591777560958) and click on Share -> Publish.
+Simply open [Lovable](https://lovable.dev/projects/be782e9a-87fb-4bcd-845c-591777560958) and click on Share → Publish.
 
 ## Can I connect a custom domain to my Lovable project?
 
@@ -75,215 +75,336 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-trick
 
 ---
 
-# External Controller API
+# 🤖 Cloud RPA Bot Integration
 
-Этот проект предоставляет REST API для внешнего контроллера (AI-агента) для управления фермой аккаунтов и мониторинга.
+## Architecture Overview
 
-## Настройка API
+The SMM platform integrates with external RPA (Robotic Process Automation) bots to perform browser automation tasks. The system consists of:
 
-1. Настройте переменную окружения `API_KEY` в настройках Supabase Edge Functions
-2. Все запросы должны содержать заголовок `x-api-key` с этим ключом
+1. **Frontend Dashboard** - React/TypeScript interface for managing RPA tasks
+2. **Supabase Backend** - Database and Edge Functions for task orchestration
+3. **Cloud RPA Bot** - Python-based automation service deployed on Railway
 
-## API Endpoints
+## Cloud RPA Bot Deployment
 
-### 1. GET /api/status
-Возвращает текущий статус всех аккаунтов и активных сценариев.
+### Prerequisites
 
-**Пример запроса:**
+- GitHub account
+- Railway account (linked to GitHub)
+- Access to Supabase project settings
+
+### Step 1: Create RPA Bot Repository
+
+1. Create a new GitHub repository: `your-username/rpa-bot-cloud`
+2. Make it **private** for security
+3. Upload all files from the `rpa-bot-cloud/` folder to repository root:
+   - `rpa_bot_cloud.py` - Main bot service
+   - `Dockerfile` - Container configuration
+   - `requirements.txt` - Python dependencies
+   - `start.sh` - Container startup script
+   - `railway.json` - Railway deployment config
+   - `.env.example` - Environment variables template
+   - `health-check.py` - Service health monitoring
+   - `README.md` - Bot-specific documentation
+
+### Step 2: Deploy to Railway
+
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select your `rpa-bot-cloud` repository
+4. Railway will automatically detect the Dockerfile and deploy
+
+### Step 3: Configure Environment Variables
+
+In Railway project settings, add these variables:
+
+```env
+SUPABASE_URL=https://izmgzstdgoswlozinmyk.supabase.co
+SUPABASE_SERVICE_KEY=<your_service_role_key>
+PORT=5000
+PYTHONUNBUFFERED=1
+DISPLAY=:99
+```
+
+**To get SUPABASE_SERVICE_KEY:**
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/settings/api)
+2. Copy the "service_role" key from API settings
+
+### Step 4: Get Railway URL
+
+1. After successful deployment, go to Railway project settings
+2. Navigate to "Networking" tab
+3. Generate a public domain
+4. Copy the URL (e.g., `https://your-bot.up.railway.app`)
+
+### Step 5: Update Supabase Configuration
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/settings/functions)
+2. Navigate to Edge Functions settings
+3. Update the `RPA_BOT_ENDPOINT` secret with your Railway URL
+4. **Important:** Remove trailing slashes from URL
+
+### Step 6: Test Deployment
+
+**Health Check:**
 ```bash
-curl -X GET "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-status" \
-  -H "x-api-key: YOUR_API_KEY"
+curl https://your-bot.up.railway.app/health
 ```
 
-**Пример fetch:**
-```javascript
-const response = await fetch('https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-status', {
-  headers: {
-    'x-api-key': 'YOUR_API_KEY'
-  }
-});
-const data = await response.json();
-```
-
-**Пример ответа:**
+Expected response:
 ```json
 {
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "accounts": [
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "username": "user1",
-      "platform": "telegram",
-      "status": "working",
-      "lastAction": "2024-01-15T10:25:00.000Z",
-      "proxyId": "proxy-123",
-      "createdAt": "2024-01-15T09:00:00.000Z",
-      "updatedAt": "2024-01-15T10:25:00.000Z"
-    }
-  ],
-  "scenarios": [
-    {
-      "id": "456e7890-e89b-12d3-a456-426614174001",
-      "name": "Telegram Posting",
-      "platform": "telegram",
-      "status": "running",
-      "progress": 75,
-      "accountsCount": 1,
-      "createdAt": "2024-01-15T09:30:00.000Z",
-      "updatedAt": "2024-01-15T10:25:00.000Z"
-    }
-  ],
-  "recentErrors": 2,
-  "summary": {
-    "totalAccounts": 10,
-    "activeAccounts": 3,
-    "idleAccounts": 6,
-    "errorAccounts": 1,
-    "totalScenarios": 5,
-    "runningScenarios": 2
-  }
+  "status": "ok",
+  "timestamp": "2024-...",
+  "version": "1.0.0",
+  "environment": "railway"
 }
 ```
 
-### 2. GET /api/logs?minutes=10
-Возвращает все логи за последние X минут (по умолчанию 10).
+**Full Test:**
+1. Open SMM platform RPA Dashboard
+2. Create test task with URL: `https://httpbin.org/get`
+3. Add simple navigation action
+4. Execute and verify completion
 
-**Пример запроса:**
+## Docker Container Structure
+
+The RPA bot runs in a containerized environment with:
+
+- **Base:** Python 3.11 slim
+- **Browser:** Google Chrome + ChromeDriver
+- **Display:** Xvfb virtual display server
+- **Framework:** Flask web server + Selenium automation
+- **Security:** Headless browser with anti-detection features
+
+### Local Development
+
 ```bash
-curl -X GET "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-logs?minutes=30" \
-  -H "x-api-key: YOUR_API_KEY"
+# Clone RPA bot repository
+git clone https://github.com/your-username/rpa-bot-cloud.git
+cd rpa-bot-cloud
+
+# Build Docker image
+docker build -t rpa-bot-cloud .
+
+# Run locally
+docker run -p 5000:5000 \
+  -e SUPABASE_URL=https://izmgzstdgoswlozinmyk.supabase.co \
+  -e SUPABASE_SERVICE_KEY=your_key \
+  rpa-bot-cloud
 ```
 
-**Пример fetch:**
-```javascript
-const response = await fetch('https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-logs?minutes=30', {
-  headers: {
-    'x-api-key': 'YOUR_API_KEY'
-  }
-});
-const logs = await response.json();
+## CI/CD Pipeline
+
+### GitHub Actions Integration
+
+Create `.github/workflows/deploy.yml` in your RPA bot repository:
+
+```yaml
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Railway CLI
+      run: npm install -g @railway/cli
+    
+    - name: Deploy to Railway
+      run: railway up --detach
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    
+    - name: Health Check
+      run: |
+        sleep 30
+        curl -f ${{ secrets.RAILWAY_URL }}/health || exit 1
 ```
 
-### 3. POST /api/control/stop-account
-Останавливает указанный аккаунт.
+### Automated Testing
 
-**Пример запроса:**
-```bash
-curl -X POST "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-control/stop-account" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -d '{"accountId": "123e4567-e89b-12d3-a456-426614174000"}'
-```
+The system includes automated health checks and integration tests:
 
-**Пример fetch:**
-```javascript
-const response = await fetch('https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-control/stop-account', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': 'YOUR_API_KEY'
-  },
-  body: JSON.stringify({
-    accountId: '123e4567-e89b-12d3-a456-426614174000'
-  })
-});
-```
+1. **Health Endpoint** - `/health` returns service status
+2. **Capability Check** - `/status` lists available automation features
+3. **Integration Test** - Full workflow test through platform
+4. **Error Monitoring** - Automatic failure notifications
 
-### 4. POST /api/control/restart-account
-Перезапускает задачу для указанного аккаунта.
+### Environment Management
 
-**Пример запроса:**
-```bash
-curl -X POST "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-control/restart-account" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -d '{"accountId": "123e4567-e89b-12d3-a456-426614174000"}'
-```
+Different environments are supported:
 
-### 5. POST /api/control/change-proxy
-Меняет прокси для аккаунта и перезапускает с новой сессией.
+- **Development** - Local Docker container
+- **Staging** - Railway preview deployments
+- **Production** - Railway production with monitoring
 
-**Пример запроса:**
-```bash
-curl -X POST "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-control/change-proxy" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -d '{"accountId": "123e4567-e89b-12d3-a456-426614174000", "proxyId": "new-proxy-456"}'
-```
+## Monitoring and Scaling
 
-### 6. POST /api/control/update-settings
-Обновляет настройки системы на лету.
+### Service Monitoring
 
-**Пример запроса:**
-```bash
-curl -X POST "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/api-control/update-settings" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -d '{
-    "settings": {
-      "maxConcurrentJobs": 5,
-      "checkInterval": 30000,
-      "retryAttempts": 3,
-      "userAgent": "Mozilla/5.0..."
-    }
-  }'
-```
+Railway provides built-in monitoring:
+- CPU/Memory usage tracking
+- Request/response metrics
+- Error rate monitoring
+- Uptime statistics
 
-## Использование с внешним контроллером
+### Scaling Configuration
 
-### Python пример:
+Railway automatically scales based on:
+- Request volume
+- Resource utilization
+- Response time thresholds
+
+Manual scaling options:
+- Replica count adjustment
+- Resource limit configuration
+- Geographic deployment regions
+
+### Error Handling
+
+The RPA bot includes comprehensive error handling:
+- Automatic retry mechanisms
+- Graceful failure recovery
+- Detailed error logging
+- Supabase integration for error tracking
+
+## External Controller API
+
+The platform provides REST API for external automation controllers:
+
+### API Endpoints
+
+- `GET /api/status` - System status and active scenarios
+- `GET /api/logs?minutes=X` - Recent system logs
+- `POST /api/control/stop-account` - Stop specific account
+- `POST /api/control/restart-account` - Restart account tasks
+- `POST /api/control/change-proxy` - Update proxy configuration
+- `POST /api/control/update-settings` - Modify system settings
+
+### Authentication
+
+All API calls require `x-api-key` header with configured API key.
+
+### Integration Examples
+
+**Python Controller:**
 ```python
 import requests
 
 API_BASE = "https://izmgzstdgoswlozinmyk.supabase.co/functions/v1"
-API_KEY = "your-api-key"
+headers = {"x-api-key": "your-api-key"}
 
-headers = {
-    "x-api-key": API_KEY,
-    "Content-Type": "application/json"
-}
-
-# Получить статус
+# Get system status
 status = requests.get(f"{API_BASE}/api-status", headers=headers)
 print(status.json())
 
-# Остановить аккаунт
-response = requests.post(
-    f"{API_BASE}/api-control/stop-account",
-    headers=headers,
-    json={"accountId": "123e4567-e89b-12d3-a456-426614174000"}
-)
+# Control account
+requests.post(f"{API_BASE}/api-control/stop-account", 
+             headers=headers, 
+             json={"accountId": "account-uuid"})
 ```
 
-### Node.js пример:
+**Node.js Controller:**
 ```javascript
 const axios = require('axios');
 
-const apiClient = axios.create({
+const api = axios.create({
   baseURL: 'https://izmgzstdgoswlozinmyk.supabase.co/functions/v1',
-  headers: {
-    'x-api-key': 'your-api-key',
-    'Content-Type': 'application/json'
-  }
+  headers: { 'x-api-key': 'your-api-key' }
 });
 
-// Получить логи за последние 20 минут
-const logs = await apiClient.get('/api-logs?minutes=20');
+// Monitor logs
+const logs = await api.get('/api-logs?minutes=30');
 
-// Перезапустить аккаунт
-const restart = await apiClient.post('/api-control/restart-account', {
-  accountId: '123e4567-e89b-12d3-a456-426614174000'
+// Update settings
+const result = await api.post('/api-control/update-settings', {
+  settings: { maxConcurrentJobs: 10 }
 });
 ```
 
-## Настройка API ключа
+## Security Considerations
 
-1. Перейдите в [Edge Functions secrets](https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/settings/functions)
-2. Добавьте секрет `API_KEY` с вашим ключом
-3. Используйте этот ключ в заголовке `x-api-key` для всех запросов
+### API Security
+- All endpoints require authentication
+- Rate limiting on API calls
+- Input validation and sanitization
+- Audit logging for all operations
 
-## Мониторинг API
+### RPA Bot Security
+- Isolated container environment
+- No persistent data storage
+- Encrypted communication with platform
+- Anti-detection browser configurations
 
-Логи всех API вызовов можно просматривать в:
-- [Edge Function logs](https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/functions)
-- Таблице `logs` в базе данных для системных событий
+### Data Protection
+- No sensitive data stored in bot
+- Secure credential management
+- Encrypted database connections
+- GDPR compliance measures
+
+## Troubleshooting
+
+### Common Issues
+
+**Bot Not Responding:**
+- Check Railway deployment logs
+- Verify environment variables
+- Test health endpoint
+
+**Tasks Failing:**
+- Review browser console errors
+- Check Selenium WebDriver logs
+- Verify target website accessibility
+
+**Integration Problems:**
+- Validate Supabase endpoint configuration
+- Check API key permissions
+- Review Edge Function logs
+
+### Support Resources
+
+- Railway deployment logs
+- Supabase function monitoring
+- GitHub Actions workflow history
+- Docker container debugging tools
+
+## Performance Optimization
+
+### Resource Management
+- Container resource limits
+- Memory usage optimization
+- CPU utilization monitoring
+- Network bandwidth management
+
+### Automation Efficiency
+- Parallel task execution
+- Smart retry mechanisms
+- Caching strategies
+- Response time optimization
+
+## Future Enhancements
+
+### Planned Features
+- Multi-region deployment support
+- Advanced scheduling capabilities
+- Machine learning integration
+- Enhanced monitoring dashboard
+
+### Scalability Roadmap
+- Kubernetes orchestration
+- Load balancing improvements
+- Database optimization
+- CDN integration
+
+---
+
+This comprehensive setup provides a fully automated, scalable, and monitored RPA automation platform suitable for production use.
