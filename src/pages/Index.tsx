@@ -1,237 +1,262 @@
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
-import AccountsPanel from "@/components/AccountsPanel";
-import ScenariosPanel from "@/components/ScenariosPanel";
-import ProxiesPanel from "@/components/ProxiesPanel";
-import MonitoringPanel from "@/components/MonitoringPanel";
-import MetricsPanel from "@/components/MetricsPanel";
-import ScenarioTemplateManager from "@/components/ScenarioTemplateManager";
-import UserManagementPanel from "@/components/UserManagementPanel";
-import SubscriptionManagementPanel from "@/components/admin/SubscriptionManagementPanel";
-import PasswordManagementPanel from "@/components/admin/PasswordManagementPanel";
-import AdminDashboard from "@/components/admin/AdminDashboard";
-import SubscriptionStatus from "@/components/SubscriptionStatus";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  Users, 
-  Play, 
-  Wifi, 
-  BarChart3, 
-  Activity, 
-  FileText, 
-  UserCog, 
-  CreditCard, 
-  KeyRound, 
-  Settings,
-  Menu,
-  X
-} from "lucide-react";
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+// Import main app components
+import AccountsPanel from '@/components/AccountsPanel';
+import ProxiesPanel from '@/components/ProxiesPanel';
+import ScenariosPanel from '@/components/ScenariosPanel';
+import ScenarioLaunchPanel from '@/components/ScenarioLaunchPanel';
+import MonitoringPanel from '@/components/MonitoringPanel';
+import SubscriptionStatus from '@/components/SubscriptionStatus';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const { profile } = useProfile();
-  const [activeTab, setActiveTab] = useState("accounts");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const { user, loading, signIn, signUp, signOut } = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      window.location.href = '/auth';
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast({
+        title: "Ошибка входа",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Успешный вход",
+        description: "Добро пожаловать!"
+      });
     }
-  }, [user]);
-
-  if (!user) {
-    return null;
-  }
-
-  const isAdmin = profile?.role === 'admin';
-
-  const tabs = [
-    { id: "accounts", label: "Аккаунты", icon: Users, component: AccountsPanel },
-    { id: "scenarios", label: "Сценарии", icon: Play, component: ScenariosPanel },
-    { id: "proxies", label: "Прокси", icon: Wifi, component: ProxiesPanel },
-    { id: "monitoring", label: "Мониторинг", icon: Activity, component: MonitoringPanel },
-    { id: "metrics", label: "Метрики", icon: BarChart3, component: MetricsPanel },
-    { id: "templates", label: "Шаблоны", icon: FileText, component: ScenarioTemplateManager },
-  ];
-
-  const adminTabs = [
-    { id: "admin-dashboard", label: "Панель админа", icon: Settings, component: AdminDashboard },
-    { id: "users", label: "Пользователи", icon: UserCog, component: UserManagementPanel },
-    { id: "subscriptions", label: "Подписки", icon: CreditCard, component: SubscriptionManagementPanel },
-    { id: "passwords", label: "Пароли", icon: KeyRound, component: PasswordManagementPanel },
-  ];
-
-  const allTabs = isAdmin ? [...tabs, ...adminTabs] : tabs;
-  const activeTabData = allTabs.find(tab => tab.id === activeTab);
-  const ActiveComponent = activeTabData?.component;
-
-  const TabButton = ({ tab, isActive, onClick }: { tab: any, isActive: boolean, onClick: () => void }) => {
-    const IconComponent = tab.icon;
-    return (
-      <button
-        onClick={onClick}
-        className={`
-          flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full
-          ${isActive 
-            ? 'bg-blue-600 text-white' 
-            : 'text-gray-300 hover:text-white hover:bg-gray-700'
-          }
-        `}
-      >
-        <IconComponent className="h-5 w-5 flex-shrink-0" />
-        <span>{tab.label}</span>
-      </button>
-    );
+    
+    setIsLoading(false);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Mobile header */}
-      {isMobile && (
-        <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-          {/* Мобильное меню с Drawer */}
-          <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <DrawerTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-gray-700"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent className="bg-gray-800 border-gray-700 max-h-[60vh]">
-              <DrawerHeader className="border-b border-gray-700">
-                <div className="flex items-center justify-between">
-                  <DrawerTitle className="text-white">Меню</DrawerTitle>
-                  <div className="mb-2">
-                    <SubscriptionStatus />
-                  </div>
-                </div>
-              </DrawerHeader>
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const { error } = await signUp(email, password);
+    
+    if (error) {
+      toast({
+        title: "Ошибка регистрации",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Регистрация успешна",
+        description: "Проверьте email для подтверждения аккаунта"
+      });
+    }
+    
+    setIsLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-white">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="text-lg">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-800/50 border-gray-700">
+          <CardHeader className="text-center">
+            <CardTitle className="text-white text-2xl mb-2">
+              Добро пожаловать
+            </CardTitle>
+            <p className="text-gray-300">
+              Войдите в систему или создайте новый аккаунт
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-700">
+                <TabsTrigger value="signin" className="text-white">
+                  Вход
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="text-white">
+                  Регистрация
+                </TabsTrigger>
+              </TabsList>
               
-              <div className="p-4 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-3">
-                  {allTabs.map((tab) => {
-                    const IconComponent = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => {
-                          setActiveTab(tab.id);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`
-                          flex flex-col items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors
-                          ${isActive 
-                            ? 'bg-blue-600 text-white' 
-                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                          }
-                        `}
-                      >
-                        <IconComponent className="h-5 w-5" />
-                        <span className="text-xs text-center leading-tight">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                <div className="mt-4 pt-4 border-t border-gray-700">
+              <TabsContent value="signin">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-gray-300">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-gray-700 border-gray-600 text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-gray-300">
+                      Пароль
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-gray-700 border-gray-600 text-white"
+                      required
+                    />
+                  </div>
                   <Button
-                    variant="outline"
-                    onClick={() => {
-                      signOut();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full text-white border-gray-600 hover:bg-gray-700"
+                    type="submit"
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    disabled={isLoading}
                   >
-                    Выйти
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <LogIn className="h-4 w-4 mr-2" />
+                    )}
+                    Войти
                   </Button>
-                </div>
-              </div>
-            </DrawerContent>
-          </Drawer>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email" className="text-gray-300">
+                      Email
+                    </Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-gray-700 border-gray-600 text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password" className="text-gray-300">
+                      Пароль
+                    </Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-gray-700 border-gray-600 text-white"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Создать аккаунт
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-          <div className="flex items-center gap-2">
-            {activeTabData && <activeTabData.icon className="h-5 w-5 text-blue-400" />}
-            <h1 className="text-lg font-semibold truncate">{activeTabData?.label || "Account Swarm"}</h1>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-white">
+            Панель управления автоматизацией
+          </h1>
+          <div className="flex items-center gap-4">
+            <span className="text-gray-300">
+              Добро пожаловать, {user.email}
+            </span>
+            <Button
+              onClick={signOut}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Выйти
+            </Button>
           </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={signOut}
-            className="text-white hover:bg-gray-700"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
-      )}
 
-      <div className="flex h-screen">
-        {/* Desktop Sidebar */}
-        {!isMobile && (
-          <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-            {/* Desktop header */}
-            <div className="p-4 border-b border-gray-700">
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-xl font-bold">Account Swarm</h1>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="text-white hover:bg-gray-700"
-                >
-                  Выход
-                </Button>
-              </div>
-              <SubscriptionStatus />
-            </div>
+        <SubscriptionStatus />
 
-            {/* Navigation */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-1">
-                {allTabs.map((tab) => (
-                  <TabButton
-                    key={tab.id}
-                    tab={tab}
-                    isActive={activeTab === tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        <Tabs defaultValue="launch" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 mb-6">
+            <TabsTrigger value="launch" className="text-white">
+              Запуск
+            </TabsTrigger>
+            <TabsTrigger value="scenarios" className="text-white">
+              Сценарии
+            </TabsTrigger>
+            <TabsTrigger value="accounts" className="text-white">
+              Аккаунты
+            </TabsTrigger>
+            <TabsTrigger value="proxies" className="text-white">
+              Прокси
+            </TabsTrigger>
+            <TabsTrigger value="monitoring" className="text-white">
+              Мониторинг
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Desktop header with active tab */}
-          {!isMobile && (
-            <div className="bg-gray-800 border-b border-gray-700 p-4">
-              <div className="flex items-center gap-2">
-                {activeTabData && <activeTabData.icon className="h-5 w-5" />}
-                <h2 className="text-lg font-semibold">{activeTabData?.label}</h2>
-              </div>
-            </div>
-          )}
+          <TabsContent value="launch" className="space-y-6">
+            <ScenarioLaunchPanel />
+          </TabsContent>
 
-          {/* Tab content */}
-          <div className="flex-1 overflow-auto p-4">
-            {ActiveComponent && <ActiveComponent />}
-          </div>
-        </div>
+          <TabsContent value="scenarios" className="space-y-6">
+            <ScenariosPanel />
+          </TabsContent>
+
+          <TabsContent value="accounts" className="space-y-6">
+            <AccountsPanel />
+          </TabsContent>
+
+          <TabsContent value="proxies" className="space-y-6">
+            <ProxiesPanel />
+          </TabsContent>
+
+          <TabsContent value="monitoring" className="space-y-6">
+            <MonitoringPanel />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
