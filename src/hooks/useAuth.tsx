@@ -23,57 +23,75 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     console.log('Auth provider initializing...');
     
-    // Set up auth state listener
+    // Проверяем существующую сессию сначала
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', !!session, error ? 'Error:' + error.message : 'No error');
+        
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    // Устанавливаем слушатель изменений состояния аутентификации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth event:', event, 'Session:', !!session);
+        console.log('Auth event:', event, 'Session:', !!session, 'User:', !!session?.user);
         
-        // Логируем события аутентификации для безопасности
-        if (event === 'SIGNED_IN' && session?.user) {
-          await securityUtils.logSecurityEvent(
-            'USER_SIGNED_IN',
-            {
-              userId: session.user.id,
-              email: session.user.email,
-              timestamp: new Date().toISOString(),
-              provider: session.user.app_metadata?.provider || 'email'
-            },
-            'info',
-            session.user.id
-          );
-        } else if (event === 'SIGNED_OUT') {
-          await securityUtils.logSecurityEvent(
-            'USER_SIGNED_OUT',
-            {
-              timestamp: new Date().toISOString()
-            },
-            'info'
-          );
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          await securityUtils.logSecurityEvent(
-            'TOKEN_REFRESHED',
-            {
-              userId: session.user.id,
-              timestamp: new Date().toISOString()
-            },
-            'info',
-            session.user.id
-          );
-        }
-        
+        // Обновляем состояние синхронно
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Логируем события аутентификации для безопасности (асинхронно)
+        setTimeout(async () => {
+          try {
+            if (event === 'SIGNED_IN' && session?.user) {
+              await securityUtils.logSecurityEvent(
+                'USER_SIGNED_IN',
+                {
+                  userId: session.user.id,
+                  email: session.user.email,
+                  timestamp: new Date().toISOString(),
+                  provider: session.user.app_metadata?.provider || 'email'
+                },
+                'info',
+                session.user.id
+              );
+            } else if (event === 'SIGNED_OUT') {
+              await securityUtils.logSecurityEvent(
+                'USER_SIGNED_OUT',
+                {
+                  timestamp: new Date().toISOString()
+                },
+                'info'
+              );
+            } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+              await securityUtils.logSecurityEvent(
+                'TOKEN_REFRESHED',
+                {
+                  userId: session.user.id,
+                  timestamp: new Date().toISOString()
+                },
+                'info',
+                session.user.id
+              );
+            }
+          } catch (error) {
+            console.error('Error logging security event:', error);
+          }
+        }, 0);
       }
     );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session check:', !!session, error ? 'Error:' + error.message : 'No error');
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
 
     return () => {
       console.log('Auth provider cleanup');
@@ -84,6 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Sign in attempt for:', email);
+      setLoading(true);
       
       // Валидация входных данных
       if (!securityUtils.validateEmail(email)) {
@@ -93,6 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           { email, timestamp: new Date().toISOString() },
           'warning'
         );
+        setLoading(false);
         return { error };
       }
 
@@ -122,6 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           },
           'warning'
         );
+        setLoading(false);
       }
 
       return { error };
@@ -136,12 +157,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         },
         'error'
       );
+      setLoading(false);
       return { error };
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
+      setLoading(true);
+      
       // Валидация входных данных
       if (!securityUtils.validateEmail(email)) {
         const error = { message: 'Неверный формат email адреса' };
@@ -150,6 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           { email, timestamp: new Date().toISOString() },
           'warning'
         );
+        setLoading(false);
         return { error };
       }
 
@@ -165,6 +190,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           },
           'warning'
         );
+        setLoading(false);
         return { error };
       }
 
@@ -196,6 +222,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           },
           'warning'
         );
+        setLoading(false);
       } else {
         await securityUtils.logSecurityEvent(
           'SIGNUP_INITIATED',
@@ -205,6 +232,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           },
           'info'
         );
+        setLoading(false);
       }
 
       return { error };
@@ -219,6 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         },
         'error'
       );
+      setLoading(false);
       return { error };
     }
   };
@@ -226,6 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async () => {
     try {
       console.log('Sign out');
+      setLoading(true);
       
       await securityUtils.logSecurityEvent(
         'SIGNOUT_INITIATED',
@@ -257,8 +287,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         'error',
         user?.id
       );
+      setLoading(false);
     }
   };
+
+  // Добавляем дополнительное логирование для отладки
+  console.log('Auth state:', { user: !!user, session: !!session, loading });
 
   const value = {
     user,
