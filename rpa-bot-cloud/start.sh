@@ -23,11 +23,21 @@ sleep 3
 
 # Проверка Chrome
 echo "🌐 Проверка Google Chrome..."
-google-chrome --version
+if google-chrome --version; then
+    echo "✅ Chrome установлен успешно"
+else
+    echo "❌ Chrome не найден"
+    exit 1
+fi
 
 # Проверка ChromeDriver
 echo "🚗 Проверка ChromeDriver..."
-chromedriver --version
+if chromedriver --version; then
+    echo "✅ ChromeDriver установлен успешно"
+else
+    echo "❌ ChromeDriver не найден"
+    exit 1
+fi
 
 echo "✅ Все компоненты готовы"
 echo "🤖 Запуск RPA Bot..."
