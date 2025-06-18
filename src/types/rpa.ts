@@ -20,13 +20,14 @@ export interface RPAAction {
 }
 
 export interface RPAResult {
-  taskId: string;
+  taskId?: string;
   success: boolean;
-  message: string;
+  message?: string;
   screenshot?: string;
-  executionTime: number;
+  executionTime?: number;
   error?: string;
-  completedActions: number;
+  completedActions?: number;
+  data?: any;
 }
 
 export type RPATaskStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'timeout';
@@ -40,3 +41,6 @@ export interface RPATaskInfo {
   result?: RPAResult;
   task: RPATask;
 }
+
+// Добавляем RPATaskResult как алиас для обратной совместимости
+export type RPATaskResult = RPAResult;

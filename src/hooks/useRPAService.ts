@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { RPATask, RPATaskStatus, RPATaskResult } from '@/types/rpa';
+import type { RPATask, RPATaskStatus, RPAResult } from '@/types/rpa';
 
 export const useRPAService = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,7 +25,7 @@ export const useRPAService = () => {
         .from('rpa_tasks')
         .insert({
           task_id: task.taskId,
-          user_id: user.id, // Добавляем user_id
+          user_id: user.id,
           status: 'pending',
           task_data: {
             url: task.url,
@@ -34,7 +34,7 @@ export const useRPAService = () => {
             scenarioId: task.scenarioId,
             blockId: task.blockId,
             timeout: task.timeout
-          }
+          } as any
         });
 
       if (insertError) {
@@ -63,7 +63,7 @@ export const useRPAService = () => {
           .from('rpa_tasks')
           .update({ 
             status: 'failed',
-            result_data: { error: error.message, message: 'Ошибка отправки задачи' }
+            result_data: { error: error.message, message: 'Ошибка отправки задачи' } as any
           })
           .eq('task_id', task.taskId);
 
@@ -107,7 +107,7 @@ export const useRPAService = () => {
     }
   };
 
-  const waitForRPACompletion = async (taskId: string, timeout: number = 60000): Promise<RPATaskResult | null> => {
+  const waitForRPACompletion = async (taskId: string, timeout: number = 60000): Promise<RPAResult | null> => {
     const startTime = Date.now();
     
     while (Date.now() - startTime < timeout) {
@@ -126,18 +126,20 @@ export const useRPAService = () => {
         }
 
         if (taskData.status === 'completed') {
+          const resultData = taskData.result_data as any;
           return {
             success: true,
-            message: taskData.result_data?.message || 'Задача выполнена успешно',
-            data: taskData.result_data
+            message: resultData?.message || 'Задача выполнена успешно',
+            data: resultData
           };
         }
 
         if (taskData.status === 'failed' || taskData.status === 'timeout') {
+          const resultData = taskData.result_data as any;
           return {
             success: false,
-            error: taskData.result_data?.error || 'Задача завершилась с ошибкой',
-            data: taskData.result_data
+            error: resultData?.error || 'Задача завершилась с ошибкой',
+            data: resultData
           };
         }
 
