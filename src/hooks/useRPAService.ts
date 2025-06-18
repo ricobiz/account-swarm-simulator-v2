@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,14 +26,7 @@ export const useRPAService = () => {
           task_id: task.taskId,
           user_id: user.id,
           status: 'pending',
-          task_data: {
-            url: task.url,
-            actions: task.actions as any, // Приводим к any для совместимости с Json
-            accountId: task.accountId,
-            scenarioId: task.scenarioId,
-            blockId: task.blockId,
-            timeout: task.timeout
-          } as any
+          task_data: task as any
         });
 
       if (insertError) {
@@ -42,17 +34,9 @@ export const useRPAService = () => {
         throw new Error(`Не удалось сохранить задачу: ${insertError.message}`);
       }
 
-      // Отправляем задачу через Edge Function
+      // Отправляем задачу через Edge Function - исправляем структуру данных
       const { data, error } = await supabase.functions.invoke('rpa-task', {
-        body: {
-          taskId: task.taskId,
-          url: task.url,
-          actions: task.actions,
-          accountId: task.accountId,
-          scenarioId: task.scenarioId,
-          blockId: task.blockId,
-          timeout: task.timeout
-        }
+        body: { task } // Передаем task как объект в body
       });
 
       if (error) {

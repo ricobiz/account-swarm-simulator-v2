@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
@@ -29,25 +28,32 @@ serve(async (req) => {
     )
 
     if (req.method === 'POST') {
-      const { task }: { task: RPATask } = await req.json();
+      const body = await req.json();
+      const task: RPATask = body.task;
 
       console.log('Получена RPA задача:', task);
 
-      // Сохраняем задачу в базу данных
-      const { data: savedTask, error: saveError } = await supabase
+      if (!task || !task.taskId) {
+        console.error('Недопустимые данные задачи:', body);
+        return new Response(
+          JSON.stringify({ error: 'Недопустимые данные задачи' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+
+      // Проверяем что задача уже сохранена в базе данных
+      const { data: existingTask, error: checkError } = await supabase
         .from('rpa_tasks')
-        .insert({
-          task_id: task.taskId,
-          status: 'pending',
-          task_data: task,
-          created_at: new Date().toISOString()
-        })
-        .select()
+        .select('id')
+        .eq('task_id', task.taskId)
         .single();
 
-      if (saveError) {
-        console.error('Ошибка сохранения RPA задачи:', saveError);
-        throw saveError;
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Ошибка проверки существующей задачи:', checkError);
+        throw checkError;
       }
 
       // Отправляем задачу внешнему RPA-боту
@@ -70,13 +76,15 @@ serve(async (req) => {
         } catch (error) {
           console.error('Ошибка отправки задачи RPA-боту:', error);
         }
+      } else {
+        console.log('RPA_BOT_ENDPOINT не настроен, задача только сохранена в БД');
       }
 
       // Логируем отправку задачи
       await supabase
         .from('logs')
         .insert({
-          user_id: (task as any).userId || null,
+          user_id: null,
           account_id: task.accountId,
           scenario_id: task.scenarioId,
           action: 'RPA задача отправлена',
