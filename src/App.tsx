@@ -9,6 +9,7 @@ import Auth from '@/pages/Auth';
 import Index from '@/pages/Index';
 import RPA from '@/pages/RPA';
 import ScenarioLaunch from '@/pages/ScenarioLaunch';
+import Accounts from '@/pages/Accounts';
 import NotFound from '@/pages/NotFound';
 import { ProcessMonitorProvider } from '@/components/ProcessMonitorProvider';
 
@@ -28,6 +29,7 @@ function App() {
                   <Route path="/rpa" element={<RPA />} />
                   <Route path="/launch" element={<ScenarioLaunch />} />
                   <Route path="/scenario-launch" element={<ScenarioLaunch />} />
+                  <Route path="/accounts" element={<Accounts />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />
