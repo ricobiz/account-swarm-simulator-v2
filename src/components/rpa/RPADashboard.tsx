@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Zap, Clock, CheckCircle, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Activity, Zap, Clock, CheckCircle, XCircle, RefreshCw, AlertTriangle, User } from 'lucide-react';
 import { RPATaskMonitor } from './RPATaskMonitor';
 import { useRPAService } from '@/hooks/useRPAService';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,14 +21,48 @@ export const RPADashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const { toast } = useToast();
 
+  // Проверяем авторизацию пользователя
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('Проверка авторизации:', { user: !!user, error });
+        setUser(user);
+        setAuthLoading(false);
+      } catch (error: any) {
+        console.error('Ошибка проверки авторизации:', error);
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    // Слушаем изменения авторизации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Изменение состояния авторизации:', event, !!session?.user);
+      setUser(session?.user || null);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const fetchRPATasks = async () => {
+    if (!user) {
+      console.log('Пользователь не авторизован, пропускаем загрузку задач');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Загрузка RPA задач...');
+      console.log('Загрузка RPA задач для пользователя:', user.id);
       
       const { data, error } = await supabase.functions.invoke('get-rpa-tasks');
 
@@ -72,13 +106,56 @@ export const RPADashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRPATasks();
-    
-    // Обновляем каждые 5 секунд
-    const interval = setInterval(fetchRPATasks, 5000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      fetchRPATasks();
+      
+      // Обновляем каждые 5 секунд только если пользователь авторизован
+      const interval = setInterval(fetchRPATasks, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  if (authLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin text-purple-400" />
+            <p className="text-white">Проверка авторизации...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">RPA Dashboard</h2>
+            <p className="text-gray-400">Управление и мониторинг RPA задач</p>
+          </div>
+        </div>
+
+        <Card className="bg-orange-900/20 border-orange-700">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <User className="h-8 w-8 text-orange-400" />
+              <div>
+                <h3 className="text-white font-bold mb-2">Требуется авторизация</h3>
+                <p className="text-orange-300 mb-4">Для доступа к RPA Dashboard необходимо войти в систему</p>
+                <Button onClick={() => window.location.href = '/auth'} className="bg-orange-600 hover:bg-orange-700">
+                  Войти в систему
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (error) {
     return (
