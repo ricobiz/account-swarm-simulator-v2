@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, Menu, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import main app components
@@ -23,6 +23,8 @@ const Index = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('launch');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,8 +200,78 @@ const Index = () => {
   // Main application interface for authenticated users
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-gray-800/50 border-b border-gray-700 p-4">
+        <div className="flex justify-between items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-white"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          <h1 className="text-lg font-bold text-white truncate mx-4">
+            Панель управления
+          </h1>
+          <Button
+            onClick={signOut}
+            variant="outline"
+            size="sm"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700 text-xs px-2"
+          >
+            Выйти
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-sm">
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Навигация</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-white"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {[
+                { id: 'launch', label: 'Запуск' },
+                { id: 'scenarios', label: 'Сценарии' },
+                { id: 'accounts', label: 'Аккаунты' },
+                { id: 'proxies', label: 'Прокси' },
+                { id: 'monitoring', label: 'Мониторинг' },
+              ].map((tab) => (
+                <Button
+                  key={tab.id}
+                  variant={activeTab === tab.id ? "default" : "ghost"}
+                  className={`w-full justify-start text-left ${
+                    activeTab === tab.id 
+                      ? 'bg-purple-600 hover:bg-purple-700' 
+                      : 'text-white hover:bg-gray-700'
+                  }`}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  {tab.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+        {/* Desktop Header */}
+        <div className="hidden lg:flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">
             Панель управления автоматизацией
           </h1>
@@ -221,45 +293,59 @@ const Index = () => {
           <SubscriptionStatus />
         </div>
 
-        <Tabs defaultValue="launch" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 mb-6">
-            <TabsTrigger value="launch" className="text-white">
-              Запуск
-            </TabsTrigger>
-            <TabsTrigger value="scenarios" className="text-white">
-              Сценарии
-            </TabsTrigger>
-            <TabsTrigger value="accounts" className="text-white">
-              Аккаунты
-            </TabsTrigger>
-            <TabsTrigger value="proxies" className="text-white">
-              Прокси
-            </TabsTrigger>
-            <TabsTrigger value="monitoring" className="text-white">
-              Мониторинг
-            </TabsTrigger>
-          </TabsList>
+        {/* Desktop Tabs */}
+        <div className="hidden lg:block">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 mb-6">
+              <TabsTrigger value="launch" className="text-white">
+                Запуск
+              </TabsTrigger>
+              <TabsTrigger value="scenarios" className="text-white">
+                Сценарии
+              </TabsTrigger>
+              <TabsTrigger value="accounts" className="text-white">
+                Аккаунты
+              </TabsTrigger>
+              <TabsTrigger value="proxies" className="text-white">
+                Прокси
+              </TabsTrigger>
+              <TabsTrigger value="monitoring" className="text-white">
+                Мониторинг
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="launch" className="space-y-6">
-            <ScenarioLaunchPanel />
-          </TabsContent>
+            <TabsContent value="launch" className="space-y-6">
+              <ScenarioLaunchPanel />
+            </TabsContent>
 
-          <TabsContent value="scenarios" className="space-y-6">
-            <ScenariosPanel />
-          </TabsContent>
+            <TabsContent value="scenarios" className="space-y-6">
+              <ScenariosPanel />
+            </TabsContent>
 
-          <TabsContent value="accounts" className="space-y-6">
-            <AccountsPanel />
-          </TabsContent>
+            <TabsContent value="accounts" className="space-y-6">
+              <AccountsPanel />
+            </TabsContent>
 
-          <TabsContent value="proxies" className="space-y-6">
-            <ProxiesPanel />
-          </TabsContent>
+            <TabsContent value="proxies" className="space-y-6">
+              <ProxiesPanel />
+            </TabsContent>
 
-          <TabsContent value="monitoring" className="space-y-6">
-            <MonitoringPanel />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="monitoring" className="space-y-6">
+              <MonitoringPanel />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="lg:hidden">
+          <div className="space-y-6">
+            {activeTab === 'launch' && <ScenarioLaunchPanel />}
+            {activeTab === 'scenarios' && <ScenariosPanel />}
+            {activeTab === 'accounts' && <AccountsPanel />}
+            {activeTab === 'proxies' && <ProxiesPanel />}
+            {activeTab === 'monitoring' && <MonitoringPanel />}
+          </div>
+        </div>
       </div>
     </div>
   );
