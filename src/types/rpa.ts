@@ -17,7 +17,6 @@ export interface RPAAction {
   text?: string;
   duration?: number;
   key?: string;
-  [key: string]: any; // Добавляем индексную сигнатуру для совместимости с Json
 }
 
 export interface RPAResult {
