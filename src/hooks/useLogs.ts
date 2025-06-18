@@ -136,9 +136,10 @@ export const useLogs = () => {
     if (user) {
       fetchLogs();
       
-      // Set up real-time subscription
+      // Создаем уникальный канал для каждого экземпляра хука
+      const channelName = `logs-updates-${user.id}-${Date.now()}`;
       const channel = supabase
-        .channel('schema-db-changes')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -154,6 +155,7 @@ export const useLogs = () => {
         .subscribe();
 
       return () => {
+        console.log('Unsubscribing from channel:', channelName);
         supabase.removeChannel(channel);
       };
     }

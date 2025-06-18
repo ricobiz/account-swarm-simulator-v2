@@ -97,9 +97,10 @@ export const useSecurityMonitoring = () => {
     if (user) {
       fetchSecurityEvents();
       
-      // Set up real-time monitoring
+      // Создаем уникальный канал для security monitoring
+      const channelName = `security-monitoring-${user.id}-${Date.now()}`;
       const channel = supabase
-        .channel('security-monitoring')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -115,6 +116,7 @@ export const useSecurityMonitoring = () => {
         .subscribe();
 
       return () => {
+        console.log('Unsubscribing from security channel:', channelName);
         supabase.removeChannel(channel);
       };
     }
