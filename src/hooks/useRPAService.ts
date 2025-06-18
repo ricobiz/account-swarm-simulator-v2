@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -10,14 +11,19 @@ export const useRPAService = () => {
   const submitRPATask = async (task: RPATask): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsProcessing(true);
-      console.log('Отправка RPA задачи:', task);
+      console.log('=== ОТПРАВКА RPA ЗАДАЧИ ===');
+      console.log('Отправляемая задача:', task);
 
       // Получаем текущего пользователя
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
+      console.log('Пользователь:', { user: !!user, error: userError });
+      
       if (userError || !user) {
         throw new Error('Пользователь не авторизован');
       }
+
+      console.log('Сохранение задачи в базу данных...');
 
       // Сохраняем задачу в базу данных с user_id
       const { error: insertError } = await supabase
@@ -29,15 +35,21 @@ export const useRPAService = () => {
           task_data: task as any
         });
 
+      console.log('Результат сохранения:', { insertError });
+
       if (insertError) {
         console.error('Ошибка сохранения RPA задачи:', insertError);
         throw new Error(`Не удалось сохранить задачу: ${insertError.message}`);
       }
 
-      // Отправляем задачу через Edge Function - исправляем структуру данных
+      console.log('Отправка задачи через Edge Function...');
+
+      // Отправляем задачу через Edge Function
       const { data, error } = await supabase.functions.invoke('rpa-task', {
-        body: { task } // Передаем task как объект в body
+        body: { task }
       });
+
+      console.log('Результат Edge Function:', { data, error });
 
       if (error) {
         console.error('Ошибка отправки RPA задачи:', error);
@@ -64,7 +76,10 @@ export const useRPAService = () => {
       return { success: true };
 
     } catch (error: any) {
-      console.error('Ошибка submitRPATask:', error);
+      console.error('=== ОШИБКА SUBMITRPATASK ===');
+      console.error('Тип ошибки:', typeof error);
+      console.error('Сообщение ошибки:', error.message);
+      console.error('Полная ошибка:', error);
       
       toast({
         title: "Ошибка отправки RPA задачи",

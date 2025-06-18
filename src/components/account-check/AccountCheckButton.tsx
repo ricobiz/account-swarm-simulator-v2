@@ -24,12 +24,25 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
   const { executeRPABlock } = useRPAExecutor();
 
   const handleCheck = async () => {
-    if (!user) return;
+    console.log('=== НАЧАЛО ПРОВЕРКИ АККАУНТА ===');
+    console.log('accountId:', accountId);
+    console.log('platform:', platform);
+    console.log('user:', user);
+    
+    if (!user) {
+      console.error('Пользователь не авторизован');
+      toast({
+        title: "Ошибка",
+        description: "Необходимо войти в систему",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsChecking(true);
     
     try {
-      console.log(`Запуск реальной проверки аккаунта ${accountId} на платформе ${platform}`);
+      console.log('Получение данных аккаунта...');
       
       // Получаем данные аккаунта
       const { data: account, error: accountError } = await supabase
@@ -38,9 +51,13 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         .eq('id', accountId)
         .single();
 
+      console.log('Результат получения аккаунта:', { account, accountError });
+
       if (accountError || !account) {
-        throw new Error('Не удалось получить данные аккаунта');
+        throw new Error(`Не удалось получить данные аккаунта: ${accountError?.message || 'аккаунт не найден'}`);
       }
+
+      console.log('Создание сценария проверки...');
 
       // Создаем реальный сценарий проверки
       const checkScenario = {
@@ -64,17 +81,23 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         .select()
         .single();
 
+      console.log('Результат создания сценария:', { scenario, scenarioError });
+
       if (scenarioError) {
         throw new Error(`Ошибка создания сценария проверки: ${scenarioError.message}`);
       }
 
-      console.log('Сценарий проверки создан:', scenario.id);
+      console.log('Обновление статуса аккаунта...');
 
       // Обновляем статус аккаунта
-      await supabase
+      const { error: updateError } = await supabase
         .from('accounts')
         .update({ status: 'checking' })
         .eq('id', accountId);
+
+      if (updateError) {
+        console.error('Ошибка обновления статуса аккаунта:', updateError);
+      }
 
       // Логируем начало проверки
       await supabase
@@ -93,6 +116,8 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         description: `Выполняется реальная проверка аккаунта ${account.username}...`,
         duration: 3000
       });
+
+      console.log('Подготовка RPA действий...');
 
       // Создаем RPA-блок для реальной проверки
       const rpaActions = [
@@ -120,7 +145,8 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         { type: 'check_element', selector: getSuccessSelector(platform) }
       ];
 
-      console.log('Отправляем задачу на реальный RPA-бот');
+      console.log('Выполнение RPA задачи...');
+      console.log('RPA actions:', rpaActions);
 
       // Выполняем реальную RPA-проверку
       const rpaResult = await executeRPABlock({
@@ -131,6 +157,8 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         blockId: `check_${accountId}`,
         timeout: 120000 // 2 минуты на проверку
       });
+
+      console.log('Результат RPA:', rpaResult);
 
       if (rpaResult.success) {
         // Успешная проверка
@@ -171,32 +199,40 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Ошибка при реальной проверке аккаунта:', error);
+      console.error('=== ОШИБКА ПРИ ПРОВЕРКЕ АККАУНТА ===');
+      console.error('Тип ошибки:', typeof error);
+      console.error('Сообщение ошибки:', error.message);
+      console.error('Полная ошибка:', error);
+      console.error('Stack trace:', error.stack);
       
       // Обновляем статусы при ошибке
-      await supabase
-        .from('scenarios')
-        .update({ 
-          status: 'failed',
-          progress: 100
-        })
-        .eq('user_id', user.id)
-        .eq('config->>accountId', accountId);
+      try {
+        await supabase
+          .from('scenarios')
+          .update({ 
+            status: 'failed',
+            progress: 100
+          })
+          .eq('user_id', user.id)
+          .eq('config->>accountId', accountId);
 
-      await supabase
-        .from('accounts')
-        .update({ status: 'error' })
-        .eq('id', accountId);
+        await supabase
+          .from('accounts')
+          .update({ status: 'error' })
+          .eq('id', accountId);
 
-      await supabase
-        .from('logs')
-        .insert({
-          user_id: user.id,
-          account_id: accountId,
-          action: 'Ошибка проверки аккаунта',
-          details: `Ошибка при проверке: ${error.message}`,
-          status: 'error'
-        });
+        await supabase
+          .from('logs')
+          .insert({
+            user_id: user.id,
+            account_id: accountId,
+            action: 'Ошибка проверки аккаунта',
+            details: `Ошибка при проверке: ${error.message}`,
+            status: 'error'
+          });
+      } catch (updateError) {
+        console.error('Ошибка при обновлении статуса после ошибки:', updateError);
+      }
       
       toast({
         title: "Ошибка проверки",
@@ -205,6 +241,7 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         duration: 8000
       });
     } finally {
+      console.log('=== ЗАВЕРШЕНИЕ ПРОВЕРКИ АККАУНТА ===');
       setIsChecking(false);
     }
   };
