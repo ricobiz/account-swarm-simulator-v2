@@ -1,4 +1,5 @@
 
+
 export interface RPATask {
   taskId: string;
   url: string;
@@ -17,6 +18,7 @@ export interface RPAAction {
   text?: string;
   duration?: number;
   key?: string;
+  [key: string]: any; // Индексная сигнатура для совместимости с Json
 }
 
 export interface RPAResult {
@@ -41,3 +43,4 @@ export interface RPATaskInfo {
   result?: RPAResult;
   task: RPATask;
 }
+

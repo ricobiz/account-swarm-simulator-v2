@@ -29,12 +29,12 @@ export const useRPAService = () => {
           status: 'pending',
           task_data: {
             url: task.url,
-            actions: task.actions,
+            actions: task.actions as any, // Приводим к any для совместимости с Json
             accountId: task.accountId,
             scenarioId: task.scenarioId,
             blockId: task.blockId,
             timeout: task.timeout
-          }
+          } as any
         });
 
       if (insertError) {
@@ -63,7 +63,7 @@ export const useRPAService = () => {
           .from('rpa_tasks')
           .update({ 
             status: 'failed',
-            result_data: { error: error.message, message: 'Ошибка отправки задачи' }
+            result_data: { error: error.message, message: 'Ошибка отправки задачи' } as any
           })
           .eq('task_id', task.taskId);
 
