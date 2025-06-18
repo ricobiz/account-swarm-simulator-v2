@@ -57,7 +57,7 @@ serve(async (req) => {
         throw checkError;
       }
 
-      // Сначала обновляем статус на processing
+      // Обновляем статус на processing
       await supabase
         .from('rpa_tasks')
         .update({
@@ -68,115 +68,94 @@ serve(async (req) => {
 
       console.log('Статус задачи обновлен на processing');
 
-      // Отправляем задачу внешнему RPA-боту
+      // Получаем RPA_BOT_ENDPOINT из переменных окружения
       const rpaEndpoint = Deno.env.get('RPA_BOT_ENDPOINT');
-      if (rpaEndpoint) {
-        try {
-          console.log('Отправка задачи внешнему RPA-боту...');
-          const response = await fetch(`${rpaEndpoint}/execute`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+      
+      if (!rpaEndpoint) {
+        console.error('RPA_BOT_ENDPOINT не настроен');
+        
+        // Обновляем статус на failed
+        await supabase
+          .from('rpa_tasks')
+          .update({
+            status: 'failed',
+            result_data: { 
+              success: false, 
+              error: 'RPA_BOT_ENDPOINT не настроен', 
+              message: 'Не настроен endpoint для RPA-бота' 
             },
-            body: JSON.stringify(task),
-          });
+            updated_at: new Date().toISOString()
+          })
+          .eq('task_id', task.taskId);
 
-          if (!response.ok) {
-            console.error('RPA-бот недоступен:', response.status);
-            // Если бот недоступен, переходим к имитации
-            throw new Error('RPA-бот недоступен');
-          } else {
-            console.log('Задача успешно отправлена RPA-боту');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'RPA_BOT_ENDPOINT не настроен',
+            message: 'Требуется настройка RPA-бота'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
           }
-        } catch (error) {
-          console.error('Ошибка отправки задачи RPA-боту:', error);
-          // Переходим к имитации при ошибке
-        }
+        );
       }
 
-      // Всегда выполняем имитацию, если RPA_BOT_ENDPOINT не настроен или бот недоступен
-      console.log('RPA_BOT_ENDPOINT не настроен или недоступен, выполняем имитацию...');
-      
-      // Запускаем имитацию выполнения задачи асинхронно
-      const executeSimulation = async () => {
-        try {
-          // Имитируем задержку выполнения (3 секунды)
-          await new Promise(resolve => setTimeout(resolve, 3000));
+      // Отправляем задачу внешнему RPA-боту
+      try {
+        console.log('Отправка задачи RPA-боту:', rpaEndpoint);
+        
+        const response = await fetch(`${rpaEndpoint}/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(task),
+        });
 
-          const mockResult = {
-            success: Math.random() > 0.2, // 80% успешных попыток
-            message: Math.random() > 0.2 
-              ? 'Имитация проверки аккаунта выполнена успешно' 
-              : 'Имитация: аккаунт заблокирован или неверные данные',
-            executionTime: 3000 + Math.floor(Math.random() * 2000),
-            completedActions: task.actions.length,
-            data: {
-              accountChecked: true,
-              loginAttempted: true,
-              status: Math.random() > 0.2 ? 'working' : 'blocked'
-            }
-          };
+        console.log('Ответ от RPA-бота:', response.status, response.statusText);
 
-          console.log('Обновление результата имитации задачи:', task.taskId, mockResult);
-
-          const { error: updateError } = await supabase
-            .from('rpa_tasks')
-            .update({
-              status: mockResult.success ? 'completed' : 'failed',
-              result_data: mockResult,
-              updated_at: new Date().toISOString()
-            })
-            .eq('task_id', task.taskId);
-
-          if (updateError) {
-            console.error('Ошибка обновления результата имитации:', updateError);
-          } else {
-            console.log('Результат имитации успешно сохранен');
-          }
-
-          // Логируем результат (с проверкой на user_id)
-          try {
-            await supabase
-              .from('logs')
-              .insert({
-                user_id: null, // Временно null, чтобы избежать ошибок
-                account_id: task.accountId,
-                scenario_id: task.scenarioId,
-                action: `RPA задача ${mockResult.success ? 'выполнена' : 'завершилась с ошибкой'} (имитация)`,
-                details: mockResult.message,
-                status: mockResult.success ? 'success' : 'error'
-              });
-          } catch (logError) {
-            console.error('Ошибка логирования (игнорируем):', logError);
-          }
-
-        } catch (error) {
-          console.error('Ошибка при имитации выполнения:', error);
-          
-          // При ошибке помечаем задачу как failed
-          try {
-            await supabase
-              .from('rpa_tasks')
-              .update({
-                status: 'failed',
-                result_data: { 
-                  success: false, 
-                  error: error.message, 
-                  message: 'Ошибка при имитации выполнения' 
-                },
-                updated_at: new Date().toISOString()
-              })
-              .eq('task_id', task.taskId);
-          } catch (updateError) {
-            console.error('Ошибка обновления статуса при ошибке имитации:', updateError);
-          }
+        if (!response.ok) {
+          throw new Error(`RPA-бот вернул ошибку: ${response.status} ${response.statusText}`);
         }
-      };
 
-      // Запускаем имитацию в фоновом режиме
-      executeSimulation();
+        const responseData = await response.json();
+        console.log('Данные от RPA-бота:', responseData);
 
-      // Логируем отправку задачи (с проверкой на user_id)
+        // Если RPA-бот принял задачу, ждем результат через webhook или polling
+        console.log('Задача успешно отправлена RPA-боту');
+
+      } catch (error) {
+        console.error('Ошибка отправки задачи RPA-боту:', error);
+        
+        // Обновляем статус на failed
+        await supabase
+          .from('rpa_tasks')
+          .update({
+            status: 'failed',
+            result_data: { 
+              success: false, 
+              error: error.message, 
+              message: 'Не удалось отправить задачу RPA-боту' 
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('task_id', task.taskId);
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message,
+            message: 'Не удалось отправить задачу RPA-боту'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
+
+      // Логируем отправку задачи
       try {
         await supabase
           .from('logs')
@@ -185,7 +164,7 @@ serve(async (req) => {
             account_id: task.accountId,
             scenario_id: task.scenarioId,
             action: 'RPA задача отправлена',
-            details: `Задача ${task.taskId} принята в обработку`,
+            details: `Задача ${task.taskId} отправлена RPA-боту`,
             status: 'info'
           });
       } catch (logError) {
@@ -196,7 +175,7 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           taskId: task.taskId,
-          message: 'Задача принята в обработку'
+          message: 'Задача отправлена RPA-боту для выполнения'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -225,7 +204,7 @@ serve(async (req) => {
         throw updateError;
       }
 
-      // Логируем результат (с проверкой на user_id)
+      // Логируем результат
       try {
         await supabase
           .from('logs')
