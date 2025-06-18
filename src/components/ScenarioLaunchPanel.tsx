@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play } from 'lucide-react';
@@ -14,6 +13,7 @@ import AccountSelector from './scenario-launch/AccountSelector';
 import ActiveScenarios from './scenario-launch/ActiveScenarios';
 import LaunchButton from './scenario-launch/LaunchButton';
 import EmptyState from './scenario-launch/EmptyState';
+import { ScenarioConfigModal } from './scenario-launch/ScenarioConfigModal';
 
 type ScenarioRow = Database['public']['Tables']['scenarios']['Row'];
 
@@ -32,6 +32,8 @@ const ScenarioLaunchPanel = () => {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [templates, setTemplates] = useState<ScenarioTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [scenarioConfig, setScenarioConfig] = useState<any>(null);
   
   const { accounts } = useAccounts();
   const { scenarios, refetch: refetchScenarios } = useScenarios();
@@ -109,21 +111,34 @@ const ScenarioLaunchPanel = () => {
   const handleLaunchScenario = async () => {
     if (!selectedTemplate || selectedAccounts.length === 0 || !user) return;
 
+    const template = templates.find(t => t.id === selectedTemplate);
+    if (!template) return;
+
+    // Показываем модал конфигурации перед запуском
+    setShowConfigModal(true);
+  };
+
+  const handleConfigSave = async (config: any) => {
+    if (!selectedTemplate || selectedAccounts.length === 0 || !user) return;
+
     try {
+      // Запускаем сценарий с конфигурацией
       const result = await launchScenario({
         templateId: selectedTemplate,
         accountIds: selectedAccounts,
-        userId: user.id
+        userId: user.id,
+        config: config // Передаем конфигурацию
       });
 
       if (result.success) {
         toast({
           title: "Сценарии запущены",
-          description: result.message,
+          description: `${result.message} с настроенной конфигурацией`,
         });
         refetchScenarios();
         setSelectedAccounts([]);
         setSelectedTemplate('');
+        setScenarioConfig(null);
       } else {
         toast({
           title: "Ошибка запуска",
@@ -150,6 +165,8 @@ const ScenarioLaunchPanel = () => {
 
   const availableAccounts = getAvailableAccounts();
   const runningScenarios = scenarios.filter(s => s.status === 'running' || s.status === 'waiting');
+
+  const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
 
   return (
     <div className="space-y-6">
@@ -182,6 +199,7 @@ const ScenarioLaunchPanel = () => {
                 selectedAccounts={selectedAccounts}
                 isLaunching={isLaunching}
                 onLaunch={handleLaunchScenario}
+                buttonText="Настроить и запустить"
               />
             </div>
           )}
@@ -194,6 +212,17 @@ const ScenarioLaunchPanel = () => {
       />
 
       {templates.length === 0 && !loadingTemplates && <EmptyState />}
+
+      {/* Модал конфигурации сценария */}
+      {showConfigModal && selectedTemplateData && (
+        <ScenarioConfigModal
+          isOpen={showConfigModal}
+          onClose={() => setShowConfigModal(false)}
+          onSave={handleConfigSave}
+          platform={selectedTemplateData.platform}
+          templateName={selectedTemplateData.name}
+        />
+      )}
     </div>
   );
 };

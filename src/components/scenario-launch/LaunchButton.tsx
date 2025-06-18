@@ -7,22 +7,21 @@ interface LaunchButtonProps {
   selectedAccounts: string[];
   isLaunching: boolean;
   onLaunch: () => void;
+  buttonText?: string;
 }
 
 const LaunchButton: React.FC<LaunchButtonProps> = ({
   selectedAccounts,
   isLaunching,
-  onLaunch
+  onLaunch,
+  buttonText = "Запустить сценарии"
 }) => {
-  if (selectedAccounts.length === 0) {
-    return null;
-  }
-
   return (
-    <Button 
+    <Button
       onClick={onLaunch}
-      disabled={isLaunching}
-      className="w-full bg-green-600 hover:bg-green-700"
+      disabled={selectedAccounts.length === 0 || isLaunching}
+      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600"
+      size="lg"
     >
       {isLaunching ? (
         <>
@@ -32,7 +31,7 @@ const LaunchButton: React.FC<LaunchButtonProps> = ({
       ) : (
         <>
           <Play className="mr-2 h-4 w-4" />
-          Запустить сценарий ({selectedAccounts.length} аккаунтов)
+          {buttonText} ({selectedAccounts.length} аккаунтов)
         </>
       )}
     </Button>
