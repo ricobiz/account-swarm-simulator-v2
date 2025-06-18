@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRPAExecutor } from '@/components/rpa/RPAExecutor';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AccountCheckButtonProps {
@@ -20,6 +21,7 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
   const [isChecking, setIsChecking] = React.useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { executeRPABlock } = useRPAExecutor();
 
   const handleCheck = async () => {
     if (!user) return;
@@ -27,33 +29,30 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
     setIsChecking(true);
     
     try {
-      console.log(`Запуск проверки аккаунта ${accountId} на платформе ${platform}`);
+      console.log(`Запуск реальной проверки аккаунта ${accountId} на платформе ${platform}`);
       
-      // Создаем простой сценарий проверки
+      // Получаем данные аккаунта
+      const { data: account, error: accountError } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('id', accountId)
+        .single();
+
+      if (accountError || !account) {
+        throw new Error('Не удалось получить данные аккаунта');
+      }
+
+      // Создаем реальный сценарий проверки
       const checkScenario = {
         user_id: user.id,
-        name: `Проверка аккаунта ${accountId.slice(-6)}`,
+        name: `Проверка аккаунта ${account.username}`,
         platform: platform,
         status: 'running',
         config: {
           type: 'account_check',
           accountId: accountId,
-          actions: [
-            {
-              type: 'navigate',
-              url: getCheckUrl(platform),
-              waitTime: 3000
-            },
-            {
-              type: 'wait',
-              minTime: 2000,
-              maxTime: 5000
-            },
-            {
-              type: 'view',
-              viewTime: 10
-            }
-          ]
+          username: account.username,
+          platform: platform
         },
         accounts_count: 1,
         progress: 0
@@ -77,8 +76,6 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
         .update({ status: 'checking' })
         .eq('id', accountId);
 
-      console.log('Статус аккаунта обновлен на checking');
-
       // Логируем начало проверки
       await supabase
         .from('logs')
@@ -86,166 +83,127 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
           user_id: user.id,
           account_id: accountId,
           scenario_id: scenario.id,
-          action: 'Проверка аккаунта запущена',
-          details: `Запущена проверка аккаунта на платформе ${platform}. URL: ${getCheckUrl(platform)}`,
+          action: 'Запуск реальной проверки аккаунта',
+          details: `Начата реальная проверка аккаунта ${account.username} на платформе ${platform}`,
           status: 'info'
         });
 
-      console.log('Лог создан, начинаем симуляцию проверки');
-
-      // Симулируем выполнение проверки с улучшенной диагностикой
-      setTimeout(async () => {
-        try {
-          console.log('Начинаем выполнение проверки аккаунта');
-          
-          // Более реалистичная симуляция проверки
-          const checkSteps = [
-            { step: 'Подключение к платформе', delay: 1000 },
-            { step: 'Навигация на главную страницу', delay: 2000 },
-            { step: 'Проверка доступности аккаунта', delay: 2000 },
-            { step: 'Выполнение тестового действия', delay: 2000 },
-            { step: 'Завершение проверки', delay: 1000 }
-          ];
-
-          let currentStep = 0;
-          let success = true;
-          let errorMessage = '';
-
-          for (const step of checkSteps) {
-            currentStep++;
-            console.log(`Шаг ${currentStep}/5: ${step.step}`);
-            
-            // Логируем промежуточные шаги
-            await supabase.from('logs').insert({
-              user_id: user.id,
-              account_id: accountId,
-              scenario_id: scenario.id,
-              action: `Шаг ${currentStep}/5`,
-              details: step.step,
-              status: 'info'
-            });
-
-            // Обновляем прогресс
-            await supabase
-              .from('scenarios')
-              .update({ progress: (currentStep / checkSteps.length) * 100 })
-              .eq('id', scenario.id);
-
-            await new Promise(resolve => setTimeout(resolve, step.delay));
-
-            // Симулируем возможные ошибки на разных этапах
-            const errorChance = Math.random();
-            if (errorChance < 0.15) { // 15% шанс ошибки
-              success = false;
-              switch (currentStep) {
-                case 1:
-                  errorMessage = 'Не удалось подключиться к платформе. Проверьте интернет соединение.';
-                  break;
-                case 2:
-                  errorMessage = 'Ошибка навигации. Возможно, сайт недоступен или изменился.';
-                  break;
-                case 3:
-                  errorMessage = 'Аккаунт заблокирован или учетные данные неверны.';
-                  break;
-                case 4:
-                  errorMessage = 'Не удалось выполнить тестовое действие. Возможны ограничения платформы.';
-                  break;
-                default:
-                  errorMessage = 'Неизвестная ошибка при выполнении проверки.';
-              }
-              console.log(`Ошибка на шаге ${currentStep}: ${errorMessage}`);
-              break;
-            }
-          }
-          
-          console.log(`Проверка завершена. Успех: ${success}`);
-
-          await supabase
-            .from('scenarios')
-            .update({ 
-              status: success ? 'completed' : 'failed',
-              progress: 100
-            })
-            .eq('id', scenario.id);
-
-          await supabase
-            .from('accounts')
-            .update({ 
-              status: success ? 'idle' : 'error',
-              last_action: new Date().toISOString()
-            })
-            .eq('id', accountId);
-
-          const finalLogDetails = success 
-            ? `Аккаунт работает корректно. Выполнены все проверочные действия на ${getCheckUrl(platform)}.`
-            : `Ошибка: ${errorMessage}`;
-
-          await supabase
-            .from('logs')
-            .insert({
-              user_id: user.id,
-              account_id: accountId,
-              scenario_id: scenario.id,
-              action: success ? 'Проверка завершена успешно' : 'Проверка завершена с ошибкой',
-              details: finalLogDetails,
-              status: success ? 'success' : 'error'
-            });
-
-          if (success) {
-            toast({
-              title: "Проверка завершена",
-              description: "Аккаунт работает корректно",
-              duration: 5000
-            });
-          } else {
-            toast({
-              title: "Проблема с аккаунтом",
-              description: errorMessage,
-              variant: "destructive",
-              duration: 8000
-            });
-          }
-        } catch (error) {
-          console.error('Ошибка при завершении проверки:', error);
-          
-          await supabase.from('logs').insert({
-            user_id: user.id,
-            account_id: accountId,
-            scenario_id: scenario.id,  
-            action: 'Критическая ошибка проверки',
-            details: `Системная ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-            status: 'error'
-          });
-
-          toast({
-            title: "Системная ошибка",
-            description: "Произошла критическая ошибка при проверке",
-            variant: "destructive"
-          });
-        }
-      }, 2000); // Начинаем через 2 секунды
-
       toast({
-        title: "Проверка запущена",
-        description: "Выполняется базовая проверка аккаунта...",
+        title: "Запуск проверки",
+        description: `Выполняется реальная проверка аккаунта ${account.username}...`,
         duration: 3000
       });
 
+      // Создаем RPA-блок для реальной проверки
+      const rpaActions = [
+        // Переход на главную страницу платформы
+        { type: 'navigate', url: getCheckUrl(platform) },
+        { type: 'wait', duration: 3000 },
+        
+        // Поиск формы входа
+        { type: 'click', selector: getLoginButtonSelector(platform) },
+        { type: 'wait', duration: 2000 },
+        
+        // Ввод логина
+        { type: 'type', selector: getUsernameSelector(platform), text: account.username },
+        { type: 'wait', duration: 1000 },
+        
+        // Ввод пароля
+        { type: 'type', selector: getPasswordSelector(platform), text: account.password },
+        { type: 'wait', duration: 1000 },
+        
+        // Попытка входа
+        { type: 'click', selector: getSubmitSelector(platform) },
+        { type: 'wait', duration: 5000 },
+        
+        // Проверка успешности входа
+        { type: 'check_element', selector: getSuccessSelector(platform) }
+      ];
+
+      console.log('Отправляем задачу на реальный RPA-бот');
+
+      // Выполняем реальную RPA-проверку
+      const rpaResult = await executeRPABlock({
+        url: getCheckUrl(platform),
+        actions: rpaActions,
+        accountId: accountId,
+        scenarioId: scenario.id,
+        blockId: `check_${accountId}`,
+        timeout: 120000 // 2 минуты на проверку
+      });
+
+      if (rpaResult.success) {
+        // Успешная проверка
+        await supabase
+          .from('scenarios')
+          .update({ 
+            status: 'completed',
+            progress: 100
+          })
+          .eq('id', scenario.id);
+
+        await supabase
+          .from('accounts')
+          .update({ 
+            status: 'idle',
+            last_action: new Date().toISOString()
+          })
+          .eq('id', accountId);
+
+        await supabase
+          .from('logs')
+          .insert({
+            user_id: user.id,
+            account_id: accountId,
+            scenario_id: scenario.id,
+            action: 'Проверка завершена успешно',
+            details: `Аккаунт ${account.username} работает корректно. Вход выполнен успешно.`,
+            status: 'success'
+          });
+
+        toast({
+          title: "Проверка завершена",
+          description: `Аккаунт ${account.username} работает корректно`,
+          duration: 5000
+        });
+      } else {
+        throw new Error(rpaResult.error || 'RPA-проверка завершилась неудачно');
+      }
+
     } catch (error: any) {
-      console.error('Ошибка при запуске проверки:', error);
+      console.error('Ошибка при реальной проверке аккаунта:', error);
+      
+      // Обновляем статусы при ошибке
+      await supabase
+        .from('scenarios')
+        .update({ 
+          status: 'failed',
+          progress: 100
+        })
+        .eq('user_id', user.id)
+        .eq('config->>accountId', accountId);
+
+      await supabase
+        .from('accounts')
+        .update({ status: 'error' })
+        .eq('id', accountId);
+
+      await supabase
+        .from('logs')
+        .insert({
+          user_id: user.id,
+          account_id: accountId,
+          action: 'Ошибка проверки аккаунта',
+          details: `Ошибка при проверке: ${error.message}`,
+          status: 'error'
+        });
       
       toast({
-        title: "Ошибка запуска проверки",
-        description: error.message || 'Не удалось запустить проверку аккаунта',
+        title: "Ошибка проверки",
+        description: error.message || 'Не удалось проверить аккаунт',
         variant: "destructive",
         duration: 8000
       });
-
-      // Возвращаем статус аккаунта
-      await supabase
-        .from('accounts')
-        .update({ status: 'idle' })
-        .eq('id', accountId);
     } finally {
       setIsChecking(false);
     }
@@ -253,15 +211,80 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
 
   const getCheckUrl = (platform: string): string => {
     const urls: Record<string, string> = {
-      youtube: 'https://www.youtube.com',
-      tiktok: 'https://www.tiktok.com',
-      instagram: 'https://www.instagram.com',
-      twitter: 'https://www.twitter.com',
-      telegram: 'https://web.telegram.org',
-      reddit: 'https://www.reddit.com'
+      youtube: 'https://accounts.google.com/signin',
+      tiktok: 'https://www.tiktok.com/login',
+      instagram: 'https://www.instagram.com/accounts/login/',
+      twitter: 'https://twitter.com/login',
+      telegram: 'https://web.telegram.org/k/',
+      reddit: 'https://www.reddit.com/login'
     };
     
     return urls[platform] || 'https://www.google.com';
+  };
+
+  const getLoginButtonSelector = (platform: string): string => {
+    const selectors: Record<string, string> = {
+      youtube: '[data-testid="sign-in-button"]',
+      tiktok: '[data-e2e="login-button"]',
+      instagram: 'a[href="/accounts/login/"]',
+      twitter: 'a[href="/login"]',
+      reddit: 'a[href="/login"]',
+      telegram: '.sign-in-button'
+    };
+    
+    return selectors[platform] || 'input[type="submit"]';
+  };
+
+  const getUsernameSelector = (platform: string): string => {
+    const selectors: Record<string, string> = {
+      youtube: 'input[type="email"]',
+      tiktok: 'input[name="username"]',
+      instagram: 'input[name="username"]',
+      twitter: 'input[name="text"]',
+      reddit: 'input[name="username"]',
+      telegram: 'input[name="phone_number"]'
+    };
+    
+    return selectors[platform] || 'input[name="username"]';
+  };
+
+  const getPasswordSelector = (platform: string): string => {
+    const selectors: Record<string, string> = {
+      youtube: 'input[type="password"]',
+      tiktok: 'input[name="password"]',
+      instagram: 'input[name="password"]',
+      twitter: 'input[name="password"]',
+      reddit: 'input[name="password"]',
+      telegram: 'input[name="password"]'
+    };
+    
+    return selectors[platform] || 'input[name="password"]';
+  };
+
+  const getSubmitSelector = (platform: string): string => {
+    const selectors: Record<string, string> = {
+      youtube: 'button[type="submit"]',
+      tiktok: 'button[data-e2e="login-submit-button"]',
+      instagram: 'button[type="submit"]',
+      twitter: 'button[role="button"]',
+      reddit: 'button[type="submit"]',
+      telegram: 'button[type="submit"]'
+    };
+    
+    return selectors[platform] || 'button[type="submit"]';
+  };
+
+  const getSuccessSelector = (platform: string): string => {
+    const selectors: Record<string, string> = {
+      youtube: '[data-testid="avatar"]',
+      tiktok: '[data-e2e="profile-icon"]',
+      instagram: 'nav[role="navigation"]',
+      twitter: '[data-testid="AppTabBar_Home_Link"]',
+      reddit: '[data-testid="user-dropdown"]',
+      telegram: '.chats-container'
+    };
+    
+    return selectors[platform] || '.user-menu';
   };
 
   return (
@@ -275,7 +298,7 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
       {isChecking ? (
         <>
           <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          Проверка...
+          Проверяем...
         </>
       ) : (
         <>
