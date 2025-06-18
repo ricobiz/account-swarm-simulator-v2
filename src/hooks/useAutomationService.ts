@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,7 @@ interface LaunchScenarioParams {
   templateId: string;
   accountIds: string[];
   userId: string;
-  config?: any; // Добавляем конфигурацию
+  config?: any;
 }
 
 export const useAutomationService = () => {
@@ -38,8 +37,8 @@ export const useAutomationService = () => {
       // Создаем сценарии для каждого аккаунта
       const scenarioPromises = accountIds.map(async (accountId) => {
         const scenarioConfig = {
-          ...template.config,
-          executionConfig: config, // Добавляем пользовательскую конфигурацию
+          ...(template.config || {}), // Safely handle null config
+          executionConfig: config,
           accountId,
           userId,
           templateId
