@@ -7,12 +7,16 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { AccountCheckButton } from './AccountCheckButton';
 
 export const QuickAccountCheck: React.FC = () => {
-  const { accounts } = useAccounts();
+  const { accounts, loading } = useAccounts();
   const [checkingAll, setCheckingAll] = React.useState(false);
 
+  // Расширяем фильтр - показываем аккаунты со статусами idle, error, checking и working
   const availableAccounts = accounts.filter(account => 
-    account.status === 'idle' || account.status === 'error'
+    ['idle', 'error', 'checking', 'working'].includes(account.status)
   );
+
+  console.log('QuickAccountCheck - Все аккаунты:', accounts);
+  console.log('QuickAccountCheck - Доступные аккаунты:', availableAccounts);
 
   const handleCheckAll = async () => {
     setCheckingAll(true);
@@ -33,6 +37,32 @@ export const QuickAccountCheck: React.FC = () => {
     }, availableAccounts.length * 2000 + 10000);
   };
 
+  if (loading) {
+    return (
+      <Card className="bg-gray-800/50 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white text-sm">Быстрая проверка аккаунтов</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-400 text-sm">Загрузка аккаунтов...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (accounts.length === 0) {
+    return (
+      <Card className="bg-gray-800/50 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white text-sm">Быстрая проверка аккаунтов</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-400 text-sm">Аккаунты не найдены. Добавьте аккаунты в систему.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (availableAccounts.length === 0) {
     return (
       <Card className="bg-gray-800/50 border-gray-700">
@@ -40,7 +70,17 @@ export const QuickAccountCheck: React.FC = () => {
           <CardTitle className="text-white text-sm">Быстрая проверка аккаунтов</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-400 text-sm">Нет доступных аккаунтов для проверки</p>
+          <div className="space-y-2">
+            <p className="text-gray-400 text-sm">Нет аккаунтов доступных для проверки</p>
+            <div className="text-xs text-gray-500">
+              <p>Всего аккаунтов: {accounts.length}</p>
+              {accounts.map(acc => (
+                <p key={acc.id}>
+                  {acc.username} ({acc.platform}) - статус: {acc.status}
+                </p>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -84,10 +124,14 @@ export const QuickAccountCheck: React.FC = () => {
               <span className="text-gray-400">({account.platform})</span>
               <span className={`text-xs px-2 py-1 rounded ${
                 account.status === 'idle' ? 'bg-green-600' : 
-                account.status === 'error' ? 'bg-red-600' : 'bg-yellow-600'
+                account.status === 'error' ? 'bg-red-600' : 
+                account.status === 'checking' ? 'bg-blue-600' : 
+                account.status === 'working' ? 'bg-yellow-600' : 'bg-gray-600'
               }`}>
                 {account.status === 'idle' ? 'Готов' : 
-                 account.status === 'error' ? 'Ошибка' : account.status}
+                 account.status === 'error' ? 'Ошибка' : 
+                 account.status === 'checking' ? 'Проверяется' :
+                 account.status === 'working' ? 'Работает' : account.status}
               </span>
             </div>
             <AccountCheckButton
