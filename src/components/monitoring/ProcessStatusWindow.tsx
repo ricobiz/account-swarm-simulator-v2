@@ -187,60 +187,6 @@ const ProcessStatusWindow: React.FC = () => {
       </Card>
     </div>
   );
-
-  function getStatusIcon(status: ProcessStatus['status']) {
-    switch (status) {
-      case 'pending': return <Clock className="h-4 w-4 text-yellow-400" />;
-      case 'running': return <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />;
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-400" />;
-      case 'failed': return <XCircle className="h-4 w-4 text-red-400" />;
-      case 'stuck': return <AlertCircle className="h-4 w-4 text-orange-400" />;
-      default: return <Activity className="h-4 w-4 text-gray-400" />;
-    }
-  }
-
-  function getStatusColor(status: ProcessStatus['status']) {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'running': return 'bg-blue-500';
-      case 'completed': return 'bg-green-500';
-      case 'failed': return 'bg-red-500';
-      case 'stuck': return 'bg-orange-500';
-      default: return 'bg-gray-500';
-    }
-  }
-
-  function getStatusText(status: ProcessStatus['status']) {
-    switch (status) {
-      case 'pending': return 'Ожидание';
-      case 'running': return 'Выполняется';
-      case 'completed': return 'Завершено';
-      case 'failed': return 'Ошибка';
-      case 'stuck': return 'Застрял';
-      default: return 'Неизвестно';
-    }
-  }
-
-  function getTypeText(type: ProcessStatus['type']) {
-    switch (type) {
-      case 'scenario_save': return 'Сохранение сценария';
-      case 'scenario_launch': return 'Запуск сценария';
-      case 'account_update': return 'Обновление аккаунта';
-      case 'template_create': return 'Создание шаблона';
-      default: return 'Процесс';
-    }
-  }
-
-  function formatDuration(startTime: Date) {
-    const duration = Date.now() - startTime.getTime();
-    const seconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(seconds / 60);
-    
-    if (minutes > 0) {
-      return `${minutes}м ${seconds % 60}с`;
-    }
-    return `${seconds}с`;
-  }
 };
 
 export default ProcessStatusWindow;
