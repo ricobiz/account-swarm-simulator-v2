@@ -41,31 +41,51 @@ const ImportAccountsPanel = () => {
     const lines = data.trim().split('\n').filter(line => line.trim());
     const parsed: AccountData[] = [];
 
+    console.log('Parsing account data:', lines);
+
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
       if (!trimmedLine) return;
 
-      // Поддерживаем форматы: username:password:platform или username:password (platform = telegram по умолчанию)
-      const parts = trimmedLine.split(':');
+      // Поддерживаем форматы: username:password:platform, username:password или просто username
+      let parts: string[];
       
-      if (parts.length >= 2) {
-        parsed.push({
-          username: parts[0].trim(),
-          password: parts[1].trim(),
-          platform: parts[2]?.trim() || 'telegram',
-          status: 'pending'
-        });
+      if (trimmedLine.includes(':')) {
+        parts = trimmedLine.split(':');
+      } else if (trimmedLine.includes(',')) {
+        parts = trimmedLine.split(',');
       } else {
-        parsed.push({
-          username: trimmedLine,
-          password: '',
-          platform: 'telegram',
-          status: 'error',
-          error: 'Неверный формат данных'
-        });
+        // Если только username без разделителей
+        parts = [trimmedLine];
+      }
+
+      console.log(`Line ${index + 1}: ${trimmedLine} -> parts:`, parts);
+
+      if (parts.length >= 1) {
+        const username = parts[0]?.trim();
+        const password = parts[1]?.trim() || 'defaultpass123'; // Дефолтный пароль если не указан
+        const platform = parts[2]?.trim() || 'telegram'; // Дефолтная платформа
+
+        if (username && username.length >= 3) {
+          parsed.push({
+            username,
+            password,
+            platform: platform.toLowerCase(),
+            status: 'pending'
+          });
+        } else {
+          parsed.push({
+            username: trimmedLine,
+            password: '',
+            platform: 'telegram',
+            status: 'error',
+            error: 'Неверное имя пользователя (минимум 3 символа)'
+          });
+        }
       }
     });
 
+    console.log('Parsed accounts:', parsed);
     return parsed;
   };
 
@@ -76,6 +96,7 @@ const ImportAccountsPanel = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
+      console.log('File content:', content);
       setTextData(content);
       const parsed = parseAccountData(content);
       setAccounts(parsed);
@@ -84,6 +105,7 @@ const ImportAccountsPanel = () => {
   };
 
   const handleTextChange = (value: string) => {
+    console.log('Text input changed:', value);
     setTextData(value);
     if (value.trim()) {
       const parsed = parseAccountData(value);
@@ -94,18 +116,32 @@ const ImportAccountsPanel = () => {
   };
 
   const processAccounts = async () => {
-    if (accounts.length === 0) return;
+    if (accounts.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Нет аккаунтов для импорта",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    console.log('Starting account processing...', accounts);
     setIsProcessing(true);
     setProgress(0);
 
     const results: AccountData[] = [...accounts];
     let processed = 0;
+    let successCount = 0;
+    let errorCount = 0;
+    let duplicateCount = 0;
 
     for (let i = 0; i < results.length; i++) {
       const account = results[i];
       
+      console.log(`Processing account ${i + 1}:`, account);
+
       if (account.status === 'error') {
+        errorCount++;
         processed++;
         setProgress((processed / results.length) * 100);
         continue;
@@ -113,18 +149,26 @@ const ImportAccountsPanel = () => {
 
       // Проверяем дубликаты
       const isDuplicate = existingAccounts.some(
-        existing => existing.username === account.username && existing.platform === account.platform
+        existing => existing.username.toLowerCase() === account.username.toLowerCase() && 
+                   existing.platform.toLowerCase() === account.platform.toLowerCase()
       );
 
       if (isDuplicate) {
+        console.log('Duplicate found:', account.username);
         results[i] = { ...account, status: 'duplicate', error: 'Аккаунт уже существует' };
-        await addLog({
-          action: 'Импорт аккаунта',
-          details: `Попытка добавить дубликат: ${account.username} (${account.platform})`,
-          status: 'warning'
-        });
+        duplicateCount++;
+        
+        if (addLog) {
+          await addLog({
+            action: 'Импорт аккаунта',
+            details: `Попытка добавить дубликат: ${account.username} (${account.platform})`,
+            status: 'warning'
+          });
+        }
       } else {
         try {
+          console.log('Adding account to database:', account);
+          
           const result = await addAccount({
             username: account.username,
             password: account.password,
@@ -134,29 +178,46 @@ const ImportAccountsPanel = () => {
             last_action: new Date().toISOString()
           });
 
+          console.log('Add account result:', result);
+
           if (result.error) {
-            results[i] = { ...account, status: 'error', error: 'Ошибка сохранения' };
+            console.error('Error adding account:', result.error);
+            results[i] = { ...account, status: 'error', error: result.error.message || 'Ошибка сохранения' };
+            errorCount++;
+            
+            if (addLog) {
+              await addLog({
+                action: 'Импорт аккаунта',
+                details: `Ошибка при добавлении ${account.username}: ${result.error.message}`,
+                status: 'error'
+              });
+            }
+          } else {
+            console.log('Account added successfully');
+            results[i] = { ...account, status: 'success' };
+            successCount++;
+            
+            if (addLog) {
+              await addLog({
+                account_id: result.data?.id,
+                action: 'Импорт аккаунта',
+                details: `Успешно добавлен аккаунт ${account.username} (${account.platform})`,
+                status: 'success'
+              });
+            }
+          }
+        } catch (error: any) {
+          console.error('Exception adding account:', error);
+          results[i] = { ...account, status: 'error', error: error.message || 'Неизвестная ошибка' };
+          errorCount++;
+          
+          if (addLog) {
             await addLog({
               action: 'Импорт аккаунта',
-              details: `Ошибка при добавлении ${account.username}: ${result.error.message}`,
+              details: `Критическая ошибка при добавлении ${account.username}: ${error.message}`,
               status: 'error'
             });
-          } else {
-            results[i] = { ...account, status: 'success' };
-            await addLog({
-              account_id: result.data?.id,
-              action: 'Импорт аккаунта',
-              details: `Успешно добавлен аккаунт ${account.username} (${account.platform})`,
-              status: 'success'
-            });
           }
-        } catch (error) {
-          results[i] = { ...account, status: 'error', error: 'Неизвестная ошибка' };
-          await addLog({
-            action: 'Импорт аккаунта',
-            details: `Критическая ошибка при добавлении ${account.username}`,
-            status: 'error'
-          });
         }
       }
 
@@ -170,14 +231,21 @@ const ImportAccountsPanel = () => {
 
     setIsProcessing(false);
     
-    const successCount = results.filter(a => a.status === 'success').length;
-    const errorCount = results.filter(a => a.status === 'error').length;
-    const duplicateCount = results.filter(a => a.status === 'duplicate').length;
+    console.log('Import completed:', { successCount, errorCount, duplicateCount });
 
     toast({
       title: "Импорт завершён",
       description: `Добавлено: ${successCount}, Ошибок: ${errorCount}, Дубликатов: ${duplicateCount}`,
+      variant: successCount > 0 ? "default" : "destructive"
     });
+
+    // Очищаем данные после успешного импорта
+    if (successCount > 0) {
+      setTimeout(() => {
+        setTextData('');
+        setAccounts([]);
+      }, 2000);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -240,7 +308,7 @@ const ImportAccountsPanel = () => {
               <Textarea
                 value={textData}
                 onChange={(e) => handleTextChange(e.target.value)}
-                placeholder="username:password:platform&#10;user1:pass1:telegram&#10;user2:pass2:tiktok"
+                placeholder="username:password:platform&#10;user1:pass1:telegram&#10;user2:pass2:tiktok&#10;&#10;Или просто usernames:&#10;user1&#10;user2"
                 className="bg-gray-700 border-gray-600 text-white min-h-[120px]"
               />
             </div>
@@ -317,7 +385,7 @@ const ImportAccountsPanel = () => {
                             {account.username}
                           </div>
                           <div className="text-xs text-gray-400">
-                            {account.platform}
+                            {account.platform} • {account.password ? 'Пароль установлен' : 'Без пароля'}
                           </div>
                         </div>
                       </div>
@@ -336,6 +404,13 @@ const ImportAccountsPanel = () => {
               </div>
             </>
           )}
+
+          <div className="text-xs text-gray-500">
+            <p><strong>Поддерживаемые форматы:</strong></p>
+            <p>• username:password:platform (например: user1:pass123:telegram)</p>
+            <p>• username:password (платформа по умолчанию: telegram)</p>
+            <p>• username (пароль по умолчанию: defaultpass123, платформа: telegram)</p>
+          </div>
         </CardContent>
       </Card>
     </div>
