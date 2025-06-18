@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play } from 'lucide-react';
+import { Play, User } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useScenarios } from '@/hooks/useScenarios';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,7 @@ import ActiveScenarios from './scenario-launch/ActiveScenarios';
 import LaunchButton from './scenario-launch/LaunchButton';
 import EmptyState from './scenario-launch/EmptyState';
 import { ScenarioConfigModal } from './scenario-launch/ScenarioConfigModal';
+import { Button } from '@/components/ui/button';
 
 type ScenarioRow = Database['public']['Tables']['scenarios']['Row'];
 
@@ -31,29 +32,42 @@ const ScenarioLaunchPanel = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [templates, setTemplates] = useState<ScenarioTemplate[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [scenarioConfig, setScenarioConfig] = useState<any>(null);
   
   const { accounts } = useAccounts();
   const { scenarios, refetch: refetchScenarios } = useScenarios();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { launchScenario, stopScenario, isLaunching } = useAutomationService();
 
-  // Load scenario templates
+  // Load scenario templates only when user is authenticated
   useEffect(() => {
     const fetchTemplates = async () => {
+      if (!user) {
+        console.log('Пользователь не авторизован, очищаем шаблоны');
+        setTemplates([]);
+        setLoadingTemplates(false);
+        return;
+      }
+
       try {
         setLoadingTemplates(true);
+        console.log('Загрузка шаблонов для пользователя:', user.id);
+        
         const { data, error } = await supabase
           .from('scenarios')
           .select('*')
           .eq('status', 'template')
+          .eq('user_id', user.id)
           .not('config', 'is', null)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Ошибка загрузки шаблонов:', error);
+          throw error;
+        }
         
         const templatesData: ScenarioTemplate[] = (data || []).map((row: ScenarioRow) => ({
           id: row.id,
@@ -62,6 +76,7 @@ const ScenarioLaunchPanel = () => {
           config: row.config && typeof row.config === 'object' ? row.config as { steps: any[]; settings: any; } : null
         }));
         
+        console.log('Загружено шаблонов:', templatesData.length);
         setTemplates(templatesData);
       } catch (error) {
         console.error('Ошибка загрузки шаблонов:', error);
@@ -70,13 +85,56 @@ const ScenarioLaunchPanel = () => {
           description: "Не удалось загрузить шаблоны сценариев",
           variant: "destructive"
         });
+        setTemplates([]);
       } finally {
         setLoadingTemplates(false);
       }
     };
 
-    fetchTemplates();
-  }, [toast]);
+    if (!authLoading) {
+      fetchTemplates();
+    }
+  }, [user, authLoading, toast]);
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardContent className="p-8 text-center">
+            <div className="text-white">Проверка авторизации...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show auth required message if user is not logged in
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Необходима авторизация
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-gray-300">
+              Для запуска сценариев необходимо войти в систему
+            </div>
+            <Button 
+              onClick={() => window.location.href = '/auth'}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Войти в систему
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Filter accounts by selected template platform
   const getAvailableAccounts = () => {
@@ -114,7 +172,6 @@ const ScenarioLaunchPanel = () => {
     const template = templates.find(t => t.id === selectedTemplate);
     if (!template) return;
 
-    // Показываем модал конфигурации перед запуском
     setShowConfigModal(true);
   };
 
@@ -122,12 +179,11 @@ const ScenarioLaunchPanel = () => {
     if (!selectedTemplate || selectedAccounts.length === 0 || !user) return;
 
     try {
-      // Запускаем сценарий с конфигурацией
       const result = await launchScenario({
         templateId: selectedTemplate,
         accountIds: selectedAccounts,
         userId: user.id,
-        config: config // Передаем конфигурацию
+        config: config
       });
 
       if (result.success) {
@@ -165,7 +221,6 @@ const ScenarioLaunchPanel = () => {
 
   const availableAccounts = getAvailableAccounts();
   const runningScenarios = scenarios.filter(s => s.status === 'running' || s.status === 'waiting');
-
   const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
 
   return (
@@ -211,9 +266,8 @@ const ScenarioLaunchPanel = () => {
         onStopScenario={handleStopScenario}
       />
 
-      {templates.length === 0 && !loadingTemplates && <EmptyState />}
+      {templates.length === 0 && !loadingTemplates && user && <EmptyState />}
 
-      {/* Модал конфигурации сценария */}
       {showConfigModal && selectedTemplateData && (
         <ScenarioConfigModal
           isOpen={showConfigModal}

@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, User } from 'lucide-react';
 
 interface ScenarioTemplate {
   id: string;
