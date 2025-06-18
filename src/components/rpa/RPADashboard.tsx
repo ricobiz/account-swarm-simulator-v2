@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Zap, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Activity, Zap, Clock, CheckCircle, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { RPATaskMonitor } from './RPATaskMonitor';
 import { useRPAService } from '@/hooks/useRPAService';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const RPADashboard: React.FC = () => {
   const [rpaTasks, setRpaTasks] = useState([]);
@@ -19,18 +20,32 @@ export const RPADashboard: React.FC = () => {
     failed: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchRPATasks = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('Загрузка RPA задач...');
+      
       const { data, error } = await supabase.functions.invoke('get-rpa-tasks');
 
       if (error) {
-        console.error('Ошибка загрузки RPA задач:', error);
+        console.error('Ошибка Edge Function:', error);
+        setError(`Ошибка загрузки: ${error.message}`);
+        toast({
+          title: "Ошибка загрузки RPA задач",
+          description: error.message,
+          variant: "destructive"
+        });
         return;
       }
 
-      const tasks = data || [];
+      console.log('Получены RPA задачи:', data);
+      
+      const tasks = Array.isArray(data) ? data : [];
       setRpaTasks(tasks);
 
       // Подсчитываем статистику
@@ -39,12 +54,18 @@ export const RPADashboard: React.FC = () => {
         pending: tasks.filter((t: any) => t.status === 'pending').length,
         processing: tasks.filter((t: any) => t.status === 'processing').length,
         completed: tasks.filter((t: any) => t.status === 'completed').length,
-        failed: tasks.filter((t: any) => t.status === 'failed').length
+        failed: tasks.filter((t: any) => ['failed', 'timeout'].includes(t.status)).length
       };
       setStats(newStats);
 
-    } catch (error) {
-      console.error('Ошибка при загрузке RPA задач:', error);
+    } catch (error: any) {
+      console.error('Критическая ошибка при загрузке RPA задач:', error);
+      setError(`Критическая ошибка: ${error.message}`);
+      toast({
+        title: "Критическая ошибка",
+        description: "Не удалось загрузить RPA задачи",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -53,11 +74,40 @@ export const RPADashboard: React.FC = () => {
   useEffect(() => {
     fetchRPATasks();
     
-    // Обновляем каждые 10 секунд
-    const interval = setInterval(fetchRPATasks, 10000);
+    // Обновляем каждые 5 секунд
+    const interval = setInterval(fetchRPATasks, 5000);
     
     return () => clearInterval(interval);
   }, []);
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">RPA Dashboard</h2>
+            <p className="text-gray-400">Управление и мониторинг RPA задач</p>
+          </div>
+        </div>
+
+        <Card className="bg-red-900/20 border-red-700">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <AlertTriangle className="h-8 w-8 text-red-400" />
+              <div>
+                <h3 className="text-white font-bold mb-2">Ошибка загрузки RPA задач</h3>
+                <p className="text-red-300 mb-4">{error}</p>
+                <Button onClick={fetchRPATasks} className="bg-red-600 hover:bg-red-700">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Попробовать снова
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -150,7 +200,7 @@ export const RPADashboard: React.FC = () => {
 
         <TabsContent value="active">
           <RPATaskMonitor 
-            tasks={rpaTasks.filter((t: any) => t.status === 'pending' || t.status === 'processing')} 
+            tasks={rpaTasks.filter((t: any) => ['pending', 'processing'].includes(t.status))} 
             onRefresh={fetchRPATasks} 
           />
         </TabsContent>
@@ -164,7 +214,7 @@ export const RPADashboard: React.FC = () => {
 
         <TabsContent value="failed">
           <RPATaskMonitor 
-            tasks={rpaTasks.filter((t: any) => t.status === 'failed' || t.status === 'timeout')} 
+            tasks={rpaTasks.filter((t: any) => ['failed', 'timeout'].includes(t.status))} 
             onRefresh={fetchRPATasks} 
           />
         </TabsContent>

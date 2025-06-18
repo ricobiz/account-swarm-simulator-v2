@@ -19,17 +19,27 @@ serve(async (req) => {
     )
 
     if (req.method === 'GET') {
+      console.log('Получение RPA задач...');
+      
       // Получаем все RPA задачи с результатами
       const { data: tasks, error } = await supabase
         .from('rpa_tasks')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) {
         console.error('Ошибка получения RPA задач:', error);
-        throw error;
+        return new Response(
+          JSON.stringify({ error: 'Ошибка получения задач', details: error.message }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
       }
+
+      console.log(`Получено ${tasks?.length || 0} RPA задач`);
 
       // Преобразуем данные в нужный формат
       const formattedTasks = (tasks || []).map(task => ({
@@ -60,9 +70,13 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Ошибка в get-rpa-tasks функции:', error);
+    console.error('Критическая ошибка в get-rpa-tasks функции:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Внутренняя ошибка сервера', 
+        details: error.message,
+        stack: error.stack 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
