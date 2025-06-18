@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Проверка здоровья облачного RPA-бота на Railway
+Проверка здоровья RPA-бота
 """
 
 import requests
@@ -13,14 +13,14 @@ from datetime import datetime
 def check_bot_health(url):
     """Проверяет здоровье RPA-бота"""
     try:
-        print(f"🔍 Проверка облачного RPA-бота: {url}")
+        print(f"🔍 Проверка RPA-бота: {url}")
         
         # Проверка health endpoint
         health_response = requests.get(f"{url}/health", timeout=10)
         
         if health_response.status_code == 200:
             health_data = health_response.json()
-            print("✅ Облачный RPA-бот онлайн")
+            print("✅ RPA-бот онлайн")
             print(f"   Статус: {health_data.get('status')}")
             print(f"   Версия: {health_data.get('version')}")
             print(f"   Среда: {health_data.get('environment')}")
@@ -30,28 +30,27 @@ def check_bot_health(url):
             if status_response.status_code == 200:
                 status_data = status_response.json()
                 print(f"   Возможности: {', '.join(status_data.get('capabilities', []))}")
-                print(f"   Оптимизации: {', '.join(status_data.get('optimizations', []))}")
             
             return True
             
         else:
-            print(f"❌ Облачный RPA-бот недоступен: {health_response.status_code}")
+            print(f"❌ RPA-бот недоступен: {health_response.status_code}")
             return False
             
     except requests.exceptions.ConnectionError:
-        print("❌ Не удается подключиться к облачному RPA-боту")
+        print("❌ Не удается подключиться к RPA-боту")
         return False
     except requests.exceptions.Timeout:
-        print("❌ Таймаут подключения к облачному RPA-боту")
+        print("❌ Таймаут подключения к RPA-боту")
         return False
     except Exception as e:
         print(f"❌ Ошибка проверки: {e}")
         return False
 
 def test_rpa_task(url):
-    """Тестирует выполнение простой RPA задачи"""
+    """Тестирует выполнение RPA задачи"""
     try:
-        print("🧪 Тестирование облачной RPA задачи...")
+        print("🧪 Тестирование RPA задачи...")
         
         test_task = {
             "taskId": f"test_{int(time.time())}",
@@ -74,7 +73,7 @@ def test_rpa_task(url):
         
         if response.status_code == 200:
             result = response.json()
-            print("✅ Тестовая облачная RPA задача принята")
+            print("✅ Тестовая RPA задача принята")
             print(f"   Задача ID: {result.get('taskId')}")
             return True
         else:
@@ -93,7 +92,7 @@ if __name__ == "__main__":
     
     bot_url = sys.argv[1].rstrip('/')
     
-    print(f"🤖 Проверка облачного RPA-бота на Railway")
+    print(f"🤖 Проверка RPA-бота")
     print(f"📅 Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-" * 50)
     
@@ -105,11 +104,11 @@ if __name__ == "__main__":
         test_ok = test_rpa_task(bot_url)
         
         if test_ok:
-            print("\n🎉 Облачный RPA-бот полностью функционален!")
+            print("\n🎉 RPA-бот полностью функционален!")
             sys.exit(0)
         else:
-            print("\n⚠️  Облачный RPA-бот онлайн, но есть проблемы с выполнением задач")
+            print("\n⚠️  RPA-бот онлайн, но есть проблемы с выполнением задач")
             sys.exit(1)
     else:
-        print("\n❌ Облачный RPA-бот недоступен или неисправен")
+        print("\n❌ RPA-бот недоступен или неисправен")
         sys.exit(1)
