@@ -37,7 +37,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
   onCreateTemplate,
   actionManager
 }) => {
-  // More robust validation for platforms
+  // Robust validation for platforms to prevent empty values
   const validPlatforms = PLATFORMS.filter(platform => {
     const hasValidValue = platform?.value && 
                          typeof platform.value === 'string' && 
@@ -59,7 +59,7 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
     return true;
   });
 
-  console.log('Valid platforms:', validPlatforms);
+  console.log('TemplateCreationForm - Valid platforms:', validPlatforms.length);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -95,18 +95,11 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => {
-                        // Double check the value before rendering - this is the key fix
-                        if (!platform.value || platform.value.trim() === '') {
-                          console.error('Skipping platform with invalid value:', platform);
-                          return null;
-                        }
-                        return (
-                          <SelectItem key={platform.value} value={platform.value}>
-                            {platform.label}
-                          </SelectItem>
-                        );
-                      })}
+                      {validPlatforms.map((platform) => (
+                        <SelectItem key={platform.value} value={platform.value}>
+                          {platform.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

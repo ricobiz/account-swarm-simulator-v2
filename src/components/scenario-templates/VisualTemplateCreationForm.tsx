@@ -58,10 +58,29 @@ export const VisualTemplateCreationForm: React.FC<VisualTemplateCreationFormProp
     setShowFlowBuilder(false);
   };
 
+  // Robust platform filtering to prevent empty values
   const validPlatforms = PLATFORMS.filter(platform => {
-    return platform?.value && platform?.label && 
-           platform.value.trim() !== '' && platform.label.trim() !== '';
+    const hasValidValue = platform?.value && 
+                         typeof platform.value === 'string' && 
+                         platform.value.trim() !== '' && 
+                         platform.value !== 'undefined' && 
+                         platform.value !== 'null' &&
+                         platform.value.length > 0;
+    
+    const hasValidLabel = platform?.label && 
+                         typeof platform.label === 'string' && 
+                         platform.label.trim() !== '' &&
+                         platform.label.length > 0;
+    
+    if (!hasValidValue || !hasValidLabel) {
+      console.warn('Platform filtered out in VisualTemplateCreationForm:', platform);
+      return false;
+    }
+    
+    return true;
   });
+
+  console.log('VisualTemplateCreationForm - Valid platforms:', validPlatforms.length);
 
   if (showFlowBuilder) {
     return (
@@ -116,18 +135,11 @@ export const VisualTemplateCreationForm: React.FC<VisualTemplateCreationFormProp
                       <SelectValue placeholder="Выберите платформу" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => {
-                        // Double check the value before rendering - this is the key fix
-                        if (!platform.value || platform.value.trim() === '') {
-                          console.error('Skipping platform with invalid value:', platform);
-                          return null;
-                        }
-                        return (
-                          <SelectItem key={platform.value} value={platform.value}>
-                            {platform.label}
-                          </SelectItem>
-                        );
-                      })}
+                      {validPlatforms.map((platform) => (
+                        <SelectItem key={platform.value} value={platform.value}>
+                          {platform.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

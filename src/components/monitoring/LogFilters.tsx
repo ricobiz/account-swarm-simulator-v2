@@ -44,8 +44,13 @@ const LogFilters = ({
            account.id.length > 0 &&
            account.username &&
            typeof account.username === 'string' &&
-           account.username.trim() !== '';
+           account.username.trim() !== '' &&
+           account.platform &&
+           typeof account.platform === 'string' &&
+           account.platform.trim() !== '';
   });
+
+  console.log('LogFilters - Original accounts:', accounts.length, 'Valid accounts:', validAccounts.length);
 
   return (
     <div className="flex items-center justify-between">
@@ -79,18 +84,11 @@ const LogFilters = ({
           </SelectTrigger>
           <SelectContent className="bg-gray-800 border-gray-600">
             <SelectItem value="all">Все аккаунты</SelectItem>
-            {validAccounts.map((account) => {
-              // Double check the value before rendering - this is the key fix
-              if (!account.id || account.id.trim() === '') {
-                console.error('Skipping account with invalid ID:', account);
-                return null;
-              }
-              return (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.username} ({account.platform})
-                </SelectItem>
-              );
-            })}
+            {validAccounts.map((account) => (
+              <SelectItem key={account.id} value={account.id}>
+                {account.username} ({account.platform})
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

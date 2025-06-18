@@ -27,7 +27,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   onTemplateChange,
   loading
 }) => {
-  // Более строгая фильтрация шаблонов с валидными данными
+  // More robust filtering of templates with valid data
   const validTemplates = templates.filter(template => {
     const hasValidId = template?.id && 
                       typeof template.id === 'string' && 
@@ -41,31 +41,28 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                         template.name.trim() !== '' &&
                         template.name.length > 0;
     
-    // Дополнительная проверка на платформу
     const hasValidPlatform = template?.platform && 
                             typeof template.platform === 'string' && 
-                            template.platform.trim() !== '';
+                            template.platform.trim() !== '' &&
+                            template.platform.length > 0;
     
-    if (!hasValidId) {
-      console.warn('Template filtered out due to invalid ID:', template);
-      return false;
+    const isValid = hasValidId && hasValidName && hasValidPlatform;
+    
+    if (!isValid) {
+      console.warn('Template filtered out:', {
+        id: template?.id,
+        name: template?.name,
+        platform: template?.platform,
+        hasValidId,
+        hasValidName,
+        hasValidPlatform
+      });
     }
     
-    if (!hasValidName) {
-      console.warn('Template filtered out due to invalid name:', template);
-      return false;
-    }
-    
-    if (!hasValidPlatform) {
-      console.warn('Template filtered out due to invalid platform:', template);
-      return false;
-    }
-    
-    return true;
+    return isValid;
   });
 
-  console.log('Valid templates after filtering:', validTemplates);
-  console.log('Selected template value:', selectedTemplate);
+  console.log('TemplateSelector - Original templates:', templates.length, 'Valid templates:', validTemplates.length);
   
   const selectedTemplateData = validTemplates.find(t => t.id === selectedTemplate);
 
@@ -95,25 +92,17 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <SelectValue placeholder="Выберите шаблон для запуска" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-600 max-h-60">
-              {validTemplates.map((template) => {
-                // Double check the value before rendering - this is the key fix
-                if (!template.id || template.id.trim() === '') {
-                  console.error('Skipping template with invalid ID:', template);
-                  return null;
-                }
-                console.log('Rendering SelectItem with value:', template.id);
-                return (
-                  <SelectItem key={template.id} value={template.id}>
-                    <div className="flex items-center gap-2 w-full">
-                      <FileText className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate flex-1">{template.name}</span>
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
-                        {template.platform}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                );
-              })}
+              {validTemplates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  <div className="flex items-center gap-2 w-full">
+                    <FileText className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate flex-1">{template.name}</span>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                      {template.platform}
+                    </Badge>
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         )}
