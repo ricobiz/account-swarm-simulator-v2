@@ -45,18 +45,6 @@ serve(async (req) => {
         );
       }
 
-      // Проверяем что задача уже сохранена в базе данных
-      const { data: existingTask, error: checkError } = await supabase
-        .from('rpa_tasks')
-        .select('id')
-        .eq('task_id', task.taskId)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Ошибка проверки существующей задачи:', checkError);
-        throw checkError;
-      }
-
       // Обновляем статус на processing
       await supabase
         .from('rpa_tasks')
@@ -74,7 +62,6 @@ serve(async (req) => {
       if (!rpaEndpoint) {
         console.error('RPA_BOT_ENDPOINT не настроен');
         
-        // Обновляем статус на failed
         await supabase
           .from('rpa_tasks')
           .update({
@@ -82,7 +69,7 @@ serve(async (req) => {
             result_data: { 
               success: false, 
               error: 'RPA_BOT_ENDPOINT не настроен', 
-              message: 'Не настроен endpoint для RPA-бота' 
+              message: 'Настройте RPA_BOT_ENDPOINT в секретах Supabase' 
             },
             updated_at: new Date().toISOString()
           })
@@ -92,7 +79,54 @@ serve(async (req) => {
           JSON.stringify({ 
             success: false, 
             error: 'RPA_BOT_ENDPOINT не настроен',
-            message: 'Требуется настройка RPA-бота'
+            message: 'Настройте RPA_BOT_ENDPOINT=http://localhost:5000 в секретах Supabase'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
+
+      // Убираем лишние слеши и формируем правильный URL
+      const botUrl = rpaEndpoint.replace(/\/+$/, ''); // убираем слеши в конце
+      const executeUrl = `${botUrl}/execute`;
+
+      console.log('Отправка задачи RPA-боту:', executeUrl);
+
+      // Проверяем доступность RPA-бота сначала
+      try {
+        const healthResponse = await fetch(`${botUrl}/health`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!healthResponse.ok) {
+          throw new Error(`RPA-бот недоступен: ${healthResponse.status}`);
+        }
+
+        console.log('RPA-бот доступен, отправляем задачу');
+      } catch (healthError) {
+        console.error('RPA-бот недоступен:', healthError);
+        
+        await supabase
+          .from('rpa_tasks')
+          .update({
+            status: 'failed',
+            result_data: { 
+              success: false, 
+              error: 'RPA-бот недоступен', 
+              message: `Убедитесь что RPA-бот запущен на ${botUrl}. Запустите: cd rpa-bot && python rpa_bot.py` 
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('task_id', task.taskId);
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'RPA-бот недоступен',
+            message: `Запустите RPA-бота: cd rpa-bot && python rpa_bot.py`
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,9 +137,7 @@ serve(async (req) => {
 
       // Отправляем задачу внешнему RPA-боту
       try {
-        console.log('Отправка задачи RPA-боту:', rpaEndpoint);
-        
-        const response = await fetch(`${rpaEndpoint}/execute`, {
+        const response = await fetch(executeUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -113,22 +145,18 @@ serve(async (req) => {
           body: JSON.stringify(task),
         });
 
-        console.log('Ответ от RPA-бота:', response.status, response.statusText);
-
         if (!response.ok) {
-          throw new Error(`RPA-бот вернул ошибку: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`RPA-бот вернул ошибку: ${response.status} - ${errorText}`);
         }
 
         const responseData = await response.json();
         console.log('Данные от RPA-бота:', responseData);
-
-        // Если RPA-бот принял задачу, ждем результат через webhook или polling
         console.log('Задача успешно отправлена RPA-боту');
 
       } catch (error) {
         console.error('Ошибка отправки задачи RPA-боту:', error);
         
-        // Обновляем статус на failed
         await supabase
           .from('rpa_tasks')
           .update({
@@ -160,7 +188,7 @@ serve(async (req) => {
         await supabase
           .from('logs')
           .insert({
-            user_id: null, // Временно null, чтобы избежать ошибок
+            user_id: null,
             account_id: task.accountId,
             scenario_id: task.scenarioId,
             action: 'RPA задача отправлена',
@@ -209,7 +237,7 @@ serve(async (req) => {
         await supabase
           .from('logs')
           .insert({
-            user_id: null, // Временно null, чтобы избежать ошибок
+            user_id: null,
             account_id: result.accountId,
             scenario_id: result.scenarioId,
             action: result.success ? 'RPA задача выполнена' : 'RPA задача завершилась с ошибкой',
