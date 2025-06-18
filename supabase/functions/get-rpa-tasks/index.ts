@@ -18,48 +18,44 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get user from auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
+    if (req.method === 'GET') {
+      // Получаем все RPA задачи с результатами
+      const { data: tasks, error } = await supabase
+        .from('rpa_tasks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Ошибка получения RPA задач:', error);
+        throw error;
+      }
+
+      // Преобразуем данные в нужный формат
+      const formattedTasks = (tasks || []).map(task => ({
+        id: task.id,
+        taskId: task.task_id,
+        status: task.status,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+        result: task.result_data,
+        task: task.task_data
+      }));
+
+      return new Response(
+        JSON.stringify(formattedTasks),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
     }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      throw new Error('Invalid user token');
-    }
-
-    const { data: tasks, error } = await supabase
-      .from('rpa_tasks')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.error('Ошибка получения RPA задач:', error);
-      throw error;
-    }
-
-    // Transform the data to match the expected format
-    const transformedTasks = tasks?.map(task => ({
-      id: task.id,
-      taskId: task.task_id,
-      status: task.status,
-      createdAt: task.created_at,
-      updatedAt: task.updated_at,
-      task: task.task_data,
-      result: task.result_data
-    })) || [];
 
     return new Response(
-      JSON.stringify(transformedTasks),
+      JSON.stringify({ error: 'Method not allowed' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+        status: 405 
       }
     );
 

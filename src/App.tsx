@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/AuthProvider';
 import Auth from '@/pages/Auth';
 import Index from '@/pages/Index';
+import RPA from '@/pages/RPA';
 import NotFound from '@/pages/NotFound';
 import { ProcessMonitorProvider } from '@/components/ProcessMonitorProvider';
 
@@ -23,6 +24,7 @@ function App() {
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Index />} />
+                  <Route path="/rpa" element={<RPA />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />
