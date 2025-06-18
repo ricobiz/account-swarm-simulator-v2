@@ -13,11 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    // Создаем клиент с анонимным ключом для пользовательского доступа
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    console.log('Обработка запроса get-rpa-tasks...');
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    // Используем service role ключ для полного доступа к данным
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
@@ -28,17 +30,33 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: req.headers.get('Authorization') ?? '' },
-      },
-    });
+    // Создаем клиент с service role ключом
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     if (req.method === 'GET') {
       console.log('Получение RPA задач...');
       
-      // Получаем текущего пользователя
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Получаем пользователя из заголовка Authorization
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        console.error('Отсутствует заголовок Authorization');
+        return new Response(
+          JSON.stringify({ error: 'Authorization required' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 401 
+          }
+        );
+      }
+
+      // Используем анонимный клиент для проверки пользователя
+      const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      });
+
+      const { data: { user }, error: userError } = await anonClient.auth.getUser();
       
       if (userError || !user) {
         console.error('Ошибка аутентификации:', userError);
@@ -51,7 +69,9 @@ serve(async (req) => {
         );
       }
 
-      // Получаем RPA задачи пользователя
+      console.log('Пользователь аутентифицирован:', user.id);
+
+      // Получаем RPA задачи пользователя с использованием service role
       const { data: tasks, error } = await supabase
         .from('rpa_tasks')
         .select('*')
