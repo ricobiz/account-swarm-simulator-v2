@@ -1,24 +1,13 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormData } from '@/hooks/useTemplateManager';
-import { StepManager } from './StepManager';
+import BasicInfoSection from './BasicInfoSection';
+import ExecutionSettingsSection from './ExecutionSettingsSection';
+import ScenarioStepsSection from './ScenarioStepsSection';
 
 export type { FormData } from '@/hooks/useTemplateManager';
-
-const PLATFORMS = [
-  { value: 'telegram', label: 'Telegram' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'twitter', label: 'Twitter' },
-  { value: 'reddit', label: 'Reddit' }
-];
 
 interface TemplateCreationFormProps {
   isOpen: boolean;
@@ -37,30 +26,6 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
   onCreateTemplate,
   actionManager
 }) => {
-  // Robust validation for platforms to prevent empty values
-  const validPlatforms = PLATFORMS.filter(platform => {
-    const hasValidValue = platform?.value && 
-                         typeof platform.value === 'string' && 
-                         platform.value.trim() !== '' && 
-                         platform.value !== 'undefined' && 
-                         platform.value !== 'null' &&
-                         platform.value.length > 0;
-    
-    const hasValidLabel = platform?.label && 
-                         typeof platform.label === 'string' && 
-                         platform.label.trim() !== '' &&
-                         platform.label.length > 0;
-    
-    if (!hasValidValue || !hasValidLabel) {
-      console.warn('Platform filtered out:', platform);
-      return false;
-    }
-    
-    return true;
-  });
-
-  console.log('TemplateCreationForm - Valid platforms:', validPlatforms.length);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
@@ -72,144 +37,21 @@ const TemplateCreationForm: React.FC<TemplateCreationFormProps> = ({
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Основная информация о шаблоне */}
-          <Card className="bg-gray-900 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Основная информация</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Название шаблона</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    placeholder="Введите название шаблона"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Платформа</label>
-                  <Select value={formData.platform} onValueChange={(value) => setFormData({ ...formData, platform: value })}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                      <SelectValue placeholder="Выберите платформу" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {validPlatforms.map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          {platform.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-gray-300">Описание</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
-                  placeholder="Опишите назначение шаблона"
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <BasicInfoSection 
+            formData={formData}
+            setFormData={setFormData}
+          />
 
-          {/* Настройки выполнения */}
-          <Card className="bg-gray-900 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Настройки выполнения</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Мин. задержка (мс)</label>
-                  <Input
-                    type="number"
-                    value={formData.settings.minDelay}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, minDelay: parseInt(e.target.value) || 1000 }
-                    })}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    min="100"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Макс. задержка (мс)</label>
-                  <Input
-                    type="number"
-                    value={formData.settings.maxDelay}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, maxDelay: parseInt(e.target.value) || 3000 }
-                    })}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    min="100"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Попытки повтора</label>
-                  <Input
-                    type="number"
-                    value={formData.settings.retryAttempts}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, retryAttempts: parseInt(e.target.value) || 2 }
-                    })}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    min="0"
-                    max="10"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-300">Пауза между аккаунтами (мс)</label>
-                  <Input
-                    type="number"
-                    value={formData.settings.pauseBetweenAccounts}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, pauseBetweenAccounts: parseInt(e.target.value) || 5000 }
-                    })}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    min="1000"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ExecutionSettingsSection
+            formData={formData}
+            setFormData={setFormData}
+          />
 
-          {/* Шаги сценария - используем вкладки для разделения */}
-          <Card className="bg-gray-900 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Шаги сценария</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="manual" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-800">
-                  <TabsTrigger value="manual" className="text-gray-300">Создать шаги вручную</TabsTrigger>
-                  <TabsTrigger value="templates" className="text-gray-300">Готовые шаблоны</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="manual" className="mt-4">
-                  <StepManager
-                    formData={formData}
-                    setFormData={setFormData}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="templates" className="mt-4">
-                  {actionManager}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+          <ScenarioStepsSection
+            formData={formData}
+            setFormData={setFormData}
+            actionManager={actionManager}
+          />
 
           {/* Кнопки действий */}
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-700">
