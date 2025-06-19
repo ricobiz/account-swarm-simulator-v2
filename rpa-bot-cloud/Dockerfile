@@ -8,7 +8,19 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     xvfb \
+    fluxbox \
     ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libgconf-2-4 \
     && rm -rf /var/lib/apt/lists/*
 
 # Добавление Google Chrome репозитория и установка
@@ -29,6 +41,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копирование кода приложения
 COPY . .
+
+# Создание директорий
+RUN mkdir -p screenshots logs profiles extensions
 
 # Установка переменных окружения
 ENV DISPLAY=:99
