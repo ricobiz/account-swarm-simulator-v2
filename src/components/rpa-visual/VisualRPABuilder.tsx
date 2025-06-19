@@ -13,10 +13,10 @@ import {
   Settings, 
   Play, 
   Database,
-  Eye,
-  Zap,
-  Server
+  Server,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { ServerRecordedAction, ServerSavedScenario } from '@/types/serverRPA';
 
 export const VisualRPABuilder: React.FC = () => {
@@ -24,12 +24,13 @@ export const VisualRPABuilder: React.FC = () => {
   const [savedScenarios, setSavedScenarios] = useState<ServerSavedScenario[]>([]);
   const [executingScenario, setExecutingScenario] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSaveScenario = useCallback((actions: ServerRecordedAction[]) => {
     if (actions.length === 0) {
       toast({
         title: "Нет действий",
-        description: "Нельзя сохранить пустой сценарий",
+        description: "Нельзя сохранить пустый сценарий",
         variant: "destructive"
       });
       return;
@@ -41,7 +42,6 @@ export const VisualRPABuilder: React.FC = () => {
     const scenarioDescription = prompt("Введите описание сценария (опционально):") || "";
     const platform = prompt("Введите название платформы (например: instagram, youtube):") || "universal";
 
-    // Берем разрешение браузера из первого действия
     const browserResolution = actions[0]?.browserResolution || { width: 1920, height: 1080 };
 
     const newScenario: ServerSavedScenario = {
@@ -56,7 +56,6 @@ export const VisualRPABuilder: React.FC = () => {
 
     setSavedScenarios(prev => [...prev, newScenario]);
     
-    // Сохраняем в localStorage
     localStorage.setItem('rpa_scenarios', JSON.stringify([...savedScenarios, newScenario]));
 
     toast({
@@ -82,12 +81,9 @@ export const VisualRPABuilder: React.FC = () => {
       description: `Выполняется "${scenario.name}" на реальном браузере сервера`
     });
 
-    // Асинхронное выполнение
     try {
-      // Здесь будет интеграция с серверным RPA движком
       console.log('Executing server-based scenario:', scenario);
       
-      // Имитация выполнения для демонстрации
       await new Promise(resolve => setTimeout(resolve, 5000));
       
       toast({
@@ -105,7 +101,6 @@ export const VisualRPABuilder: React.FC = () => {
     }
   }, [executingScenario, toast]);
 
-  // Загрузка сохраненных сценариев при инициализации
   React.useEffect(() => {
     const stored = localStorage.getItem('rpa_scenarios');
     if (stored) {
@@ -120,14 +115,26 @@ export const VisualRPABuilder: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Bot className="h-8 w-8 text-purple-400" />
-            Серверный RPA Конструктор
-          </h1>
-          <p className="text-gray-400 mt-2">
-            Создавайте и выполняйте автоматизированные сценарии на основе реальных серверных скриншотов
-          </p>
+        <div className="mb-8 flex items-center gap-4">
+          <Button
+            onClick={() => navigate('/')}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Назад
+          </Button>
+          
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Bot className="h-8 w-8 text-purple-400" />
+              Серверный RPA Конструктор
+            </h1>
+            <p className="text-gray-400 mt-2">
+              Создавайте и выполняйте автоматизированные сценарии на основе реальных серверных скриншотов
+            </p>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -151,36 +158,102 @@ export const VisualRPABuilder: React.FC = () => {
           </TabsList>
 
           <TabsContent value="recorder">
-            <ServerBasedRPARecorder onSaveScenario={handleSaveScenario} />
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Серверный рекордер действий</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Server className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+                  <p className="text-gray-300 mb-4">
+                    Здесь будет интерфейс для записи действий на сервере
+                  </p>
+                  <Button className="bg-purple-600 hover:bg-purple-700">
+                    Начать запись
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="scenarios">
-            <ScenarioManager 
-              scenarios={savedScenarios}
-              onExecute={handleExecuteScenario}
-              onDelete={(id) => {
-                const updated = savedScenarios.filter(s => s.id !== id);
-                setSavedScenarios(updated);
-                localStorage.setItem('rpa_scenarios', JSON.stringify(updated));
-              }}
-              isExecuting={executingScenario}
-            />
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Сохраненные сценарии</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedScenarios.length > 0 ? (
+                  <div className="space-y-4">
+                    {savedScenarios.map((scenario) => (
+                      <div key={scenario.id} className="bg-gray-900 p-4 rounded-lg border border-gray-600">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-white font-medium">{scenario.name}</h3>
+                            <p className="text-gray-400 text-sm">{scenario.description}</p>
+                            <p className="text-gray-500 text-xs">
+                              {scenario.actions.length} действий • {scenario.platform}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => handleExecuteScenario(scenario)}
+                            disabled={executingScenario === scenario.id}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {executingScenario === scenario.id ? 'Выполняется...' : 'Запустить'}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Database className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400">Нет сохраненных сценариев</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="executor">
-            <MacroExecutor 
-              scenarios={savedScenarios}
-              onExecute={handleExecuteScenario}
-              isExecuting={executingScenario}
-            />
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Выполнение сценариев</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Play className="h-16 w-16 text-blue-400 mx-auto mb-4" />
+                  <p className="text-gray-300 mb-4">
+                    Интерфейс для массового выполнения сценариев
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    Настроить выполнение
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings">
-            <APIKeysManager />
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Настройки API</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Settings className="h-16 w-16 text-orange-400 mx-auto mb-4" />
+                  <p className="text-gray-300 mb-4">
+                    Управление API ключами и настройками подключения
+                  </p>
+                  <Button className="bg-orange-600 hover:bg-orange-700">
+                    Настроить API
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Статус выполнения */}
         {executingScenario && (
           <Card className="fixed bottom-4 right-4 bg-purple-900 border-purple-700 w-80">
             <CardContent className="p-4">

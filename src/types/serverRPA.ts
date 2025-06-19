@@ -1,26 +1,17 @@
 
-export interface BrowserInfo {
-  resolution: { width: number; height: number };
-  userAgent: string;
-  deviceType: 'desktop' | 'mobile' | 'tablet';
-  timestamp: string;
-}
-
-export interface ServerScreenshot {
-  imageBase64: string;
-  browserInfo: BrowserInfo;
-  sessionId: string;
-}
-
 export interface ServerRecordedAction {
   id: string;
-  type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  coordinates: { x: number; y: number };
-  browserResolution: { width: number; height: number };
-  description: string;
-  value?: string;
+  type: 'click' | 'type' | 'navigate' | 'scroll' | 'wait' | 'screenshot';
   timestamp: number;
-  element?: string; // Keep as optional string for server compatibility
+  element?: {
+    selector: string;
+    text?: string;
+    coordinates?: { x: number; y: number };
+  };
+  url?: string;
+  screenshot?: string;
+  browserResolution?: { width: number; height: number };
+  delay?: number;
 }
 
 export interface ServerSavedScenario {
@@ -33,12 +24,12 @@ export interface ServerSavedScenario {
   browserResolution: { width: number; height: number };
 }
 
-export interface MacroTestResult {
+export interface ServerRPAExecutionResult {
   success: boolean;
-  completedActions: number;
+  scenarioId: string;
+  executedActions: number;
   totalActions: number;
-  error?: string;
-  beforeScreenshot?: string;
-  afterScreenshot?: string;
-  executionTime: number;
+  duration: number;
+  errors?: string[];
+  screenshots?: string[];
 }
