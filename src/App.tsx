@@ -1,41 +1,34 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import PrivateRoute from './components/PrivateRoute';
+import ProcessMonitor from './pages/ProcessMonitor';
+import { ProcessMonitorProvider } from './contexts/ProcessMonitorContext';
+import Settings from './pages/Settings';
+import VisualRPA from './pages/VisualRPA';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/AuthProvider";
-import { ProcessMonitorProvider } from "@/components/ProcessMonitorProvider";
-import Index from "./pages/Index";
-import Accounts from "./pages/Accounts";
-import Auth from "./pages/Auth";
-import ScenarioLaunch from "./pages/ScenarioLaunch";
-import RPA from "./pages/RPA";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <ProcessMonitorProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-900">
+        <AuthProvider>
+          <ProcessMonitorProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/scenario-launch" element={<ScenarioLaunch />} />
-              <Route path="/rpa" element={<RPA />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/process-monitor" element={<PrivateRoute><ProcessMonitor /></PrivateRoute>} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+              <Route path="/visual-rpa" element={<VisualRPA />} />
             </Routes>
-          </BrowserRouter>
-        </ProcessMonitorProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          </ProcessMonitorProvider>
+        </AuthProvider>
+      </div>
+    </Router>
+  );
+}
 
 export default App;
