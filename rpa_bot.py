@@ -43,7 +43,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/app/logs/rpa_bot.log'),
         logging.StreamHandler()
     ]
 )
@@ -109,12 +108,7 @@ class UniversalRPABot:
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
-            
-            # Headless режим для облака
-            if os.getenv('DISPLAY'):
-                options.add_argument('--display=' + os.getenv('DISPLAY'))
-            else:
-                options.add_argument('--headless')
+            options.add_argument('--headless')
             
             # Антидетект настройки
             if stealth_mode:

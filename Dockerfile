@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     unzip \
     curl \
-    xvfb \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
@@ -31,7 +30,7 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Создание пользователя app
+# Создание пользователя app и рабочей директории
 RUN useradd --create-home --shell /bin/bash app
 WORKDIR /app
 
@@ -43,13 +42,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копирование кода приложения
 COPY rpa_bot.py health_check.py ./
 
-# Настройка прав
-RUN chown -R app:app /app \
-    && mkdir -p /app/logs \
-    && chmod -R 755 /app/logs
+# Создание директорий с правильными правами
+RUN mkdir -p /app/logs /app/screenshots /app/frontend \
+    && chown -R app:app /app \
+    && chmod -R 755 /app
 
 # Переменные окружения
-ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/google-chrome
 
@@ -57,5 +55,4 @@ USER app
 
 EXPOSE 8080
 
-# Запуск с Xvfb
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & python rpa_bot.py"]
+CMD ["python", "rpa_bot.py"]
