@@ -9,13 +9,22 @@ import type { RPATask } from '@/types/rpa';
 
 export const TestRPAButton: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
+  const [testLog, setTestLog] = useState<string[]>([]);
   const { submitRPATask, waitForRPACompletion } = useRPAService();
   const { toast } = useToast();
 
+  const addLog = (message: string) => {
+    console.log(`[RPA TEST] ${message}`);
+    setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
   const runTestRPA = async () => {
     setIsRunning(true);
+    setTestLog([]);
     
     try {
+      addLog('Начинаем тест RPA системы');
+      
       // Создаем простую тестовую задачу
       const testTask: RPATask = {
         taskId: `test_${Date.now()}`,
@@ -45,32 +54,45 @@ export const TestRPAButton: React.FC = () => {
         timeout: 30000
       };
 
+      addLog(`Создана тестовая задача: ${testTask.taskId}`);
+
       toast({
         title: "Запуск тестовой RPA задачи",
         description: "Отправляем задачу RPA-боту..."
       });
 
+      addLog('Отправляем задачу RPA-боту...');
+
       // Отправляем задачу
       const submitResult = await submitRPATask(testTask);
+      
+      addLog(`Результат отправки: ${JSON.stringify(submitResult)}`);
       
       if (!submitResult.success) {
         throw new Error(submitResult.error || 'Ошибка отправки задачи');
       }
+
+      addLog('Задача успешно отправлена, ждем выполнения...');
 
       toast({
         title: "Задача отправлена",
         description: "Ожидаем выполнения RPA-ботом..."
       });
 
-      // Ждем результат
+      // Ждем результат с подробным логированием
+      addLog('Начинаем ожидание результата (таймаут 30 секунд)...');
       const result = await waitForRPACompletion(testTask.taskId, 30000);
 
+      addLog(`Получен результат: ${JSON.stringify(result)}`);
+
       if (result?.success) {
+        addLog('✅ Тест завершен успешно!');
         toast({
           title: "✅ RPA тест прошел успешно!",
           description: result.message || 'Задача выполнена'
         });
       } else {
+        addLog(`❌ Тест завершился с ошибкой: ${result?.error || 'Неизвестная ошибка'}`);
         toast({
           title: "❌ RPA тест завершился с ошибкой",
           description: result?.error || 'Неизвестная ошибка',
@@ -79,6 +101,9 @@ export const TestRPAButton: React.FC = () => {
       }
 
     } catch (error: any) {
+      addLog(`💥 Критическая ошибка: ${error.message}`);
+      console.error('Полная ошибка теста RPA:', error);
+      
       toast({
         title: "Ошибка выполнения теста",
         description: error.message,
@@ -129,6 +154,18 @@ export const TestRPAButton: React.FC = () => {
             <li>Ожидание 1 секунда</li>
           </ul>
         </div>
+
+        {/* Лог выполнения теста */}
+        {testLog.length > 0 && (
+          <div className="mt-4 p-3 bg-gray-900 rounded-lg">
+            <p className="text-xs text-gray-400 mb-2">Лог выполнения:</p>
+            <div className="text-xs text-gray-300 space-y-1 max-h-32 overflow-y-auto">
+              {testLog.map((log, index) => (
+                <div key={index} className="font-mono">{log}</div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
