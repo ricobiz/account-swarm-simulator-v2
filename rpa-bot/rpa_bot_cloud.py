@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Cloud version of RPA-bot optimized for Railway with advanced features
+Cloud version of RPA-bot optimized for Railway with server-based screenshots
 """
 
 import json
@@ -15,13 +15,14 @@ from datetime import datetime
 
 # Локальные импорты
 from advanced_cloud_rpa_bot import AdvancedCloudRPABot
+from server_screenshot_handler import screenshot_handler
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/rpa_bot.log'),
+        logging.FileHandler('logs/rpa_bot.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -68,33 +69,35 @@ def send_result_to_supabase(task_id, result):
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Проверка состояния продвинутого облачного сервиса"""
+    """Проверка состояния сервиса"""
     try:
-        # Проверка Vision API подключения
         vision_status = advanced_rpa_bot.test_vision_connection()
         cache_stats = advanced_rpa_bot.get_cache_stats()
+        active_sessions = screenshot_handler.list_active_sessions()
         
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
-            'version': '3.0.0-advanced',
+            'version': '3.0.0-server-screenshots',
             'environment': 'railway',
             'capabilities': [
                 'navigate', 'click', 'type', 'wait', 'scroll', 'key', 'move', 
                 'check_element', 'telegram_like', 'vision_recognition', 
-                'smart_caching', 'antidetect_browser', 'auto_learning'
+                'smart_caching', 'antidetect_browser', 'auto_learning',
+                'server_screenshots', 'macro_testing'
             ],
             'vision_api': {
                 'status': 'connected' if vision_status else 'disconnected',
                 'api_key_set': bool(OPENROUTER_API_KEY)
             },
             'cache_stats': cache_stats,
+            'active_browser_sessions': len(active_sessions),
             'system': {
                 'cpu_percent': 15.0,
                 'memory_percent': 65.0,
                 'disk_usage': 45.0
             }
-        }), 200, {'Content-Type': 'application/json'}
+        }), 200
     except Exception as e:
         logger.error(f"Ошибка health check: {e}")
         return jsonify({
@@ -103,43 +106,118 @@ def health():
             'timestamp': datetime.now().isoformat()
         }), 500
 
-@app.route('/status', methods=['GET'])
-def get_status():
-    """Получение подробного статуса продвинутого бота"""
+@app.route('/api/rpa/screenshot', methods=['POST'])
+def get_server_screenshot():
+    """Получение скриншота с сервера"""
     try:
-        cache_stats = advanced_rpa_bot.get_cache_stats()
+        data = request.get_json()
+        url = data.get('url')
+        session_id = data.get('sessionId')
+        device_type = data.get('deviceType', 'desktop')
         
-        return jsonify({
-            'bot_status': 'online',
-            'version': '3.0.0-advanced-railway',
-            'environment': 'railway',
-            'features': {
-                'antidetect_browser': True,
-                'vision_caching': True,
-                'auto_learning': True,
-                'smart_retry': True,
-                'human_behavior': True
-            },
-            'supported_platforms': ['instagram', 'youtube', 'twitter', 'telegram', 'any_website'],
-            'active_sessions': 0,
-            'uptime': time.time(),
-            'cache_statistics': cache_stats,
-            'system_resources': {
-                'cpu': '15.0%',
-                'memory': '65.0%',
-                'disk': '45.0%'
-            }
-        }), 200, {'Content-Type': 'application/json'}
+        if not url:
+            return jsonify({'error': 'URL обязателен'}), 400
+        
+        logger.info(f"Получение серверного скриншота для: {url}")
+        
+        # Создаем новый сеанс, если не передан
+        if not session_id:
+            session_id = screenshot_handler.create_browser_session(device_type)
+        
+        # Получаем скриншот
+        result = screenshot_handler.get_screenshot(session_id, url)
+        
+        logger.info(f"Скриншот получен для сеанса: {session_id}")
+        return jsonify(result)
+        
     except Exception as e:
-        logger.error(f"Ошибка status check: {e}")
-        return jsonify({
-            'error': str(e),
-            'bot_status': 'error'
-        }), 500
+        logger.error(f"Ошибка получения скриншота: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rpa/test-macro', methods=['POST'])
+def test_macro():
+    """Тестирование макроса на сервере"""
+    try:
+        data = request.get_json()
+        session_id = data.get('sessionId')
+        actions = data.get('actions', [])
+        url = data.get('url')
+        
+        if not actions:
+            return jsonify({'error': 'Действия обязательны'}), 400
+        
+        if not url:
+            return jsonify({'error': 'URL обязателен'}), 400
+        
+        logger.info(f"Тестирование макроса: {len(actions)} действий")
+        
+        # Тестируем макрос
+        result = screenshot_handler.test_macro(session_id, actions, url)
+        
+        logger.info(f"Макрос протестирован: {result['completedActions']}/{result['totalActions']} действий")
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Ошибка тестирования макроса: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rpa/execute-macro', methods=['POST'])
+def execute_macro():
+    """Выполнение макроса с человеческим поведением"""
+    try:
+        data = request.get_json()
+        session_id = data.get('sessionId')
+        actions = data.get('actions', [])
+        url = data.get('url')
+        human_behavior = data.get('humanBehavior', True)
+        
+        if not actions:
+            return jsonify({'error': 'Действия обязательны'}), 400
+        
+        if not url:
+            return jsonify({'error': 'URL обязателен'}), 400
+        
+        logger.info(f"Выполнение макроса с человеческим поведением: {len(actions)} действий")
+        
+        # Выполняем макрос (пока используем test_macro, но с флагом человеческого поведения)
+        result = screenshot_handler.test_macro(session_id, actions, url)
+        result['humanBehavior'] = human_behavior
+        
+        logger.info(f"Макрос выполнен: {result['completedActions']}/{result['totalActions']} действий")
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Ошибка выполнения макроса: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rpa/browser-info/<session_id>', methods=['GET'])
+def get_browser_info(session_id):
+    """Получение информации о браузере"""
+    try:
+        info = screenshot_handler.get_session_info(session_id)
+        if not info:
+            return jsonify({'error': 'Сеанс не найден'}), 404
+        
+        return jsonify(info)
+        
+    except Exception as e:
+        logger.error(f"Ошибка получения информации о браузере: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rpa/session/<session_id>', methods=['DELETE'])
+def close_session(session_id):
+    """Закрытие сеанса браузера"""
+    try:
+        screenshot_handler.close_session(session_id)
+        return jsonify({'success': True, 'message': 'Сеанс закрыт'})
+        
+    except Exception as e:
+        logger.error(f"Ошибка закрытия сеанса: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/execute', methods=['POST'])
 def execute_task():
-    """Выполнение продвинутой RPA задачи в облаке"""
+    """Выполнение RPA задачи"""
     try:
         task = request.get_json()
         
@@ -150,7 +228,7 @@ def execute_task():
         if not task_id:
             return jsonify({'error': 'Отсутствует taskId'}), 400
         
-        logger.info(f"Получена продвинутая облачная задача для выполнения: {task_id}")
+        logger.info(f"Получена задача для выполнения: {task_id}")
         
         def execute_and_send():
             try:
@@ -172,53 +250,25 @@ def execute_task():
         
         return jsonify({
             'success': True,
-            'message': f'Продвинутая облачная задача {task_id} принята к выполнению',
+            'message': f'Задача {task_id} принята к выполнению',
             'taskId': task_id,
-            'environment': 'railway-advanced',
-            'features_enabled': ['antidetect', 'vision_cache', 'auto_learning']
+            'environment': 'railway-server-screenshots'
         })
         
     except Exception as e:
-        logger.error(f"Ошибка получения продвинутой облачной задачи: {e}")
+        logger.error(f"Ошибка получения задачи: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/clear-cache', methods=['POST'])
-def clear_cache():
-    """Очистка кэша Vision API"""
-    try:
-        data = request.get_json()
-        url = data.get('url') if data else None
-        
-        if url:
-            advanced_rpa_bot.clear_cache_for_url(url)
-            message = f'Кэш очищен для URL: {url}'
-        else:
-            # Очистка всего кэша (можно добавить метод в VisionCache)
-            message = 'Частичная очистка кэша выполнена'
-        
-        return jsonify({
-            'success': True,
-            'message': message,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"Ошибка очистки кэша: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/cache-stats', methods=['GET'])
-def get_cache_stats():
-    """Получение статистики кэша"""
-    try:
-        stats = advanced_rpa_bot.get_cache_stats()
-        return jsonify({
-            'success': True,
-            'stats': stats,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        logger.error(f"Ошибка получения статистики кэша: {e}")
-        return jsonify({'error': str(e)}), 500
+# Фоновая задача для очистки старых сеансов
+def cleanup_old_sessions():
+    """Очистка старых сеансов браузера"""
+    while True:
+        try:
+            screenshot_handler.cleanup_old_sessions()
+            time.sleep(300)  # каждые 5 минут
+        except Exception as e:
+            logger.error(f"Ошибка очистки сеансов: {e}")
+            time.sleep(60)
 
 @app.errorhandler(404)
 def not_found(error):
@@ -229,18 +279,22 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    logger.info("Запуск сервера продвинутого облачного RPA бота...")
+    logger.info("Запуск сервера RPA бота с поддержкой серверных скриншотов...")
     logger.info(f"Порт: {BOT_PORT}")
     logger.info(f"Supabase URL: {SUPABASE_URL}")
     logger.info(f"OpenRouter API ключ установлен: {bool(OPENROUTER_API_KEY)}")
-    logger.info("Среда: Railway Cloud - Advanced RPA")
     
     # Создание необходимых директорий
     os.makedirs('screenshots', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     os.makedirs('cache_errors', exist_ok=True)
     
-    # Проверка доступности основных компонентов
+    # Запуск фоновой задачи очистки
+    cleanup_thread = threading.Thread(target=cleanup_old_sessions)
+    cleanup_thread.daemon = True
+    cleanup_thread.start()
+    
+    # Проверка доступности компонентов
     try:
         from selenium import webdriver
         logger.info("✅ Selenium доступен")

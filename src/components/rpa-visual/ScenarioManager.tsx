@@ -13,21 +13,18 @@ import {
   MousePointer,
   Type,
   Hand,
-  MoreHorizontal
+  MoreHorizontal,
+  Monitor,
+  Server
 } from 'lucide-react';
 
 interface RecordedAction {
   id: string;
   type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  element: {
-    x: number;
-    y: number;
-    selector?: string;
-    text?: string;
-    description: string;
-  };
+  coordinates: { x: number; y: number };
+  browserResolution: { width: number; height: number };
+  description: string;
   value?: string;
-  delay?: number;
   timestamp: number;
 }
 
@@ -38,6 +35,7 @@ interface SavedScenario {
   actions: RecordedAction[];
   created_at: string;
   platform: string;
+  browserResolution: { width: number; height: number };
 }
 
 interface ScenarioManagerProps {
@@ -79,9 +77,9 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
       <Card className="bg-gray-800 border-gray-700">
         <CardContent className="p-8 text-center">
           <div className="text-gray-400">
-            <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium text-white mb-2">Нет сохраненных сценариев</h3>
-            <p>Используйте рекордер для создания ваших первых автоматизированных сценариев</p>
+            <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium text-white mb-2">Нет серверных сценариев</h3>
+            <p>Используйте серверный рекордер для создания сценариев на основе реальных скриншотов</p>
           </div>
         </CardContent>
       </Card>
@@ -92,7 +90,7 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white">
-          Сохраненные сценарии ({scenarios.length})
+          Серверные сценарии ({scenarios.length})
         </h2>
       </div>
 
@@ -107,6 +105,10 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
                     <Badge variant="outline" className="ml-2">
                       <Globe className="h-3 w-3 mr-1" />
                       {scenario.platform}
+                    </Badge>
+                    <Badge variant="secondary" className="ml-1">
+                      <Monitor className="h-3 w-3 mr-1" />
+                      {scenario.browserResolution.width}x{scenario.browserResolution.height}
                     </Badge>
                   </CardTitle>
                   {scenario.description && (
@@ -125,7 +127,8 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
                   >
                     {isExecuting === scenario.id ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    ) : (
+                    )
+                     : (
                       <Play className="h-4 w-4" />
                     )}
                   </Button>
@@ -149,6 +152,11 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
                   <span className="text-gray-400">
                     Длительность: <span className="text-white font-medium">
                       ~{Math.ceil(scenario.actions.length * 2.5)}с
+                    </span>
+                  </span>
+                  <span className="text-gray-400">
+                    Разрешение: <span className="text-white font-medium">
+                      {scenario.browserResolution.width}x{scenario.browserResolution.height}
                     </span>
                   </span>
                 </div>
@@ -176,14 +184,31 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
                   </div>
                 </div>
 
-                {/* Предварительный просмотр первых действий */}
+                {/* Предварительный просмотр первых действий с координатами */}
                 <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-gray-300">Первые действия:</h4>
+                  <h4 className="text-sm font-medium text-gray-300">Первые серверные действия:</h4>
                   {scenario.actions.slice(0, 3).map((action, index) => (
                     <div key={action.id} className="text-xs text-gray-400 pl-4">
-                      {index + 1}. {action.type} - {action.element.description}
+                      {index + 1}. {action.type} - {action.description}
+                      <span className="text-gray-500 ml-2">
+                        ({action.coordinates.x}, {action.coordinates.y})
+                      </span>
                     </div>
                   ))}
+                </div>
+
+                {/* Информация о совместимости */}
+                <div className="bg-gray-700 p-3 rounded border border-gray-600">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Server className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-300">Серверный сценарий:</span>
+                    <Badge variant="outline" className="text-xs">
+                      Координаты записаны относительно серверного браузера
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Сценарий будет выполнен на сервере с разрешением {scenario.browserResolution.width}x{scenario.browserResolution.height}
+                  </p>
                 </div>
               </div>
             </CardContent>

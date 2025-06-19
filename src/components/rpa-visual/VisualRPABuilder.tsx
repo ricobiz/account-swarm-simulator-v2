@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { VisualRPARecorder } from './VisualRPARecorder';
+import { ServerBasedRPARecorder } from './ServerBasedRPARecorder';
 import { APIKeysManager } from './APIKeysManager';
 import { MacroExecutor } from './MacroExecutor';
 import { ScenarioManager } from './ScenarioManager';
@@ -14,21 +14,17 @@ import {
   Play, 
   Database,
   Eye,
-  Zap
+  Zap,
+  Server
 } from 'lucide-react';
 
 interface RecordedAction {
   id: string;
   type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  element: {
-    x: number;
-    y: number;
-    selector?: string;
-    text?: string;
-    description: string;
-  };
+  coordinates: { x: number; y: number };
+  browserResolution: { width: number; height: number };
+  description: string;
   value?: string;
-  delay?: number;
   timestamp: number;
 }
 
@@ -39,6 +35,7 @@ interface SavedScenario {
   actions: RecordedAction[];
   created_at: string;
   platform: string;
+  browserResolution: { width: number; height: number };
 }
 
 export const VisualRPABuilder: React.FC = () => {
@@ -63,13 +60,17 @@ export const VisualRPABuilder: React.FC = () => {
     const scenarioDescription = prompt("Введите описание сценария (опционально):") || "";
     const platform = prompt("Введите название платформы (например: instagram, youtube):") || "universal";
 
+    // Берем разрешение браузера из первого действия
+    const browserResolution = actions[0]?.browserResolution || { width: 1920, height: 1080 };
+
     const newScenario: SavedScenario = {
       id: `scenario_${Date.now()}`,
       name: scenarioName,
       description: scenarioDescription,
       actions,
       created_at: new Date().toISOString(),
-      platform
+      platform,
+      browserResolution
     };
 
     setSavedScenarios(prev => [...prev, newScenario]);
@@ -79,7 +80,7 @@ export const VisualRPABuilder: React.FC = () => {
 
     toast({
       title: "Сценарий сохранен",
-      description: `"${scenarioName}" успешно сохранен с ${actions.length} действиями`
+      description: `"${scenarioName}" сохранен с ${actions.length} действиями (${browserResolution.width}x${browserResolution.height})`
     });
   }, [savedScenarios, toast]);
 
@@ -96,25 +97,25 @@ export const VisualRPABuilder: React.FC = () => {
     setExecutingScenario(scenario.id);
     
     toast({
-      title: "Запуск сценария",
-      description: `Выполняется "${scenario.name}" с человекоподобным поведением`
+      title: "Запуск серверного сценария",
+      description: `Выполняется "${scenario.name}" на реальном браузере сервера`
     });
 
     try {
-      // Здесь будет интеграция с Python RPA движком
-      console.log('Executing scenario with human behavior:', scenario);
+      // Здесь будет интеграция с серверным RPA движком
+      console.log('Executing server-based scenario:', scenario);
       
       // Имитация выполнения для демонстрации
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
       toast({
-        title: "Сценарий выполнен",
-        description: `"${scenario.name}" успешно завершен`
+        title: "Серверный сценарий выполнен",
+        description: `"${scenario.name}" успешно завершен на сервере`
       });
     } catch (error) {
       toast({
         title: "Ошибка выполнения",
-        description: "Не удалось выполнить сценарий",
+        description: "Не удалось выполнить сценарий на сервере",
         variant: "destructive"
       });
     } finally {
@@ -140,18 +141,18 @@ export const VisualRPABuilder: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <Bot className="h-8 w-8 text-purple-400" />
-            Визуальный RPA Конструктор
+            Серверный RPA Конструктор
           </h1>
           <p className="text-gray-400 mt-2">
-            Создавайте и выполняйте автоматизированные сценарии с полной эмуляцией человеческого поведения
+            Создавайте и выполняйте автоматизированные сценарии на основе реальных серверных скриншотов
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-gray-800">
             <TabsTrigger value="recorder" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Рекордер
+              <Server className="h-4 w-4" />
+              Серверный рекордер
             </TabsTrigger>
             <TabsTrigger value="scenarios" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
@@ -168,7 +169,7 @@ export const VisualRPABuilder: React.FC = () => {
           </TabsList>
 
           <TabsContent value="recorder">
-            <VisualRPARecorder onSaveScenario={handleSaveScenario} />
+            <ServerBasedRPARecorder onSaveScenario={handleSaveScenario} />
           </TabsContent>
 
           <TabsContent value="scenarios">
@@ -204,9 +205,9 @@ export const VisualRPABuilder: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 bg-purple-400 rounded-full animate-pulse"></div>
                 <div>
-                  <p className="text-white font-medium">Выполнение сценария</p>
+                  <p className="text-white font-medium">Выполнение на сервере</p>
                   <p className="text-purple-300 text-sm">
-                    Эмулируется человеческое поведение...
+                    Серверный браузер эмулирует человеческое поведение...
                   </p>
                 </div>
               </div>
