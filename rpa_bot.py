@@ -38,12 +38,12 @@ os.makedirs('/app/screenshots', exist_ok=True)
 os.makedirs('/app/logs', exist_ok=True)
 os.makedirs('/app/frontend', exist_ok=True)
 
-# Настройка логирования
+# Настройка логирования (только консоль для Railway)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler()
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -96,19 +96,25 @@ class UniversalRPABot:
         }
     
     def create_driver(self, stealth_mode=True, proxy=None):
-        """Создание webdriver с антидетект настройками"""
+        """Создание webdriver с антидетект настройками для Railway"""
         try:
             options = Options()
             
-            # Базовые настройки для облака
+            # Обязательные настройки для Railway
+            options.add_argument('--headless')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-plugins')
+            options.add_argument('--disable-images')
+            options.add_argument('--disable-javascript')
             options.add_argument('--window-size=1920,1080')
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
-            options.add_argument('--headless')
             
             # Антидетект настройки
             if stealth_mode:
@@ -119,12 +125,18 @@ class UniversalRPABot:
                 options.add_argument(f'--proxy-server={proxy}')
             
             # Создание драйвера
-            if stealth_mode:
-                self.driver = uc.Chrome(options=options)
-            else:
+            try:
                 self.driver = webdriver.Chrome(options=options)
+                logger.info("Стандартный Chrome WebDriver создан успешно")
+            except Exception as e:
+                logger.warning(f"Не удалось создать стандартный драйвер: {e}")
+                # Fallback на undetected-chromedriver
+                self.driver = uc.Chrome(options=options)
+                logger.info("Undetected Chrome WebDriver создан успешно")
             
-            logger.info("WebDriver создан успешно")
+            # Убираем webdriver признаки
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
             return True
             
         except Exception as e:
@@ -134,7 +146,10 @@ class UniversalRPABot:
     def close(self):
         """Закрытие драйвера"""
         if self.driver:
-            self.driver.quit()
+            try:
+                self.driver.quit()
+            except:
+                pass
             self.driver = None
 
 # Глобальный инстанс бота
@@ -145,9 +160,10 @@ def index():
     """Главная страница"""
     return jsonify({
         'status': 'online',
-        'message': 'Universal RPA Bot is running',
+        'message': 'Universal RPA Bot is running on Railway',
         'version': '2.0.0',
-        'capabilities': list(rpa_bot.platforms_config.keys())
+        'capabilities': list(rpa_bot.platforms_config.keys()),
+        'environment': 'railway'
     })
 
 @app.route('/health')
@@ -158,18 +174,19 @@ def health_check():
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
             'system': {
-                'cpu_percent': psutil.cpu_percent(),
+                'cpu_percent': psutil.cpu_percent(interval=1),
                 'memory_percent': psutil.virtual_memory().percent,
                 'disk_usage': psutil.disk_usage('/').percent
             },
             'capabilities': list(rpa_bot.platforms_config.keys()),
             'version': '2.0.0',
-            'environment': 'production' if os.getenv('PORT') else 'development'
+            'environment': 'railway'
         }
         
         return jsonify(system_info), 200
         
     except Exception as e:
+        logger.error(f"Health check error: {e}")
         return jsonify({
             'status': 'unhealthy',
             'error': str(e),
@@ -195,17 +212,28 @@ def execute_rpa_task():
         
         try:
             # Переход на страницу
+            logger.info(f"Переход на URL: {url}")
             rpa_bot.driver.get(url)
             time.sleep(3)
+            
+            # Получение информации о странице
+            page_title = rpa_bot.driver.title
+            current_url = rpa_bot.driver.current_url
             
             # Скриншот результата
             screenshot_path = f'/app/screenshots/task_{task_id}_{int(time.time())}.png'
             rpa_bot.driver.save_screenshot(screenshot_path)
             
+            logger.info(f"RPA задача выполнена успешно: {task_id}")
+            
             return jsonify({
                 'success': True,
                 'message': 'RPA задача выполнена успешно',
                 'taskId': task_id,
+                'data': {
+                    'title': page_title,
+                    'url': current_url
+                },
                 'screenshot': screenshot_path
             })
             
@@ -233,15 +261,25 @@ def get_status():
                 'disk': f"{psutil.disk_usage('/').percent}%"
             },
             'uptime': time.time(),
-            'version': '2.0.0-universal'
+            'version': '2.0.0-railway',
+            'environment': 'railway'
         })
     except Exception as e:
+        logger.error(f"Status error: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
     
-    logger.info(f"🚀 Запуск универсального RPA-бота на порту {port}")
-    logger.info(f"🌐 Поддерживаемые платформы: {list(rpa_bot.platforms_config.keys())}")
+    logger.info("="*50)
+    logger.info(f"🚀 Запуск универсального RPA-бота на Railway")
+    logger.info(f"🌐 Порт: {port}")
+    logger.info(f"🤖 Поддерживаемые платформы: {list(rpa_bot.platforms_config.keys())}")
+    logger.info(f"💻 Среда: Railway Cloud")
+    logger.info("="*50)
     
-    app.run(host='0.0.0.0', port=port, debug=False)
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    except Exception as e:
+        logger.error(f"Ошибка запуска Flask приложения: {e}")
+        sys.exit(1)
