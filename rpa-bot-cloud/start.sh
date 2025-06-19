@@ -30,15 +30,6 @@ else
     exit 1
 fi
 
-# Проверка ChromeDriver
-echo "🚗 Проверка ChromeDriver..."
-if chromedriver --version; then
-    echo "✅ ChromeDriver установлен успешно"
-else
-    echo "❌ ChromeDriver не найден"
-    exit 1
-fi
-
 echo "✅ Все компоненты готовы"
 echo "🤖 Запуск RPA Bot..."
 

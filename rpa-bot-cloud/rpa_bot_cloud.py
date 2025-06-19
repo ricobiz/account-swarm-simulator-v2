@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Облачный RPA-бот для Railway
+Облачный RPA-бот для Railway с webdriver-manager
 """
 
 import json
@@ -17,7 +17,9 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import threading
 
@@ -43,7 +45,7 @@ class CloudRPABot:
         logger.info("Cloud RPA Bot инициализирован")
     
     def setup_browser(self):
-        """Настройка браузера для Railway"""
+        """Настройка браузера для Railway с webdriver-manager"""
         try:
             chrome_options = Options()
             
@@ -63,7 +65,11 @@ class CloudRPABot:
             chrome_options.add_experimental_option('useAutomationExtension', False)
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
             
-            self.driver = webdriver.Chrome(options=chrome_options)
+            # Используем webdriver-manager для автоматической установки ChromeDriver
+            logger.info("Устанавливаем ChromeDriver через webdriver-manager...")
+            service = Service(ChromeDriverManager().install())
+            
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             self.wait = WebDriverWait(self.driver, 15)
             
