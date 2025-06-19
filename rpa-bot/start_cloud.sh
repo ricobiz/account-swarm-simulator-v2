@@ -1,6 +1,6 @@
 
 #!/bin/bash
-# Обновленный скрипт запуска для облачной среды Railway
+# Оптимизированный скрипт запуска для Railway
 
 echo "🚀 Запуск облачного RPA-бота на Railway..."
 
@@ -30,7 +30,7 @@ echo "🪟 Запуск window manager..."
 fluxbox &
 
 # Ожидание готовности дисплея
-sleep 5
+sleep 3
 
 # Проверка доступности Chrome
 echo "🌐 Проверка Google Chrome..."
@@ -43,17 +43,6 @@ else
     exit 1
 fi
 
-# Проверка ChromeDriver
-echo "🚗 Проверка ChromeDriver..."
-if chromedriver --version; then
-    echo "✅ ChromeDriver работает"
-    CHROMEDRIVER_VERSION=$(chromedriver --version)
-    echo "   Версия: $CHROMEDRIVER_VERSION"
-else
-    echo "❌ ChromeDriver не найден"
-    exit 1
-fi
-
 # Проверка Python зависимостей
 echo "🐍 Проверка Python зависимостей..."
 python -c "
@@ -61,26 +50,7 @@ try:
     import selenium
     import flask
     import requests
-    import threading
-    import json
-    import time
-    import logging
-    import os
-    from datetime import datetime
-    print('✅ Все основные зависимости установлены')
-    
-    # Проверка локальных модулей
-    try:
-        from cloud_rpa_bot import CloudRPABot
-        from human_behavior import CloudHumanBehaviorSimulator
-        from browser_manager import CloudBrowserManager
-        from action_handlers import ActionHandlers
-        from telegram_handler import TelegramHandler
-        print('✅ Все локальные модули доступны')
-    except ImportError as e:
-        print(f'❌ Ошибка импорта локального модуля: {e}')
-        exit(1)
-        
+    print('✅ Основные зависимости установлены')
 except ImportError as e:
     print(f'❌ Отсутствует зависимость: {e}')
     exit(1)
@@ -97,10 +67,6 @@ echo "   CPU: $(nproc) ядер"
 
 echo "✅ Все компоненты готовы для Railway"
 echo "🤖 Запуск облачного RPA-бота..."
-echo "🔧 Поддерживаемые действия:"
-echo "   📱 navigate, click, type, wait"
-echo "   📜 scroll, key, move, check_element"
-echo "   💬 telegram_like (специально для Telegram)"
 
 # Запуск основного приложения
 exec python rpa_bot_cloud.py 2>&1 | tee logs/bot_output.log

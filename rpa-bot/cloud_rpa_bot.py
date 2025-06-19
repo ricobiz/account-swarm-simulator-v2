@@ -22,13 +22,6 @@ class CloudRPABot:
         self.action_handlers = None
         self.telegram_handler = None
         
-        # Отключаем PyAutoGUI для облака
-        try:
-            import pyautogui
-            pyautogui.FAILSAFE = False
-        except ImportError:
-            pass  # PyAutoGUI может быть недоступен в облаке
-        
         logger.info("Cloud RPA Bot initialized")
     
     def setup_browser(self, headless=True, proxy=None):
@@ -83,6 +76,7 @@ class CloudRPABot:
         """Execute full task in cloud"""
         start_time = time.time()
         task_id = task.get('taskId', 'unknown')
+        completed_actions = 0
         
         logger.info(f"Starting cloud task execution: {task_id}")
         
@@ -96,7 +90,6 @@ class CloudRPABot:
                 self.browser_manager.driver.get(task['url'])
                 self.behavior.random_delay(1000, 2000)
             
-            completed_actions = 0
             actions = task.get('actions', [])
             
             # Выполнение действий
@@ -152,7 +145,7 @@ class CloudRPABot:
                 'message': 'Cloud task execution error',
                 'error': str(e),
                 'executionTime': execution_time,
-                'completedActions': completed_actions if 'completed_actions' in locals() else 0,
+                'completedActions': completed_actions,
                 'environment': 'railway-cloud'
             }
             
