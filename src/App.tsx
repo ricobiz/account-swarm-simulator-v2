@@ -1,45 +1,41 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/components/AuthProvider';
-import Auth from '@/pages/Auth';
-import Index from '@/pages/Index';
-import RPA from '@/pages/RPA';
-import ScenarioLaunch from '@/pages/ScenarioLaunch';
-import Accounts from '@/pages/Accounts';
-import NotFound from '@/pages/NotFound';
-import { ProcessMonitorProvider } from '@/components/ProcessMonitorProvider';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/components/AuthProvider";
+import { ProcessMonitorProvider } from "@/components/ProcessMonitorProvider";
+import Index from "./pages/Index";
+import Accounts from "./pages/Accounts";
+import Auth from "./pages/Auth";
+import ScenarioLaunch from "./pages/ScenarioLaunch";
+import RPA from "./pages/RPA";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <AuthProvider>
         <ProcessMonitorProvider>
-          <TooltipProvider>
-            <Router>
-              <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={<Index />} />
-                  <Route path="/rpa" element={<RPA />} />
-                  <Route path="/launch" element={<ScenarioLaunch />} />
-                  <Route path="/scenario-launch" element={<ScenarioLaunch />} />
-                  <Route path="/accounts" element={<Accounts />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-              </div>
-            </Router>
-          </TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/scenario-launch" element={<ScenarioLaunch />} />
+              <Route path="/rpa" element={<RPA />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
         </ProcessMonitorProvider>
       </AuthProvider>
-    </QueryClientProvider>
-  );
-}
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
