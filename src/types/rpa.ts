@@ -7,10 +7,17 @@ export interface RPATask {
   scenarioId: string;
   blockId: string;
   timeout?: number;
+  metadata?: {
+    platform?: string;
+    action?: string;
+    emoji?: string;
+    postUrl?: string;
+    [key: string]: any;
+  };
 }
 
 export interface RPAAction {
-  type: 'move' | 'click' | 'type' | 'wait' | 'scroll' | 'key' | 'navigate' | 'check_element';
+  type: 'move' | 'click' | 'type' | 'wait' | 'scroll' | 'key' | 'navigate' | 'check_element' | 'telegram_like';
   x?: number;
   y?: number;
   button?: 'left' | 'right' | 'middle';
@@ -19,6 +26,8 @@ export interface RPAAction {
   key?: string;
   url?: string;
   selector?: string;
+  emoji?: string;
+  description?: string;
   [key: string]: any; // Индексная сигнатура для совместимости с Json
 }
 
