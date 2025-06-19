@@ -267,18 +267,18 @@ class CloudRPABot:
             return False
     
     def _telegram_like(self, action):
-        """Постановка лайка в Telegram Web с улучшенной логикой"""
+        """Улучшенная постановка лайка в Telegram Web"""
         emoji = action.get('emoji', '👍')
         selector = action.get('selector')
         
-        logger.info(f"🎯 Начинаем постановку лайка в Telegram: {emoji}")
+        logger.info(f"🎯 Начинаем улучшенную постановку лайка: {emoji}")
         
         try:
-            # Ждем загрузки страницы Telegram дольше
-            logger.info("⏳ Ожидание загрузки страницы Telegram...")
-            time.sleep(5)
+            # Ждем загрузки Telegram Web дольше
+            logger.info("⏳ Ожидание полной загрузки Telegram Web...")
+            time.sleep(8)
             
-            # Проверяем, что мы на странице Telegram
+            # Проверяем URL
             current_url = self.driver.current_url
             logger.info(f"📍 Текущий URL: {current_url}")
             
@@ -286,227 +286,246 @@ class CloudRPABot:
                 logger.error("❌ Не на странице Telegram")
                 return False
             
-            # Получаем заголовок страницы для диагностики
-            page_title = self.driver.title
-            logger.info(f"📋 Заголовок страницы: {page_title}")
+            # Прокрутка для активации реакций
+            logger.info("📜 Активная прокрутка для загрузки реакций...")
+            for i in range(3):
+                self.driver.execute_script("window.scrollBy(0, 300);")
+                time.sleep(1)
+                self.driver.execute_script("window.scrollBy(0, -150);")
+                time.sleep(1)
             
-            # Скроллим немного вниз, чтобы убедиться что пост виден
-            logger.info("📜 Скроллим для лучшей видимости поста...")
-            self.driver.execute_script("window.scrollBy(0, 200);")
-            time.sleep(2)
+            # Современные селекторы для Telegram Web
+            modern_selectors = [
+                # Новые селекторы для современного Telegram Web
+                'button[class*="ReactionButton"]',
+                'button[class*="reaction"]',
+                '.message-reactions button',
+                '.reactions-container button',
+                'button[data-reaction]',
+                'button[aria-label*="reaction"]',
+                '.quick-reaction-button',
+                
+                # Селекторы для мобильной версии
+                '.mobile-reactions button',
+                '.reaction-selector button',
+                
+                # Универсальные селекторы
+                'button:has(span.emoji)',
+                'div[class*="reaction"] button',
+                '.btn-reaction',
+                
+                # XPath селекторы как запасной вариант
+                f'//button[contains(@class, "reaction")]',
+                f'//button[.//*[contains(text(), "{emoji}")]]',
+                f'//div[contains(@class, "reaction")]//button',
+                f'//button[contains(@aria-label, "reaction")]'
+            ]
             
-            # Ищем кнопку реакции разными способами
             reaction_button = None
+            found_method = ""
             
-            # Способ 1: По XPath с текстом эмодзи (если указан селектор)
-            if selector:
+            # Поиск кнопки реакции через современные селекторы
+            for selector_type, selector_value in enumerate(modern_selectors):
                 try:
-                    logger.info(f"🔍 Поиск по указанному селектору: {selector}")
-                    reaction_button = WebDriverWait(self.driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, selector))
-                    )
-                    logger.info("✅ Найдена кнопка реакции по указанному селектору")
-                except Exception as e:
-                    logger.warning(f"⚠️ Не найдено по селектору: {e}")
-            
-            # Способ 2: Поиск по классам Telegram Web
-            if not reaction_button:
-                try:
-                    logger.info("🔍 Поиск кнопки реакции по классам Telegram...")
+                    if selector_value.startswith('//'):
+                        # XPath селектор
+                        elements = self.driver.find_elements(By.XPATH, selector_value)
+                    else:
+                        # CSS селектор
+                        elements = self.driver.find_elements(By.CSS_SELECTOR, selector_value)
                     
-                    # Ищем все возможные варианты кнопок реакций
-                    selectors_to_try = [
-                        '.ReactionButton',
-                        '.reactions-button',
-                        '.quick-reaction',
-                        '[data-reaction]',
-                        '.message-reactions button',
-                        '.reactions .button',
-                        'button[data-emoji]'
-                    ]
+                    logger.info(f"🔍 Селектор #{selector_type+1} '{selector_value}': найдено {len(elements)} элементов")
                     
-                    for css_selector in selectors_to_try:
-                        try:
-                            buttons = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                            logger.info(f"🔍 Найдено {len(buttons)} элементов по селектору: {css_selector}")
-                            
-                            for button in buttons:
-                                try:
-                                    button_text = button.get_attribute('textContent') or button.text
-                                    logger.info(f"🔤 Текст кнопки: '{button_text}'")
-                                    
-                                    if emoji in button_text:
-                                        reaction_button = button
-                                        logger.info(f"✅ Найдена кнопка с эмодзи {emoji}")
-                                        break
-                                except:
+                    if elements:
+                        for element in elements:
+                            try:
+                                # Проверяем видимость элемента
+                                if not element.is_displayed():
                                     continue
-                                    
-                            if reaction_button:
-                                break
                                 
-                        except Exception as e:
-                            logger.debug(f"Селектор {css_selector} не сработал: {e}")
-                            continue
-                            
-                except Exception as e:
-                    logger.warning(f"⚠️ Ошибка поиска по классам: {e}")
-            
-            # Способ 3: Поиск по тексту на всей странице
-            if not reaction_button:
-                try:
-                    logger.info(f"🔍 Поиск кнопки с эмодзи {emoji} по всей странице...")
+                                # Получаем текст элемента
+                                element_text = element.get_attribute('textContent') or element.text or ""
+                                element_html = element.get_attribute('outerHTML')[:200] + "..."
+                                
+                                logger.info(f"📝 Элемент: текст='{element_text}', HTML={element_html}")
+                                
+                                # Проверяем наличие нужного эмодзи
+                                if emoji in element_text or emoji in element_html:
+                                    reaction_button = element
+                                    found_method = f"selector_{selector_type+1}"
+                                    logger.info(f"✅ Найдена кнопка реакции через {found_method}")
+                                    break
+                                    
+                            except Exception as e:
+                                logger.debug(f"Ошибка анализа элемента: {e}")
+                                continue
                     
-                    # Универсальный поиск кнопки с эмодзи
-                    xpath_patterns = [
-                        f"//button[contains(text(), '{emoji}')]",
-                        f"//button[.//*[contains(text(), '{emoji}')]]",
-                        f"//*[contains(@class, 'button') and contains(text(), '{emoji}')]",
-                        f"//*[contains(@class, 'reaction') and contains(text(), '{emoji}')]",
-                        f"//span[contains(text(), '{emoji}')]/parent::button",
-                        f"//div[contains(text(), '{emoji}')]/parent::button"
-                    ]
-                    
-                    for xpath in xpath_patterns:
-                        try:
-                            elements = self.driver.find_elements(By.XPATH, xpath)
-                            logger.info(f"🔍 XPath '{xpath}' нашел {len(elements)} элементов")
-                            
-                            if elements:
-                                reaction_button = elements[0]
-                                logger.info(f"✅ Найдена кнопка реакции через XPath")
-                                break
-                        except Exception as e:
-                            continue
-                            
+                    if reaction_button:
+                        break
+                        
                 except Exception as e:
-                    logger.warning(f"⚠️ Ошибка поиска по XPath: {e}")
+                    logger.debug(f"Селектор '{selector_value}' не сработал: {e}")
+                    continue
             
-            # Если не нашли кнопку, попробуем найти любые кнопки на странице
+            # Если не нашли конкретную реакцию, ищем любую кнопку реакции
             if not reaction_button:
+                logger.info("🔍 Поиск любой кнопки реакции для активации...")
+                
+                generic_selectors = [
+                    'button[class*="reaction"]',
+                    '.message-reactions button:first-child',
+                    'button[data-reaction]:first-child',
+                    '//button[contains(@class, "reaction")][1]'
+                ]
+                
+                for selector in generic_selectors:
+                    try:
+                        if selector.startswith('//'):
+                            elements = self.driver.find_elements(By.XPATH, selector)
+                        else:
+                            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        
+                        if elements and elements[0].is_displayed():
+                            reaction_button = elements[0]
+                            found_method = "generic_reaction"
+                            logger.info("✅ Найдена общая кнопка реакции")
+                            break
+                    except:
+                        continue
+            
+            # Если все еще не нашли, попробуем поиск через JavaScript
+            if not reaction_button:
+                logger.info("🔍 JavaScript поиск реакций...")
+                
+                js_search = f"""
+                var buttons = document.querySelectorAll('button, div[role="button"], span[role="button"]');
+                var found = null;
+                
+                for (var i = 0; i < buttons.length; i++) {{
+                    var btn = buttons[i];
+                    var text = btn.textContent || btn.innerText || '';
+                    var html = btn.outerHTML || '';
+                    
+                    if (text.includes('{emoji}') || html.includes('{emoji}') || 
+                        btn.className.includes('reaction') || 
+                        btn.getAttribute('data-reaction')) {{
+                        found = btn;
+                        break;
+                    }}
+                }}
+                
+                if (found) {{
+                    found.style.border = '3px solid red';
+                    found.scrollIntoView({{block: 'center'}});
+                    return found;
+                }}
+                return null;
+                """
+                
                 try:
-                    logger.info("🔍 Поиск всех кнопок на странице для диагностики...")
+                    js_element = self.driver.execute_script(js_search)
+                    if js_element:
+                        reaction_button = js_element
+                        found_method = "javascript"
+                        logger.info("✅ Найдена кнопка через JavaScript")
+                except Exception as e:
+                    logger.warning(f"JavaScript поиск не удался: {e}")
+            
+            if not reaction_button:
+                logger.error("❌ Кнопка реакции не найдена всеми методами")
+                
+                # Финальная диагностика - поиск всех кнопок
+                try:
                     all_buttons = self.driver.find_elements(By.TAG_NAME, 'button')
                     logger.info(f"🔢 Всего кнопок на странице: {len(all_buttons)}")
                     
-                    for i, button in enumerate(all_buttons[:10]):  # Проверяем первые 10 кнопок
+                    for i, btn in enumerate(all_buttons[:15]):  # Показываем первые 15
                         try:
-                            button_text = button.get_attribute('textContent') or button.text
-                            button_class = button.get_attribute('class')
-                            logger.info(f"🔤 Кнопка {i+1}: текст='{button_text}', класс='{button_class}'")
+                            btn_text = btn.get_attribute('textContent') or btn.text or ""
+                            btn_class = btn.get_attribute('class') or ""
+                            logger.info(f"Кнопка {i+1}: '{btn_text[:30]}' класс='{btn_class[:50]}'")
                         except:
                             continue
-                            
-                except Exception as e:
-                    logger.error(f"❌ Ошибка анализа кнопок: {e}")
-            
-            if not reaction_button:
-                logger.error(f"❌ Кнопка реакции {emoji} не найдена после всех попыток")
-                
-                # Делаем скриншот для диагностики
-                try:
-                    screenshot_path = f"screenshots/telegram_debug_{int(time.time())}.png"
-                    os.makedirs('screenshots', exist_ok=True)
-                    self.driver.save_screenshot(screenshot_path)
-                    logger.info(f"📸 Скриншот сохранен: {screenshot_path}")
                 except:
                     pass
-                    
+                
                 return False
             
-            # Скроллим к кнопке если нужно
-            logger.info("📜 Скроллим к кнопке реакции...")
-            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", reaction_button)
-            time.sleep(1)
-            
-            # Проверяем, что кнопка видима и кликабельна
-            logger.info("👁️ Проверяем видимость кнопки...")
-            if not reaction_button.is_displayed():
-                logger.warning("⚠️ Кнопка не видима, пытаемся сделать видимой...")
-                self.driver.execute_script("arguments[0].style.display = 'block';", reaction_button)
-                time.sleep(1)
-            
-            if not reaction_button.is_enabled():
-                logger.warning("⚠️ Кнопка не активна")
-                return False
-            
-            # Кликаем на реакцию
-            logger.info(f"👆 Кликаем по реакции {emoji}...")
+            # Клик по найденной кнопке реакции
+            logger.info(f"👆 Кликаем по реакции (метод: {found_method})...")
             
             try:
-                # Сначала пробуем обычный клик
+                # Прокручиваем к элементу
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", reaction_button)
+                time.sleep(1)
+                
+                # Наводим курсор и кликаем
                 self.behavior.human_mouse_move(self.driver, reaction_button)
+                time.sleep(0.5)
+                
+                # Пробуем обычный клик
                 reaction_button.click()
-                logger.info("✅ Обычный клик выполнен")
+                logger.info("✅ Клик выполнен")
+                
             except Exception as e:
                 logger.warning(f"⚠️ Обычный клик не сработал: {e}")
                 try:
-                    # Пробуем JavaScript клик
+                    # JavaScript клик как запасной вариант
                     self.driver.execute_script("arguments[0].click();", reaction_button)
                     logger.info("✅ JavaScript клик выполнен")
                 except Exception as e2:
-                    logger.error(f"❌ JavaScript клик тоже не сработал: {e2}")
+                    logger.error(f"❌ Оба типа кликов провалились: {e2}")
                     return False
             
             # Ждем обновления UI
-            logger.info("⏳ Ждем обновления интерфейса...")
-            time.sleep(3)
+            logger.info("⏳ Ожидание обновления интерфейса...")
+            time.sleep(4)
             
-            # Проверяем, что лайк поставлен
+            # Проверяем результат
             try:
-                logger.info("🔍 Проверяем результат постановки лайка...")
-                
-                # Ищем признаки активной реакции
-                active_selectors = [
-                    '.ReactionButton--chosen',
+                # Ищем признаки успешной постановки лайка
+                success_indicators = [
+                    'button[class*="chosen"]',
+                    'button[class*="active"]',
+                    'button[class*="selected"]',
                     '.reaction-chosen',
-                    '.reaction.active',
-                    '.selected',
+                    '.reaction-active',
                     '[data-chosen="true"]'
                 ]
                 
-                reaction_confirmed = False
-                for sel in active_selectors:
+                success_found = False
+                for indicator in success_indicators:
                     try:
-                        active_elements = self.driver.find_elements(By.CSS_SELECTOR, sel)
-                        if active_elements:
-                            logger.info(f"✅ Найден активный элемент реакции: {sel}")
-                            reaction_confirmed = True
+                        elements = self.driver.find_elements(By.CSS_SELECTOR, indicator)
+                        if elements:
+                            logger.info(f"✅ Найден признак успеха: {indicator}")
+                            success_found = True
                             break
                     except:
                         continue
                 
-                if reaction_confirmed:
-                    logger.info("🎉 Лайк успешно поставлен и подтвержден!")
+                if success_found:
+                    logger.info("🎉 Лайк успешно поставлен!")
                 else:
-                    logger.warning("⚠️ Не удалось подтвердить постановку лайка, но клик выполнен")
+                    logger.info("⚠️ Клик выполнен, но подтверждение не найдено")
                 
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка проверки результата: {e}")
             
-            # Итоговый скриншот
+            # Скриншот результата
             try:
-                screenshot_path = f"screenshots/telegram_result_{int(time.time())}.png"
+                screenshot_path = f"screenshots/telegram_final_{int(time.time())}.png"
+                os.makedirs('screenshots', exist_ok=True)
                 self.driver.save_screenshot(screenshot_path)
                 logger.info(f"📸 Финальный скриншот: {screenshot_path}")
             except:
                 pass
             
-            logger.info("✅ Процесс постановки лайка завершен")
+            logger.info("✅ Процесс завершен")
             return True
             
         except Exception as e:
-            logger.error(f"💥 Критическая ошибка постановки лайка в Telegram: {e}")
-            
-            # Скриншот ошибки
-            try:
-                screenshot_path = f"screenshots/telegram_error_{int(time.time())}.png"
-                os.makedirs('screenshots', exist_ok=True)
-                self.driver.save_screenshot(screenshot_path)
-                logger.info(f"📸 Скриншот ошибки: {screenshot_path}")
-            except:
-                pass
-                
+            logger.error(f"💥 Критическая ошибка: {e}")
             return False
     
     def execute_task(self, task):
