@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ export const VisualRPABuilder: React.FC = () => {
     if (actions.length === 0) {
       toast({
         title: "Нет действий",
-        description: "Нельзя сохранить пустый сценарий",
+        description: "Нельзя сохранить пустой сценарий",
         variant: "destructive"
       });
       return;
@@ -74,21 +73,34 @@ export const VisualRPABuilder: React.FC = () => {
     const scenarioDescription = prompt("Введите описание сценария (опционально):") || "";
     const platform = prompt("Введите название платформы:") || "universal";
 
-    // Конвертируем узлы в действия
+    // Конвертируем узлы в действия с правильными типами
     const actions: ServerRecordedAction[] = nodes
       .filter(node => node.type === 'action')
-      .map((node, index) => ({
-        id: node.id,
-        type: node.data.type || 'click',
-        timestamp: Date.now() + index * 1000,
-        element: {
-          selector: node.data.config?.selector || '',
-          text: node.data.config?.text || '',
-          coordinates: { x: 0, y: 0 }
-        },
-        url: node.data.config?.url || '',
-        delay: node.data.config?.delay || 1000
-      }));
+      .map((node, index) => {
+        const nodeData = node.data as any;
+        const config = nodeData.config || {};
+        
+        // Определяем правильный тип действия
+        let actionType: ServerRecordedAction['type'] = 'click';
+        if (nodeData.type === 'navigate') actionType = 'navigate';
+        else if (nodeData.type === 'type') actionType = 'type';
+        else if (nodeData.type === 'wait') actionType = 'wait';
+        else if (nodeData.type === 'scroll') actionType = 'scroll';
+        else if (nodeData.type === 'screenshot') actionType = 'screenshot';
+
+        return {
+          id: node.id,
+          type: actionType,
+          timestamp: Date.now() + index * 1000,
+          element: {
+            selector: config.selector || '',
+            text: config.text || '',
+            coordinates: { x: 0, y: 0 }
+          },
+          url: config.url || '',
+          delay: config.delay || 1000
+        };
+      });
 
     const newScenario: ServerSavedScenario = {
       id: `scenario_${Date.now()}`,
