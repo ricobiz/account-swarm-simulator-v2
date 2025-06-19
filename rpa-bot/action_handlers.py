@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Action handlers for RPA bot
+Обработчики действий для RPA бота
 """
 
 import time
@@ -20,27 +20,27 @@ class ActionHandlers:
         self.behavior = behavior
     
     def navigate(self, action):
-        """Navigate to URL"""
+        """Переход по URL"""
         try:
             url = action.get('url')
             if not url:
-                logger.error("No URL provided for navigation")
+                logger.error("URL не предоставлен для навигации")
                 return False
             
-            logger.info(f"Navigating to: {url}")
+            logger.info(f"Переход к: {url}")
             self.driver.get(url)
             time.sleep(2)
             return True
         except Exception as e:
-            logger.error(f"Navigation failed: {e}")
+            logger.error(f"Навигация не удалась: {e}")
             return False
     
     def click(self, action):
-        """Click element"""
+        """Клик по элементу"""
         try:
             selector = action.get('selector')
             if not selector:
-                logger.error("No selector provided for click")
+                logger.error("Селектор не предоставлен для клика")
                 return False
             
             element = self.driver.find_element(By.CSS_SELECTOR, selector)
@@ -49,38 +49,38 @@ class ActionHandlers:
             self.behavior.random_delay(500, 1500)
             return True
         except Exception as e:
-            logger.error(f"Click failed: {e}")
+            logger.error(f"Клик не удался: {e}")
             return False
     
     def type_text(self, action):
-        """Type text in element"""
+        """Ввод текста в элемент"""
         try:
             selector = action.get('selector')
             text = action.get('text', '')
             
             if not selector:
-                logger.error("No selector provided for typing")
+                logger.error("Селектор не предоставлен для ввода")
                 return False
             
             element = self.driver.find_element(By.CSS_SELECTOR, selector)
             self.behavior.human_type(element, text)
             return True
         except Exception as e:
-            logger.error(f"Typing failed: {e}")
+            logger.error(f"Ввод текста не удался: {e}")
             return False
     
     def wait(self, action):
-        """Wait for specified time"""
+        """Ожидание указанного времени"""
         try:
-            duration = action.get('duration', 1000) / 1000  # Convert to seconds
+            duration = action.get('duration', 1000) / 1000  # Конвертация в секунды
             time.sleep(duration)
             return True
         except Exception as e:
-            logger.error(f"Wait failed: {e}")
+            logger.error(f"Ожидание не удалось: {e}")
             return False
     
     def scroll(self, action):
-        """Scroll page"""
+        """Прокрутка страницы"""
         try:
             direction = action.get('direction', 'down')
             amount = action.get('amount', 300)
@@ -93,15 +93,15 @@ class ActionHandlers:
             self.behavior.random_delay(500, 1000)
             return True
         except Exception as e:
-            logger.error(f"Scroll failed: {e}")
+            logger.error(f"Прокрутка не удалась: {e}")
             return False
     
     def key_press(self, action):
-        """Press keyboard key"""
+        """Нажатие клавиши клавиатуры"""
         try:
             key = action.get('key', 'ENTER')
             
-            # Map key names to Selenium keys
+            # Карта имен клавиш к клавишам Selenium
             key_map = {
                 'ENTER': Keys.ENTER,
                 'TAB': Keys.TAB,
@@ -116,36 +116,36 @@ class ActionHandlers:
             self.behavior.random_delay(200, 500)
             return True
         except Exception as e:
-            logger.error(f"Key press failed: {e}")
+            logger.error(f"Нажатие клавиши не удалось: {e}")
             return False
     
     def move_mouse(self, action):
-        """Move mouse to element"""
+        """Перемещение мыши к элементу"""
         try:
             selector = action.get('selector')
             if not selector:
-                logger.error("No selector provided for mouse move")
+                logger.error("Селектор не предоставлен для перемещения мыши")
                 return False
             
             element = self.driver.find_element(By.CSS_SELECTOR, selector)
             self.behavior.human_mouse_move(self.driver, element)
             return True
         except Exception as e:
-            logger.error(f"Mouse move failed: {e}")
+            logger.error(f"Перемещение мыши не удалось: {e}")
             return False
     
     def check_element(self, action):
-        """Check if element exists"""
+        """Проверка существования элемента"""
         try:
             selector = action.get('selector')
             if not selector:
-                logger.error("No selector provided for element check")
+                logger.error("Селектор не предоставлен для проверки элемента")
                 return False
             
             elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
             exists = len(elements) > 0
-            logger.info(f"Element {selector} exists: {exists}")
+            logger.info(f"Элемент {selector} существует: {exists}")
             return exists
         except Exception as e:
-            logger.error(f"Element check failed: {e}")
+            logger.error(f"Проверка элемента не удалась: {e}")
             return False

@@ -13,33 +13,37 @@ import threading
 from flask import Flask, request, jsonify
 from datetime import datetime
 
-# Импорты локальных модулей
+# Локальные импорты
 from cloud_rpa_bot import CloudRPABot
 
-# Logging setup
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('rpa_bot.log'),
+        logging.FileHandler('logs/rpa_bot.log'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
-# Cloud configuration
+# Конфигурация облака
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://izmgzstdgoswlozinmyk.supabase.co')
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
-BOT_PORT = int(os.getenv('PORT', 5000))  # Railway uses PORT variable
+BOT_PORT = int(os.getenv('PORT', 5000))
 
 app = Flask(__name__)
 
-# Global cloud RPA bot instance
+# Глобальный экземпляр облачного RPA бота
 cloud_rpa_bot = CloudRPABot()
 
 def send_result_to_supabase(task_id, result):
-    """Send result back to Supabase"""
+    """Отправка результата обратно в Supabase"""
     try:
+        if not SUPABASE_SERVICE_KEY:
+            logger.warning("SUPABASE_SERVICE_KEY не установлен, результат не отправлен")
+            return
+            
         url = f"{SUPABASE_URL}/functions/v1/rpa-task"
         headers = {
             'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
@@ -54,16 +58,16 @@ def send_result_to_supabase(task_id, result):
         response = requests.put(url, json=data, headers=headers, timeout=30)
         
         if response.status_code == 200:
-            logger.info(f"Cloud task result {task_id} successfully sent to Supabase")
+            logger.info(f"Результат задачи {task_id} успешно отправлен в Supabase")
         else:
-            logger.error(f"Error sending result to Supabase: {response.status_code} - {response.text}")
+            logger.error(f"Ошибка отправки результата в Supabase: {response.status_code} - {response.text}")
             
     except Exception as e:
-        logger.error(f"Error sending result to Supabase: {e}")
+        logger.error(f"Ошибка отправки результата в Supabase: {e}")
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Cloud service health check"""
+    """Проверка состояния облачного сервиса"""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -79,7 +83,7 @@ def health():
 
 @app.route('/status', methods=['GET'])
 def get_status():
-    """Get detailed cloud bot status"""
+    """Получение подробного статуса облачного бота"""
     return jsonify({
         'bot_status': 'online',
         'version': '2.0.0-railway',
@@ -96,30 +100,30 @@ def get_status():
 
 @app.route('/execute', methods=['POST'])
 def execute_task():
-    """Execute RPA task in cloud"""
+    """Выполнение RPA задачи в облаке"""
     try:
         task = request.get_json()
         
         if not task:
-            return jsonify({'error': 'Empty task'}), 400
+            return jsonify({'error': 'Пустая задача'}), 400
         
         task_id = task.get('taskId')
         if not task_id:
-            return jsonify({'error': 'Missing taskId'}), 400
+            return jsonify({'error': 'Отсутствует taskId'}), 400
         
-        logger.info(f"Received cloud task for execution: {task_id}")
+        logger.info(f"Получена облачная задача для выполнения: {task_id}")
         
         def execute_and_send():
             try:
                 result = cloud_rpa_bot.execute_task(task)
                 send_result_to_supabase(task_id, result)
             except Exception as e:
-                logger.error(f"Error executing task {task_id}: {e}")
+                logger.error(f"Ошибка выполнения задачи {task_id}: {e}")
                 error_result = {
                     'taskId': task_id,
                     'success': False,
                     'error': str(e),
-                    'environment': 'cloud'
+                    'environment': 'railway'
                 }
                 send_result_to_supabase(task_id, error_result)
         
@@ -129,37 +133,30 @@ def execute_task():
         
         return jsonify({
             'success': True,
-            'message': f'Cloud task {task_id} accepted for execution',
+            'message': f'Облачная задача {task_id} принята к выполнению',
             'taskId': task_id,
             'environment': 'railway'
         })
         
     except Exception as e:
-        logger.error(f"Error receiving cloud task: {e}")
+        logger.error(f"Ошибка получения облачной задачи: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    logger.info("Starting cloud RPA Bot server...")
-    logger.info(f"Port: {BOT_PORT}")
+    logger.info("Запуск сервера облачного RPA бота...")
+    logger.info(f"Порт: {BOT_PORT}")
     logger.info(f"Supabase URL: {SUPABASE_URL}")
-    logger.info("Environment: Railway Cloud")
+    logger.info("Среда: Railway Cloud")
     
-    # Создаем необходимые директории
+    # Создание необходимых директорий
     os.makedirs('screenshots', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     
-    # Проверяем доступность основных компонентов
+    # Проверка доступности основных компонентов
     try:
         from selenium import webdriver
         logger.info("✅ Selenium доступен")
     except ImportError as e:
         logger.error(f"❌ Selenium недоступен: {e}")
-    
-    try:
-        import pyautogui
-        pyautogui.FAILSAFE = False
-        logger.info("✅ PyAutoGUI отключен для облака")
-    except ImportError:
-        logger.warning("⚠️ PyAutoGUI недоступен (нормально для облака)")
     
     app.run(host='0.0.0.0', port=BOT_PORT, debug=False)

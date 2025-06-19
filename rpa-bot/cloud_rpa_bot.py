@@ -1,16 +1,16 @@
 
 #!/usr/bin/env python3
 """
-Main cloud RPA bot class
+Главный класс облачного RPA бота
 """
 
 import time
 import logging
 import os
-from human_behavior import CloudHumanBehaviorSimulator
 from browser_manager import CloudBrowserManager
 from action_handlers import ActionHandlers
 from telegram_handler import TelegramHandler
+from human_behavior import CloudHumanBehaviorSimulator
 from selenium.common.exceptions import TimeoutException
 
 logger = logging.getLogger(__name__)
@@ -22,10 +22,10 @@ class CloudRPABot:
         self.action_handlers = None
         self.telegram_handler = None
         
-        logger.info("Cloud RPA Bot initialized")
+        logger.info("Облачный RPA бот инициализирован")
     
     def setup_browser(self, headless=True, proxy=None):
-        """Setup browser for cloud"""
+        """Настройка браузера для облака"""
         success = self.browser_manager.setup_browser(headless, proxy)
         if success:
             self.action_handlers = ActionHandlers(
@@ -41,9 +41,9 @@ class CloudRPABot:
         return success
     
     def execute_action(self, action):
-        """Execute action with cloud optimizations"""
+        """Выполнение действия с облачными оптимизациями"""
         action_type = action.get('type')
-        logger.info(f"Executing cloud action: {action_type}")
+        logger.info(f"Выполнение облачного действия: {action_type}")
         
         try:
             if action_type == 'navigate':
@@ -65,25 +65,25 @@ class CloudRPABot:
             elif action_type == 'telegram_like':
                 return self.telegram_handler.telegram_like(action)
             else:
-                logger.warning(f"Unknown action type: {action_type}")
+                logger.warning(f"Неизвестный тип действия: {action_type}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Error executing cloud action {action_type}: {e}")
+            logger.error(f"Ошибка выполнения облачного действия {action_type}: {e}")
             return False
     
     def execute_task(self, task):
-        """Execute full task in cloud"""
+        """Выполнение полной задачи в облаке"""
         start_time = time.time()
         task_id = task.get('taskId', 'unknown')
         completed_actions = 0
         
-        logger.info(f"Starting cloud task execution: {task_id}")
+        logger.info(f"Начало выполнения облачной задачи: {task_id}")
         
         try:
             # Настройка браузера
             if not self.setup_browser():
-                raise Exception("Failed to setup cloud browser")
+                raise Exception("Не удалось настроить облачный браузер")
             
             # Переход на стартовую страницу
             if task.get('url'):
@@ -94,16 +94,16 @@ class CloudRPABot:
             
             # Выполнение действий
             for i, action in enumerate(actions):
-                logger.info(f"Executing action {i+1}/{len(actions)}: {action.get('type')}")
+                logger.info(f"Выполнение действия {i+1}/{len(actions)}: {action.get('type')}")
                 
                 if self.execute_action(action):
                     completed_actions += 1
                 else:
-                    logger.warning(f"Action {i+1} failed: {action}")
+                    logger.warning(f"Действие {i+1} не выполнено: {action}")
                 
                 # Проверка таймаута
                 if time.time() - start_time > task.get('timeout', 60000) / 1000:
-                    raise TimeoutException("Task execution timeout exceeded")
+                    raise TimeoutException("Превышен таймаут выполнения задачи")
             
             execution_time = int((time.time() - start_time) * 1000)
             
@@ -114,14 +114,14 @@ class CloudRPABot:
             try:
                 self.browser_manager.driver.save_screenshot(screenshot_path)
             except Exception as e:
-                logger.warning(f"Failed to save screenshot: {e}")
+                logger.warning(f"Не удалось сохранить скриншот: {e}")
                 screenshot_path = None
             
             # Успешный результат
             result = {
                 'taskId': task_id,
                 'success': True,
-                'message': f'Cloud task executed successfully. Completed {completed_actions}/{len(actions)} actions',
+                'message': f'Облачная задача выполнена успешно. Завершено {completed_actions}/{len(actions)} действий',
                 'executionTime': execution_time,
                 'completedActions': completed_actions,
                 'screenshot': screenshot_path,
@@ -132,7 +132,7 @@ class CloudRPABot:
                 'environment': 'railway-cloud'
             }
             
-            logger.info(f"Cloud task {task_id} executed successfully in {execution_time}ms")
+            logger.info(f"Облачная задача {task_id} выполнена успешно за {execution_time}мс")
             return result
             
         except Exception as e:
@@ -142,14 +142,14 @@ class CloudRPABot:
             result = {
                 'taskId': task_id,
                 'success': False,
-                'message': 'Cloud task execution error',
+                'message': 'Ошибка выполнения облачной задачи',
                 'error': str(e),
                 'executionTime': execution_time,
                 'completedActions': completed_actions,
                 'environment': 'railway-cloud'
             }
             
-            logger.error(f"Cloud task execution error {task_id}: {e}")
+            logger.error(f"Ошибка выполнения облачной задачи {task_id}: {e}")
             return result
             
         finally:
@@ -157,4 +157,4 @@ class CloudRPABot:
             try:
                 self.browser_manager.close()
             except Exception as e:
-                logger.warning(f"Error closing browser: {e}")
+                logger.warning(f"Ошибка закрытия браузера: {e}")

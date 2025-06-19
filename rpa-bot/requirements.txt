@@ -1,37 +1,34 @@
 
-# Core Flask dependencies
+# Основные Flask зависимости
 Flask==2.3.3
 Werkzeug==2.3.7
 gunicorn==21.2.0
 
-# Selenium and browser automation
+# Selenium и автоматизация браузера
 selenium==4.15.2
 webdriver-manager==4.0.1
 
-# HTTP requests
+# HTTP запросы
 requests==2.31.0
 urllib3==2.0.7
 
-# Fake user agents for stealth
+# Поддельные user agents для скрытности
 fake-useragent==1.4.0
 
-# Data processing
+# Обработка данных
 numpy==1.24.3
 
-# System utilities
+# Системные утилиты
 psutil==5.9.6
 
-# Date/time handling
+# Обработка даты/времени
 python-dateutil==2.8.2
 
-# JSON handling
+# Обработка JSON
 simplejson==3.19.2
 
-# Environment variables
+# Переменные окружения
 python-decouple==3.8
 
-# Logging enhancements
+# Улучшения логирования
 colorlog==6.7.0
-
-# Threading utilities
-threading-timer==0.1.0

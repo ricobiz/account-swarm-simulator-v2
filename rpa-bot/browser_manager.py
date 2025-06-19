@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Cloud browser manager for RPA bot
+Менеджер браузера для облачного RPA бота
 """
 
 import logging
@@ -9,10 +9,8 @@ import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import WebDriverException
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +21,14 @@ class CloudBrowserManager:
         self.chrome_options = None
         
     def setup_browser(self, headless=True, proxy=None):
-        """Setup Chrome browser for cloud environment"""
+        """Настройка Chrome браузера для облачной среды"""
         try:
-            logger.info("Setting up Chrome browser for cloud...")
+            logger.info("Настройка Chrome браузера для облака...")
             
-            # Chrome options for cloud environment
+            # Опции Chrome для облачной среды
             self.chrome_options = Options()
             
-            # Essential cloud options
+            # Основные облачные опции
             self.chrome_options.add_argument('--headless=new')
             self.chrome_options.add_argument('--no-sandbox')
             self.chrome_options.add_argument('--disable-dev-shm-usage')
@@ -40,21 +38,20 @@ class CloudBrowserManager:
             self.chrome_options.add_argument('--disable-extensions')
             self.chrome_options.add_argument('--disable-plugins')
             self.chrome_options.add_argument('--disable-images')
-            self.chrome_options.add_argument('--disable-javascript')
             self.chrome_options.add_argument('--window-size=1920,1080')
             self.chrome_options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
             
-            # Memory optimizations
+            # Оптимизации памяти
             self.chrome_options.add_argument('--memory-pressure-off')
             self.chrome_options.add_argument('--max_old_space_size=4096')
             
-            # Proxy configuration
+            # Конфигурация прокси
             if proxy:
                 proxy_arg = f"--proxy-server={proxy}"
                 self.chrome_options.add_argument(proxy_arg)
-                logger.info(f"Using proxy: {proxy}")
+                logger.info(f"Использование прокси: {proxy}")
             
-            # Additional preferences
+            # Дополнительные настройки
             prefs = {
                 "profile.default_content_setting_values": {
                     "notifications": 2,
@@ -66,34 +63,34 @@ class CloudBrowserManager:
             }
             self.chrome_options.add_experimental_option("prefs", prefs)
             
-            # Try to create driver
+            # Попытка создания драйвера
             try:
                 self.driver = webdriver.Chrome(options=self.chrome_options)
             except Exception as e:
-                logger.warning(f"Failed to create Chrome driver: {e}")
-                # Fallback with service
+                logger.warning(f"Не удалось создать Chrome драйвер: {e}")
+                # Запасной вариант с сервисом
                 service = Service('/usr/local/bin/chromedriver')
                 self.driver = webdriver.Chrome(service=service, options=self.chrome_options)
             
-            # Set timeouts
+            # Установка таймаутов
             self.driver.implicitly_wait(10)
             self.driver.set_page_load_timeout(30)
             
-            # Create wait object
+            # Создание объекта ожидания
             self.wait = WebDriverWait(self.driver, 10)
             
-            logger.info("Browser setup completed successfully")
+            logger.info("Настройка браузера завершена успешно")
             return True
             
         except Exception as e:
-            logger.error(f"Browser setup failed: {e}")
+            logger.error(f"Настройка браузера не удалась: {e}")
             return False
     
     def close(self):
-        """Close browser and cleanup"""
+        """Закрытие браузера и очистка"""
         if self.driver:
             try:
                 self.driver.quit()
-                logger.info("Browser closed successfully")
+                logger.info("Браузер закрыт успешно")
             except Exception as e:
-                logger.warning(f"Error closing browser: {e}")
+                logger.warning(f"Ошибка закрытия браузера: {e}")
