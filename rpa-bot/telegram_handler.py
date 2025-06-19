@@ -8,10 +8,9 @@ import time
 import logging
 import os
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 logger = logging.getLogger(__name__)
-
 
 class TelegramHandler:
     """Handles Telegram-specific actions"""
@@ -22,7 +21,7 @@ class TelegramHandler:
         self.behavior = behavior
     
     def telegram_like(self, action):
-        """Enhanced Telegram like functionality"""
+        """Enhanced Telegram like functionality with modern selectors"""
         emoji = action.get('emoji', '👍')
         
         logger.info(f"🎯 Starting enhanced Telegram like: {emoji}")
@@ -50,7 +49,7 @@ class TelegramHandler:
             
             # Modern selectors for Telegram Web
             modern_selectors = [
-                # New selectors for modern Telegram Web
+                # 2024 Telegram Web selectors
                 'button[class*="ReactionButton"]',
                 'button[class*="reaction"]',
                 '.message-reactions button',
@@ -272,8 +271,8 @@ class TelegramHandler:
                 os.makedirs('screenshots', exist_ok=True)
                 self.driver.save_screenshot(screenshot_path)
                 logger.info(f"📸 Final screenshot: {screenshot_path}")
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Screenshot failed: {e}")
             
             logger.info("✅ Process completed")
             return True

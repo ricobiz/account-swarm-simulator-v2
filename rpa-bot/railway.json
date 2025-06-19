@@ -8,6 +8,16 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicyType": "ON_FAILURE"
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300,
+    "healthcheckInterval": 60
+  },
+  "env": {
+    "PYTHONUNBUFFERED": "1",
+    "DISPLAY": ":99",
+    "SELENIUM_LOG_LEVEL": "WARNING",
+    "PORT": "5000"
   }
 }

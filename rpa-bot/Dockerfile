@@ -8,59 +8,82 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     xvfb \
-    x11vnc \
     fluxbox \
-    wmctrl \
+    ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libgconf-2-4 \
+    sudo \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
+    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
     && apt-get update \
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка ChromeDriver
 RUN CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1) \
-    && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}/chromedriver_linux64.zip" \
+    && CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") \
+    && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" \
     && unzip /tmp/chromedriver.zip -d /usr/local/bin/ \
     && rm /tmp/chromedriver.zip \
     && chmod +x /usr/local/bin/chromedriver
 
+# Создание пользователя app
+RUN useradd --create-home --shell /bin/bash app \
+    && usermod -aG sudo app \
+    && echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
 # Создание рабочей директории
 WORKDIR /app
 
-# Копирование файлов требований
-COPY requirements.txt .
+# Установка владельца директории
+RUN chown -R app:app /app
 
-# Установка Python зависимостей
-RUN pip install --no-cache-dir -r requirements.txt
+# Переключение на пользователя app
+USER app
+
+# Копирование файлов требований и установка зависимостей
+COPY --chown=app:app requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Копирование кода приложения
-COPY . .
+COPY --chown=app:app . .
 
-# Создание необходимых директорий
-RUN mkdir -p screenshots logs
+# Создание директорий с правильными правами
+RUN mkdir -p screenshots logs profiles extensions downloads \
+    && chmod -R 755 screenshots logs profiles extensions downloads
 
-# Установка переменных окружения для headless режима
+# Установка переменных окружения
 ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/home/app/.local/bin:${PATH}"
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 
-# Создание скрипта запуска
-RUN echo '#!/bin/bash\n\
-# Запуск виртуального дисплея\n\
-Xvfb :99 -screen 0 1920x1080x24 &\n\
-# Запуск window manager\n\
-fluxbox &\n\
-# Ожидание готовности дисплея\n\
-sleep 2\n\
-# Запуск RPA бота\n\
-python rpa_bot.py' > /app/start.sh
+# Переключение обратно на root для финальной настройки
+USER root
 
-RUN chmod +x /app/start.sh
+# Установка правильных прав на исполняемые файлы
+RUN chmod +x start_cloud.sh rpa_bot_cloud.py \
+    && chown app:app start_cloud.sh rpa_bot_cloud.py
+
+# Возврат к пользователю app
+USER app
 
 # Открытие порта
 EXPOSE 5000
 
 # Команда запуска
-CMD ["/app/start.sh"]
+CMD ["./start_cloud.sh"]

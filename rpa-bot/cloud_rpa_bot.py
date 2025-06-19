@@ -12,10 +12,8 @@ from browser_manager import CloudBrowserManager
 from action_handlers import ActionHandlers
 from telegram_handler import TelegramHandler
 from selenium.common.exceptions import TimeoutException
-import pyautogui
 
 logger = logging.getLogger(__name__)
-
 
 class CloudRPABot:
     def __init__(self):
@@ -24,8 +22,12 @@ class CloudRPABot:
         self.action_handlers = None
         self.telegram_handler = None
         
-        # Disable PyAutoGUI for cloud (use only Selenium)
-        pyautogui.FAILSAFE = False
+        # Отключаем PyAutoGUI для облака
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = False
+        except ImportError:
+            pass  # PyAutoGUI может быть недоступен в облаке
         
         logger.info("Cloud RPA Bot initialized")
     
@@ -85,9 +87,11 @@ class CloudRPABot:
         logger.info(f"Starting cloud task execution: {task_id}")
         
         try:
+            # Настройка браузера
             if not self.setup_browser():
                 raise Exception("Failed to setup cloud browser")
             
+            # Переход на стартовую страницу
             if task.get('url'):
                 self.browser_manager.driver.get(task['url'])
                 self.behavior.random_delay(1000, 2000)
@@ -95,24 +99,32 @@ class CloudRPABot:
             completed_actions = 0
             actions = task.get('actions', [])
             
+            # Выполнение действий
             for i, action in enumerate(actions):
                 logger.info(f"Executing action {i+1}/{len(actions)}: {action.get('type')}")
                 
                 if self.execute_action(action):
                     completed_actions += 1
                 else:
-                    logger.warning(f"Action {i+1} not executed: {action}")
+                    logger.warning(f"Action {i+1} failed: {action}")
                 
+                # Проверка таймаута
                 if time.time() - start_time > task.get('timeout', 60000) / 1000:
                     raise TimeoutException("Task execution timeout exceeded")
             
             execution_time = int((time.time() - start_time) * 1000)
             
-            # Result screenshot
+            # Создание скриншота результата
             screenshot_path = f"screenshots/cloud_task_{task_id}_{int(time.time())}.png"
             os.makedirs('screenshots', exist_ok=True)
-            self.browser_manager.driver.save_screenshot(screenshot_path)
             
+            try:
+                self.browser_manager.driver.save_screenshot(screenshot_path)
+            except Exception as e:
+                logger.warning(f"Failed to save screenshot: {e}")
+                screenshot_path = None
+            
+            # Успешный результат
             result = {
                 'taskId': task_id,
                 'success': True,
@@ -124,7 +136,7 @@ class CloudRPABot:
                     'url': self.browser_manager.driver.current_url,
                     'title': self.browser_manager.driver.title
                 },
-                'environment': 'cloud'
+                'environment': 'railway-cloud'
             }
             
             logger.info(f"Cloud task {task_id} executed successfully in {execution_time}ms")
@@ -133,6 +145,7 @@ class CloudRPABot:
         except Exception as e:
             execution_time = int((time.time() - start_time) * 1000)
             
+            # Результат с ошибкой
             result = {
                 'taskId': task_id,
                 'success': False,
@@ -140,11 +153,15 @@ class CloudRPABot:
                 'error': str(e),
                 'executionTime': execution_time,
                 'completedActions': completed_actions if 'completed_actions' in locals() else 0,
-                'environment': 'cloud'
+                'environment': 'railway-cloud'
             }
             
             logger.error(f"Cloud task execution error {task_id}: {e}")
             return result
             
         finally:
-            self.browser_manager.close()
+            # Очистка ресурсов
+            try:
+                self.browser_manager.close()
+            except Exception as e:
+                logger.warning(f"Error closing browser: {e}")
