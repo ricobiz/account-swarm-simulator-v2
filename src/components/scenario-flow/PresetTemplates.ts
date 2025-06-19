@@ -6,26 +6,28 @@ export interface ScenarioPreset {
   name: string;
   description: string;
   category: string;
-  platform: string;
   nodes: Node[];
   edges: Edge[];
-  tags: string[];
 }
 
 export const SCENARIO_PRESETS: ScenarioPreset[] = [
   {
-    id: 'youtube_engagement',
-    name: 'Прокачка YouTube канала',
-    description: 'Просмотр, лайки и комментарии на YouTube видео',
-    category: 'engagement',
-    platform: 'youtube',
-    tags: ['youtube', 'лайки', 'просмотры', 'комментарии'],
+    id: 'simple-form-fill',
+    name: 'Заполнение формы',
+    description: 'Простой сценарий заполнения веб-формы с именем и email',
+    category: 'Формы',
     nodes: [
       {
         id: 'start',
         type: 'input',
-        data: { label: 'Начало' },
-        position: { x: 100, y: 50 }
+        data: { label: 'Начало сценария' },
+        position: { x: 250, y: 50 },
+        style: { 
+          background: '#4ade80', 
+          color: 'white',
+          border: '2px solid #22c55e',
+          borderRadius: '8px'
+        }
       },
       {
         id: 'navigate-1',
@@ -33,248 +35,238 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
         data: {
           id: 'navigate-1',
           type: 'navigate',
-          label: 'Переход на YouTube',
+          label: 'Переход по URL',
           icon: 'Navigation',
-          config: { url: 'https://youtube.com/watch?v=VIDEO_ID', waitTime: 5 },
-          isConfigured: true
-        },
-        position: { x: 100, y: 150 }
-      },
-      {
-        id: 'view-1',
-        type: 'action',
-        data: {
-          id: 'view-1',
-          type: 'view',
-          label: 'Просмотр видео',
-          icon: 'Eye',
-          config: { viewTime: 60, scrollBehavior: 'random', interactions: true },
-          isConfigured: true
-        },
-        position: { x: 100, y: 250 }
-      },
-      {
-        id: 'like-1',
-        type: 'action',
-        data: {
-          id: 'like-1',
-          type: 'like',
-          label: 'Поставить лайк',
-          icon: 'Heart',
-          config: { selector: '[aria-label*="like"]', checkIfLiked: true, delay: 1000 },
-          isConfigured: true
-        },
-        position: { x: 100, y: 350 }
-      },
-      {
-        id: 'comment-1',
-        type: 'action',
-        data: {
-          id: 'comment-1',
-          type: 'comment',
-          label: 'Написать комментарий',
-          icon: 'MessageCircle',
-          config: { 
-            text: 'Отличное видео! 👍',
-            textVariations: 'Отличное видео! 👍\nКлассно! 🔥\nСпасибо за контент! ✨',
-            selector: '#placeholder-area',
-            submitSelector: '#submit-button'
+          config: {
+            url: 'https://example.com/form',
+            waitTime: 5
           },
           isConfigured: true
         },
-        position: { x: 100, y: 450 }
-      }
-    ],
-    edges: [
-      { id: 'e1', source: 'start', target: 'navigate-1' },
-      { id: 'e2', source: 'navigate-1', target: 'view-1' },
-      { id: 'e3', source: 'view-1', target: 'like-1' },
-      { id: 'e4', source: 'like-1', target: 'comment-1' }
-    ]
-  },
-  
-  {
-    id: 'tiktok_spam',
-    name: 'Активность в TikTok',
-    description: 'Массовые лайки и подписки в TikTok',
-    category: 'spam',
-    platform: 'tiktok',
-    tags: ['tiktok', 'лайки', 'подписки', 'массовая активность'],
-    nodes: [
-      {
-        id: 'start',
-        type: 'input',
-        data: { label: 'Начало' },
-        position: { x: 100, y: 50 }
+        position: { x: 250, y: 150 }
       },
       {
-        id: 'navigate-1',
+        id: 'type-name',
         type: 'action',
         data: {
-          id: 'navigate-1',
-          type: 'navigate',
-          label: 'Переход на TikTok',
-          icon: 'Navigation',
-          config: { url: 'https://tiktok.com/@USERNAME', waitTime: 3 },
-          isConfigured: true
-        },
-        position: { x: 100, y: 150 }
-      },
-      {
-        id: 'loop-1',
-        type: 'action',
-        data: {
-          id: 'loop-1',
-          type: 'loop',
-          label: 'Цикл по видео',
-          icon: 'RotateCcw',
-          config: { loopType: 'count', count: 10, maxIterations: 10 },
-          isConfigured: true
-        },
-        position: { x: 100, y: 250 }
-      },
-      {
-        id: 'like-1',
-        type: 'action',
-        data: {
-          id: 'like-1',
-          type: 'like',
-          label: 'Лайк видео',
-          icon: 'Heart',
-          config: { selector: '[data-e2e="like-button"]', checkIfLiked: true, delay: 500 },
-          isConfigured: true
-        },
-        position: { x: 300, y: 350 }
-      },
-      {
-        id: 'wait-1',
-        type: 'action',
-        data: {
-          id: 'wait-1',
-          type: 'wait_random',
-          label: 'Случайная пауза',
-          icon: 'Pause',
-          config: { minTime: 2, maxTime: 5, humanBehavior: true },
-          isConfigured: true
-        },
-        position: { x: 300, y: 450 }
-      }
-    ],
-    edges: [
-      { id: 'e1', source: 'start', target: 'navigate-1' },
-      { id: 'e2', source: 'navigate-1', target: 'loop-1' },
-      { id: 'e3', source: 'loop-1', target: 'like-1' },
-      { id: 'e4', source: 'like-1', target: 'wait-1' },
-      { id: 'e5', source: 'wait-1', target: 'loop-1' }
-    ]
-  },
-  
-  {
-    id: 'telegram_join',
-    name: 'Вступление в Telegram каналы',
-    description: 'Автоматическое вступление в список Telegram каналов',
-    category: 'automation',
-    platform: 'telegram',
-    tags: ['telegram', 'каналы', 'подписки', 'автоматизация'],
-    nodes: [
-      {
-        id: 'start',
-        type: 'input',
-        data: { label: 'Начало' },
-        position: { x: 100, y: 50 }
-      },
-      {
-        id: 'proxy-1',
-        type: 'action',
-        data: {
-          id: 'proxy-1',
-          type: 'proxy_change',
-          label: 'Смена прокси',
-          icon: 'Shuffle',
-          config: { proxyType: 'random', testConnection: true },
-          isConfigured: true
-        },
-        position: { x: 100, y: 150 }
-      },
-      {
-        id: 'navigate-1',
-        type: 'action',
-        data: {
-          id: 'navigate-1',
-          type: 'navigate',
-          label: 'Переход в Telegram',
-          icon: 'Navigation',
-          config: { url: 'https://t.me/CHANNEL_NAME', waitTime: 3 },
-          isConfigured: true
-        },
-        position: { x: 100, y: 250 }
-      },
-      {
-        id: 'condition-1',
-        type: 'action',
-        data: {
-          id: 'condition-1',
-          type: 'condition',
-          label: 'Проверка кнопки Join',
-          icon: 'GitBranch',
-          config: { 
-            conditionType: 'element_exists', 
-            selector: '.tgme_action_button_new',
-            randomChance: 50
+          id: 'type-name',
+          type: 'type',
+          label: 'Ввод имени',
+          icon: 'Type',
+          config: {
+            selector: 'input[name="name"]',
+            text: 'Иван Иванов',
+            clearFirst: true
           },
           isConfigured: true
         },
-        position: { x: 100, y: 350 }
+        position: { x: 250, y: 250 }
       },
       {
-        id: 'click-1',
+        id: 'type-email',
         type: 'action',
         data: {
-          id: 'click-1',
+          id: 'type-email',
+          type: 'type',
+          label: 'Ввод email',
+          icon: 'Type',
+          config: {
+            selector: 'input[name="email"]',
+            text: 'ivan@example.com',
+            clearFirst: true
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 350 }
+      },
+      {
+        id: 'submit-form',
+        type: 'action',
+        data: {
+          id: 'submit-form',
           type: 'click',
-          label: 'Нажать Join',
+          label: 'Отправить форму',
           icon: 'MousePointer',
-          config: { 
-            selector: '.tgme_action_button_new',
-            waitForElement: true,
-            timeout: 5000
+          config: {
+            selector: 'button[type="submit"]',
+            delay: 1000
           },
           isConfigured: true
         },
-        position: { x: 300, y: 450 }
-      },
-      {
-        id: 'wait-1',
-        type: 'action',
-        data: {
-          id: 'wait-1',
-          type: 'wait_random',
-          label: 'Пауза после подписки',
-          icon: 'Pause',
-          config: { minTime: 3, maxTime: 8, humanBehavior: true },
-          isConfigured: true
-        },
-        position: { x: 300, y: 550 }
+        position: { x: 250, y: 450 }
       }
     ],
     edges: [
-      { id: 'e1', source: 'start', target: 'proxy-1' },
-      { id: 'e2', source: 'proxy-1', target: 'navigate-1' },
-      { id: 'e3', source: 'navigate-1', target: 'condition-1' },
-      { id: 'e4', source: 'condition-1', target: 'click-1', sourceHandle: 'true' },
-      { id: 'e5', source: 'click-1', target: 'wait-1' }
+      { id: 'e1', source: 'start', target: 'navigate-1', type: 'smoothstep' },
+      { id: 'e2', source: 'navigate-1', target: 'type-name', type: 'smoothstep' },
+      { id: 'e3', source: 'type-name', target: 'type-email', type: 'smoothstep' },
+      { id: 'e4', source: 'type-email', target: 'submit-form', type: 'smoothstep' }
+    ]
+  },
+  {
+    id: 'data-extraction',
+    name: 'Извлечение данных',
+    description: 'Сценарий для извлечения данных с веб-страницы',
+    category: 'Парсинг',
+    nodes: [
+      {
+        id: 'start',
+        type: 'input',
+        data: { label: 'Начало сценария' },
+        position: { x: 250, y: 50 },
+        style: { 
+          background: '#4ade80', 
+          color: 'white',
+          border: '2px solid #22c55e',
+          borderRadius: '8px'
+        }
+      },
+      {
+        id: 'navigate-1',
+        type: 'action',
+        data: {
+          id: 'navigate-1',
+          type: 'navigate',
+          label: 'Открыть страницу',
+          icon: 'Navigation',
+          config: {
+            url: 'https://example.com/products',
+            waitTime: 5
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 150 }
+      },
+      {
+        id: 'extract-title',
+        type: 'action',
+        data: {
+          id: 'extract-title',
+          type: 'extract',
+          label: 'Извлечь заголовок',
+          icon: 'Copy',
+          config: {
+            selector: 'h1',
+            attribute: 'text',
+            variableName: 'pageTitle'
+          },
+          isConfigured: true
+        },
+        position: { x: 150, y: 250 }
+      },
+      {
+        id: 'extract-price',
+        type: 'action',
+        data: {
+          id: 'extract-price',
+          type: 'extract',
+          label: 'Извлечь цену',
+          icon: 'Copy',
+          config: {
+            selector: '.price',
+            attribute: 'text',
+            variableName: 'productPrice'
+          },
+          isConfigured: true
+        },
+        position: { x: 350, y: 250 }
+      }
+    ],
+    edges: [
+      { id: 'e1', source: 'start', target: 'navigate-1', type: 'smoothstep' },
+      { id: 'e2', source: 'navigate-1', target: 'extract-title', type: 'smoothstep' },
+      { id: 'e3', source: 'navigate-1', target: 'extract-price', type: 'smoothstep' }
+    ]
+  },
+  {
+    id: 'social-media-posting',
+    name: 'Публикация в соцсетях',
+    description: 'Автоматическая публикация контента в социальных сетях',
+    category: 'Социальные сети',
+    nodes: [
+      {
+        id: 'start',
+        type: 'input',
+        data: { label: 'Начало сценария' },
+        position: { x: 250, y: 50 },
+        style: { 
+          background: '#4ade80', 
+          color: 'white',
+          border: '2px solid #22c55e',
+          borderRadius: '8px'
+        }
+      },
+      {
+        id: 'navigate-1',
+        type: 'action',
+        data: {
+          id: 'navigate-1',
+          type: 'navigate',
+          label: 'Открыть соцсеть',
+          icon: 'Navigation',
+          config: {
+            url: 'https://twitter.com',
+            waitTime: 5
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 150 }
+      },
+      {
+        id: 'click-compose',
+        type: 'action',
+        data: {
+          id: 'click-compose',
+          type: 'click',
+          label: 'Создать пост',
+          icon: 'MousePointer',
+          config: {
+            selector: '[data-testid="SideNav_NewTweet_Button"]',
+            delay: 1000
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 250 }
+      },
+      {
+        id: 'type-content',
+        type: 'action',
+        data: {
+          id: 'type-content',
+          type: 'type',
+          label: 'Написать текст',
+          icon: 'Type',
+          config: {
+            selector: '[data-testid="tweetTextarea_0"]',
+            text: 'Это автоматически созданный пост! 🤖',
+            clearFirst: true
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 350 }
+      },
+      {
+        id: 'publish',
+        type: 'action',
+        data: {
+          id: 'publish',
+          type: 'click',
+          label: 'Опубликовать',
+          icon: 'MousePointer',
+          config: {
+            selector: '[data-testid="tweetButtonInline"]',
+            delay: 2000
+          },
+          isConfigured: true
+        },
+        position: { x: 250, y: 450 }
+      }
+    ],
+    edges: [
+      { id: 'e1', source: 'start', target: 'navigate-1', type: 'smoothstep' },
+      { id: 'e2', source: 'navigate-1', target: 'click-compose', type: 'smoothstep' },
+      { id: 'e3', source: 'click-compose', target: 'type-content', type: 'smoothstep' },
+      { id: 'e4', source: 'type-content', target: 'publish', type: 'smoothstep' }
     ]
   }
 ];
-
-export function getPresetsByCategory(category: string): ScenarioPreset[] {
-  return SCENARIO_PRESETS.filter(preset => preset.category === category);
-}
-
-export function getPresetsByPlatform(platform: string): ScenarioPreset[] {
-  return SCENARIO_PRESETS.filter(preset => preset.platform === platform);
-}
-
-export function getPresetById(id: string): ScenarioPreset | undefined {
-  return SCENARIO_PRESETS.find(preset => preset.id === id);
-}
