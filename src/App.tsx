@@ -6,6 +6,11 @@ import { ProcessMonitorProvider } from './components/ProcessMonitorProvider';
 import Auth from './pages/Auth';
 import VisualRPA from './pages/VisualRPA';
 import Index from './pages/Index';
+import Accounts from './pages/Accounts';
+import ScenarioLaunch from './pages/ScenarioLaunch';
+import Monitoring from './pages/Monitoring';
+import Proxies from './pages/Proxies';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -16,6 +21,11 @@ function App() {
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/visual-rpa" element={<VisualRPA />} />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/scenario-launch" element={<ScenarioLaunch />} />
+              <Route path="/monitoring" element={<Monitoring />} />
+              <Route path="/proxies" element={<Proxies />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/" element={<Index />} />
             </Routes>
           </ProcessMonitorProvider>

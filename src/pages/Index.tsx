@@ -10,7 +10,13 @@ import {
   Settings, 
   Eye,
   Zap,
-  Shield
+  Shield,
+  Users,
+  Activity,
+  Server,
+  PlayCircle,
+  BarChart3,
+  UserCheck
 } from 'lucide-react';
 
 const Index: React.FC = () => {
@@ -95,7 +101,7 @@ const Index: React.FC = () => {
                 onClick={() => navigate('/accounts')}>
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-400" />
+                <UserCheck className="h-5 w-5 text-green-400" />
                 Управление аккаунтами
               </CardTitle>
             </CardHeader>
@@ -104,27 +110,88 @@ const Index: React.FC = () => {
                 Добавляйте и управляйте аккаунтами для автоматизации
               </p>
               <div className="flex items-center text-green-400 text-sm">
-                <Settings className="h-4 w-4 mr-1" />
+                <Users className="h-4 w-4 mr-1" />
                 Открыть панель
               </div>
             </CardContent>
           </Card>
 
-          {/* Settings */}
-          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors cursor-pointer">
+          {/* Scenario Launch */}
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors cursor-pointer"
+                onClick={() => navigate('/scenario-launch')}>
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Settings className="h-5 w-5 text-blue-400" />
-                Настройки
+                <PlayCircle className="h-5 w-5 text-blue-400" />
+                Запуск сценариев
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-300 text-sm mb-4">
-                Конфигурация API ключей и системных параметров
+                Массовый запуск автоматизированных сценариев на множестве аккаунтов
               </p>
               <div className="flex items-center text-blue-400 text-sm">
+                <PlayCircle className="h-4 w-4 mr-1" />
+                Запустить задачи
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monitoring */}
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors cursor-pointer"
+                onClick={() => navigate('/monitoring')}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-yellow-400" />
+                Мониторинг
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Отслеживание активности аккаунтов и выполнения сценариев в реальном времени
+              </p>
+              <div className="flex items-center text-yellow-400 text-sm">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Посмотреть статистику
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Proxy Management */}
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors cursor-pointer"
+                onClick={() => navigate('/proxies')}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Shield className="h-5 w-5 text-orange-400" />
+                Управление прокси
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Настройка и управление прокси-серверами для безопасной автоматизации
+              </p>
+              <div className="flex items-center text-orange-400 text-sm">
+                <Server className="h-4 w-4 mr-1" />
+                Настроить прокси
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Admin Panel */}
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors cursor-pointer"
+                onClick={() => navigate('/admin')}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Settings className="h-5 w-5 text-red-400" />
+                Администрирование
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Управление пользователями, подписками и системными настройками
+              </p>
+              <div className="flex items-center text-red-400 text-sm">
                 <Settings className="h-4 w-4 mr-1" />
-                Настроить
+                Панель админа
               </div>
             </CardContent>
           </Card>
