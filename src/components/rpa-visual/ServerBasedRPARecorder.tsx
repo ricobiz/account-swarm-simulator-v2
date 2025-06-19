@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,29 +20,7 @@ import {
   Target,
   TestTube
 } from 'lucide-react';
-
-interface BrowserInfo {
-  resolution: { width: number; height: number };
-  userAgent: string;
-  deviceType: 'desktop' | 'mobile' | 'tablet';
-  timestamp: string;
-}
-
-interface ServerScreenshot {
-  imageBase64: string;
-  browserInfo: BrowserInfo;
-  sessionId: string;
-}
-
-interface RecordedAction {
-  id: string;
-  type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  coordinates: { x: number; y: number };
-  browserResolution: { width: number; height: number };
-  description: string;
-  value?: string;
-  timestamp: number;
-}
+import type { BrowserInfo, ServerScreenshot, RecordedAction } from '@/types/serverRPA';
 
 interface ServerBasedRPARecorderProps {
   onSaveScenario: (actions: RecordedAction[]) => void;

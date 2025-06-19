@@ -17,26 +17,7 @@ import {
   Zap,
   Server
 } from 'lucide-react';
-
-interface RecordedAction {
-  id: string;
-  type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  coordinates: { x: number; y: number };
-  browserResolution: { width: number; height: number };
-  description: string;
-  value?: string;
-  timestamp: number;
-}
-
-interface SavedScenario {
-  id: string;
-  name: string;
-  description: string;
-  actions: RecordedAction[];
-  created_at: string;
-  platform: string;
-  browserResolution: { width: number; height: number };
-}
+import type { RecordedAction, SavedScenario } from '@/types/serverRPA';
 
 export const VisualRPABuilder: React.FC = () => {
   const [activeTab, setActiveTab] = useState('recorder');
@@ -84,7 +65,7 @@ export const VisualRPABuilder: React.FC = () => {
     });
   }, [savedScenarios, toast]);
 
-  const handleExecuteScenario = useCallback(async (scenario: SavedScenario) => {
+  const handleExecuteScenario = useCallback((scenario: SavedScenario) => {
     if (executingScenario) {
       toast({
         title: "Выполнение уже запущено",
@@ -101,26 +82,29 @@ export const VisualRPABuilder: React.FC = () => {
       description: `Выполняется "${scenario.name}" на реальном браузере сервера`
     });
 
-    try {
-      // Здесь будет интеграция с серверным RPA движком
-      console.log('Executing server-based scenario:', scenario);
-      
-      // Имитация выполнения для демонстрации
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      toast({
-        title: "Серверный сценарий выполнен",
-        description: `"${scenario.name}" успешно завершен на сервере`
-      });
-    } catch (error) {
-      toast({
-        title: "Ошибка выполнения",
-        description: "Не удалось выполнить сценарий на сервере",
-        variant: "destructive"
-      });
-    } finally {
-      setExecutingScenario(null);
-    }
+    // Асинхронное выполнение
+    (async () => {
+      try {
+        // Здесь будет интеграция с серверным RPA движком
+        console.log('Executing server-based scenario:', scenario);
+        
+        // Имитация выполнения для демонстрации
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        toast({
+          title: "Серверный сценарий выполнен",
+          description: `"${scenario.name}" успешно завершен на сервере`
+        });
+      } catch (error) {
+        toast({
+          title: "Ошибка выполнения",
+          description: "Не удалось выполнить сценарий на сервере",
+          variant: "destructive"
+        });
+      } finally {
+        setExecutingScenario(null);
+      }
+    })();
   }, [executingScenario, toast]);
 
   // Загрузка сохраненных сценариев при инициализации

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,26 +16,7 @@ import {
   Monitor,
   Server
 } from 'lucide-react';
-
-interface RecordedAction {
-  id: string;
-  type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
-  coordinates: { x: number; y: number };
-  browserResolution: { width: number; height: number };
-  description: string;
-  value?: string;
-  timestamp: number;
-}
-
-interface SavedScenario {
-  id: string;
-  name: string;
-  description: string;
-  actions: RecordedAction[];
-  created_at: string;
-  platform: string;
-  browserResolution: { width: number; height: number };
-}
+import type { RecordedAction, SavedScenario } from '@/types/serverRPA';
 
 interface ScenarioManagerProps {
   scenarios: SavedScenario[];
@@ -127,8 +107,7 @@ export const ScenarioManager: React.FC<ScenarioManagerProps> = ({
                   >
                     {isExecuting === scenario.id ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    )
-                     : (
+                    ) : (
                       <Play className="h-4 w-4" />
                     )}
                   </Button>
