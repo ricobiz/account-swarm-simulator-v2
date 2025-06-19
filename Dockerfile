@@ -1,14 +1,4 @@
 
-# Multi-stage build для оптимизации
-FROM node:18-alpine as frontend-builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-# Основной образ для RPA-бота
 FROM python:3.11-slim
 
 # Установка системных зависимостей
@@ -18,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     xvfb \
-    fluxbox \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
@@ -31,9 +20,7 @@ RUN apt-get update && apt-get install -y \
     libgbm1 \
     libxss1 \
     libgconf-2-4 \
-    sudo \
-    nginx \
-    supervisor \
+    build-essential \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,38 +32,30 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
     && rm -rf /var/lib/apt/lists/*
 
 # Создание пользователя app
-RUN useradd --create-home --shell /bin/bash app \
-    && usermod -aG sudo app \
-    && echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
+RUN useradd --create-home --shell /bin/bash app
 WORKDIR /app
 
-# Копирование frontend build
-COPY --from=frontend-builder /app/dist ./frontend
-
-# Копирование Python зависимостей
+# Обновление pip и установка Python зависимостей
 COPY requirements.txt .
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копирование RPA-бота
+# Копирование кода приложения
 COPY rpa_bot.py health_check.py ./
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY nginx.conf /etc/nginx/nginx.conf
 
 # Настройка прав
 RUN chown -R app:app /app \
-    && mkdir -p /var/log/supervisor \
-    && mkdir -p /app/screenshots /app/logs /app/profiles /app/extensions /app/downloads \
-    && chmod -R 755 /app/screenshots /app/logs /app/profiles /app/extensions /app/downloads
+    && mkdir -p /app/logs \
+    && chmod -R 755 /app/logs
 
 # Переменные окружения
 ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/google-chrome
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 USER app
 
 EXPOSE 8080
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Запуск с Xvfb
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & python rpa_bot.py"]
