@@ -12,11 +12,12 @@
     "restartPolicyMaxRetries": 3,
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
-    "healthcheckInterval": 30
+    "healthcheckInterval": 60
   },
   "env": {
     "PYTHONUNBUFFERED": "1",
     "DISPLAY": ":99",
-    "SELENIUM_LOG_LEVEL": "WARNING"
+    "SELENIUM_LOG_LEVEL": "WARNING",
+    "PORT": "5000"
   }
 }
