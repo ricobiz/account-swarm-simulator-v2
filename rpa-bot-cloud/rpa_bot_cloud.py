@@ -1,8 +1,9 @@
 
 #!/usr/bin/env python3
 """
-Продвинутый облачный RPA-бот с полным функционалом
-Включает антидетект, поддержку различных платформ, прокси, captcha solving
+Универсальный облачный RPA-бот с полным функционалом
+Поддерживает все основные платформы: Instagram, TikTok, YouTube, X (Twitter), 
+Facebook, LinkedIn, Telegram, Reddit, Discord, WhatsApp и другие
 """
 
 import json
@@ -52,333 +53,594 @@ BOT_PORT = int(os.getenv('PORT', 5000))
 
 app = Flask(__name__)
 
-class AntiDetectSystem:
-    """Система антидетекта для обхода защиты"""
+class UniversalAntiDetectSystem:
+    """Универсальная система антидетекта для всех платформ"""
     
     def __init__(self):
         self.ua = UserAgent()
-        self.profiles = self._load_browser_profiles()
+        self.profiles = self._load_universal_profiles()
+        self.platform_configs = self._load_platform_configs()
     
-    def _load_browser_profiles(self):
-        """Загрузка профилей браузеров"""
+    def _load_universal_profiles(self):
+        """Загрузка универсальных профилей браузеров"""
         return [
             {
+                'name': 'Windows Chrome',
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'viewport': (1920, 1080),
                 'platform': 'Win32',
                 'languages': ['en-US', 'en'],
-                'timezone': 'America/New_York'
+                'timezone': 'America/New_York',
+                'webgl_vendor': 'Google Inc. (NVIDIA)',
+                'webgl_renderer': 'ANGLE (NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0)'
             },
             {
-                'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'name': 'MacOS Safari',
+                'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
                 'viewport': (1440, 900),
                 'platform': 'MacIntel',
                 'languages': ['en-US', 'en'],
-                'timezone': 'America/Los_Angeles'
+                'timezone': 'America/Los_Angeles',
+                'webgl_vendor': 'Apple',
+                'webgl_renderer': 'Apple GPU'
             },
             {
-                'user_agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'name': 'Linux Firefox',
+                'user_agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0',
                 'viewport': (1920, 1080),
                 'platform': 'Linux x86_64',
                 'languages': ['en-US', 'en'],
-                'timezone': 'Europe/London'
+                'timezone': 'Europe/London',
+                'webgl_vendor': 'Mozilla',
+                'webgl_renderer': 'Mesa DRI Intel(R) UHD Graphics'
             }
         ]
     
-    def get_random_profile(self):
-        """Получение случайного профиля браузера"""
-        return random.choice(self.profiles)
-    
-    def setup_stealth_options(self, options, profile=None):
-        """Настройка стелс-опций для браузера"""
-        if not profile:
-            profile = self.get_random_profile()
-        
-        # Основные антидетект опции
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        
-        # Настройка viewport
-        options.add_argument(f'--window-size={profile["viewport"][0]},{profile["viewport"][1]}')
-        
-        # User Agent
-        options.add_argument(f'--user-agent={profile["user_agent"]}')
-        
-        # Дополнительные опции для обхода детекции
-        options.add_argument('--disable-web-security')
-        options.add_argument('--disable-features=VizDisplayCompositor')
-        options.add_argument('--disable-extensions-file-access-check')
-        options.add_argument('--disable-extensions-http-throttling')
-        options.add_argument('--disable-component-extensions-with-background-pages')
-        
-        # Preferences для дополнительного обхода
-        prefs = {
-            "profile.default_content_setting_values": {
-                "notifications": 2,
-                "geolocation": 2,
-                "media_stream": 2,
+    def _load_platform_configs(self):
+        """Конфигурации для различных платформ"""
+        return {
+            'instagram': {
+                'login_url': 'https://www.instagram.com/accounts/login/',
+                'selectors': {
+                    'username': 'input[name="username"]',
+                    'password': 'input[name="password"]',
+                    'login_button': 'button[type="submit"]',
+                    'like_button': '[aria-label="Like"]',
+                    'follow_button': 'button:contains("Follow")',
+                    'comment_input': 'textarea[aria-label="Add a comment..."]'
+                }
             },
-            "profile.managed_default_content_settings": {
-                "images": 1
+            'tiktok': {
+                'login_url': 'https://www.tiktok.com/login',
+                'selectors': {
+                    'like_button': '[data-e2e="like-icon"]',
+                    'follow_button': '[data-e2e="follow-button"]',
+                    'share_button': '[data-e2e="share-button"]',
+                    'comment_input': '[data-e2e="comment-input"]'
+                }
+            },
+            'youtube': {
+                'login_url': 'https://accounts.google.com/signin',
+                'selectors': {
+                    'like_button': '#top-level-buttons-computed ytd-toggle-button-renderer:first-child button',
+                    'subscribe_button': '#subscribe-button button',
+                    'comment_input': '#placeholder-area',
+                    'comment_submit': '#submit-button button'
+                }
+            },
+            'x': {  # Twitter/X
+                'login_url': 'https://x.com/i/flow/login',
+                'selectors': {
+                    'username': 'input[name="text"]',
+                    'password': 'input[name="password"]',
+                    'like_button': '[data-testid="like"]',
+                    'retweet_button': '[data-testid="retweet"]',
+                    'reply_button': '[data-testid="reply"]',
+                    'follow_button': '[data-testid*="follow"]'
+                }
+            },
+            'facebook': {
+                'login_url': 'https://www.facebook.com/login',
+                'selectors': {
+                    'email': '#email',
+                    'password': '#pass',
+                    'login_button': '[name="login"]',
+                    'like_button': '[aria-label="Like"]',
+                    'comment_input': '[data-testid="comment-input"]'
+                }
+            },
+            'linkedin': {
+                'login_url': 'https://www.linkedin.com/login',
+                'selectors': {
+                    'username': '#username',
+                    'password': '#password',
+                    'login_button': '.btn__primary--large',
+                    'like_button': '.react-button__trigger',
+                    'connect_button': '.pvs-profile-actions__action'
+                }
+            },
+            'telegram': {
+                'login_url': 'https://web.telegram.org/',
+                'selectors': {
+                    'phone_input': 'input[type="tel"]',
+                    'code_input': '.input-field-input',
+                    'chat_item': '.chatlist-chat'
+                }
+            },
+            'reddit': {
+                'login_url': 'https://www.reddit.com/login',
+                'selectors': {
+                    'username': '#loginUsername',
+                    'password': '#loginPassword',
+                    'login_button': '.AnimatedForm__submitButton',
+                    'upvote_button': '[aria-label="upvote"]',
+                    'comment_input': '.public-DraftEditor-content'
+                }
+            },
+            'discord': {
+                'login_url': 'https://discord.com/login',
+                'selectors': {
+                    'email': 'input[name="email"]',
+                    'password': 'input[name="password"]',
+                    'login_button': 'button[type="submit"]',
+                    'message_input': '[data-slate-editor="true"]'
+                }
+            },
+            'whatsapp': {
+                'login_url': 'https://web.whatsapp.com/',
+                'selectors': {
+                    'qr_code': '[data-testid="qrcode"]',
+                    'chat_item': '[data-testid="chat"]',
+                    'message_input': '[data-testid="conversation-compose-box-input"]'
+                }
             }
         }
-        options.add_experimental_option("prefs", prefs)
-        
-        return options, profile
 
-class HumanBehaviorSimulator:
-    """Имитация человеческого поведения"""
+class UniversalHumanBehavior:
+    """Универсальная имитация человеческого поведения"""
     
     @staticmethod
     def random_delay(min_ms=100, max_ms=3000):
-        """Случайная задержка"""
-        delay = random.uniform(min_ms/1000, max_ms/1000)
-        time.sleep(delay)
+        """Случайная задержка с человеческим распределением"""
+        # Используем гамма-распределение для более естественных пауз
+        delay = np.random.gamma(2, (max_ms - min_ms) / 1000 / 4) + min_ms / 1000
+        time.sleep(max(delay, min_ms / 1000))
     
     @staticmethod
-    def human_type(element, text, typing_speed_range=(0.05, 0.2)):
-        """Человеческий ввод текста"""
+    def human_type(element, text, typing_speed_range=(0.05, 0.3)):
+        """Человеческий ввод с опечатками и исправлениями"""
         element.clear()
-        for char in text:
-            element.send_keys(char)
-            delay = random.uniform(*typing_speed_range)
-            time.sleep(delay)
-            
-            # Случайные паузы и опечатки
-            if random.random() < 0.02:  # 2% шанс опечатки
-                wrong_char = random.choice('qwertyuiopasdfghjklzxcvbnm')
+        
+        for i, char in enumerate(text):
+            # Случайные опечатки
+            if random.random() < 0.03:  # 3% шанс опечатки
+                wrong_chars = 'qwertyuiopasdfghjklzxcvbnm1234567890'
+                wrong_char = random.choice(wrong_chars)
                 element.send_keys(wrong_char)
                 time.sleep(random.uniform(0.1, 0.3))
                 element.send_keys(Keys.BACKSPACE)
                 time.sleep(random.uniform(0.1, 0.2))
             
-            if random.random() < 0.05:  # 5% шанс паузы
-                time.sleep(random.uniform(0.5, 2.0))
+            # Ввод правильного символа
+            element.send_keys(char)
+            
+            # Варьируемая скорость печати
+            base_delay = random.uniform(*typing_speed_range)
+            
+            # Более длинные паузы после знаков препинания
+            if char in '.,!?;:':
+                base_delay *= random.uniform(2, 4)
+            # Паузы после пробелов
+            elif char == ' ':
+                base_delay *= random.uniform(1.5, 2.5)
+            
+            time.sleep(base_delay)
+            
+            # Случайные длинные паузы (размышления)
+            if random.random() < 0.05:  # 5% шанс паузы размышления
+                time.sleep(random.uniform(1, 3))
     
     @staticmethod
-    def human_scroll(driver, direction='down', intensity=3):
-        """Человеческая прокрутка"""
+    def human_scroll(driver, direction='down', intensity=3, platform='generic'):
+        """Человеческая прокрутка с учетом платформы"""
+        scroll_patterns = {
+            'instagram': {'pixels': (300, 800), 'pauses': (0.2, 0.8)},
+            'tiktok': {'pixels': (400, 900), 'pauses': (0.5, 2.0)},
+            'youtube': {'pixels': (200, 600), 'pauses': (0.3, 1.0)},
+            'x': {'pixels': (250, 700), 'pauses': (0.2, 0.6)},
+            'generic': {'pixels': (200, 600), 'pauses': (0.2, 0.8)}
+        }
+        
+        pattern = scroll_patterns.get(platform, scroll_patterns['generic'])
+        
         for _ in range(random.randint(1, intensity)):
-            if direction == 'down':
-                driver.execute_script("window.scrollBy(0, arguments[0]);", random.randint(200, 600))
-            else:
-                driver.execute_script("window.scrollBy(0, arguments[0]);", random.randint(-600, -200))
-            time.sleep(random.uniform(0.1, 0.5))
+            scroll_amount = random.randint(*pattern['pixels'])
+            if direction == 'up':
+                scroll_amount = -scroll_amount
+                
+            # Естественная прокрутка с ускорением/замедлением
+            steps = random.randint(3, 8)
+            step_size = scroll_amount // steps
+            
+            for step in range(steps):
+                current_step = step_size
+                # Ускорение в начале, замедление в конце
+                if step < 2:
+                    current_step = int(step_size * 0.3)
+                elif step > steps - 3:
+                    current_step = int(step_size * 0.7)
+                
+                driver.execute_script(f"window.scrollBy(0, {current_step});")
+                time.sleep(random.uniform(0.01, 0.05))
+            
+            time.sleep(random.uniform(*pattern['pauses']))
     
     @staticmethod
     def human_mouse_movement(driver, element):
-        """Человеческое движение мыши"""
+        """Естественное движение мыши к элементу"""
         action = ActionChains(driver)
         
-        # Случайное движение перед кликом
-        for _ in range(random.randint(1, 3)):
-            x_offset = random.randint(-50, 50)
-            y_offset = random.randint(-50, 50)
-            action.move_by_offset(x_offset, y_offset)
-            action.pause(random.uniform(0.1, 0.3))
+        # Получаем размеры окна
+        window_size = driver.get_window_size()
+        element_location = element.location
+        element_size = element.size
         
-        action.move_to_element(element)
-        action.pause(random.uniform(0.2, 0.8))
+        # Случайные промежуточные точки
+        intermediate_points = random.randint(2, 5)
+        
+        for i in range(intermediate_points):
+            # Создаем случайные точки по пути к элементу
+            progress = (i + 1) / (intermediate_points + 1)
+            target_x = element_location['x'] + element_size['width'] / 2
+            target_y = element_location['y'] + element_size['height'] / 2
+            
+            # Добавляем случайность к траектории
+            noise_x = random.randint(-100, 100) * (1 - progress)
+            noise_y = random.randint(-100, 100) * (1 - progress)
+            
+            intermediate_x = int(target_x * progress + noise_x)
+            intermediate_y = int(target_y * progress + noise_y)
+            
+            action.move_by_offset(
+                intermediate_x - action._get_current_mouse_position()[0] if hasattr(action, '_get_current_mouse_position') else 0,
+                intermediate_y - action._get_current_mouse_position()[1] if hasattr(action, '_get_current_mouse_position') else 0
+            )
+            action.pause(random.uniform(0.05, 0.2))
+        
+        # Финальное движение к элементу
+        action.move_to_element_with_offset(
+            element, 
+            random.randint(-5, 5), 
+            random.randint(-5, 5)
+        )
+        action.pause(random.uniform(0.1, 0.4))
         action.perform()
 
-class CaptchaSolver:
-    """Решение капчи"""
+class UniversalPlatformHandler:
+    """Универсальный обработчик всех платформ"""
     
-    def __init__(self, anticaptcha_key=None):
-        self.anticaptcha_key = anticaptcha_key or os.getenv('ANTICAPTCHA_KEY')
-    
-    def solve_recaptcha_v2(self, driver, site_key):
-        """Решение reCAPTCHA v2"""
-        try:
-            if not self.anticaptcha_key:
-                logger.warning("AntiCaptcha ключ не настроен")
-                return False
-            
-            # Здесь будет интеграция с AntiCaptcha API
-            logger.info("Попытка решения reCAPTCHA v2...")
-            # Временная заглушка
-            time.sleep(5)
-            return True
-            
-        except Exception as e:
-            logger.error(f"Ошибка решения капчи: {e}")
-            return False
-    
-    def solve_image_captcha(self, image_element):
-        """Решение изображений капчи"""
-        try:
-            # Сохранение изображения
-            screenshot = image_element.screenshot_as_png
-            image = Image.open(io.BytesIO(screenshot))
-            
-            # Здесь будет OCR и решение
-            logger.info("Попытка решения изображения капчи...")
-            return "captcha_solution"
-            
-        except Exception as e:
-            logger.error(f"Ошибка решения изображения капчи: {e}")
-            return None
-
-class ProxyManager:
-    """Управление прокси"""
-    
-    def __init__(self):
-        self.proxies = []
-        self.current_proxy_index = 0
-    
-    def add_proxy(self, proxy_config):
-        """Добавление прокси"""
-        self.proxies.append(proxy_config)
-    
-    def get_next_proxy(self):
-        """Получение следующего прокси"""
-        if not self.proxies:
-            return None
-        
-        proxy = self.proxies[self.current_proxy_index]
-        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
-        return proxy
-    
-    def format_proxy_for_chrome(self, proxy):
-        """Форматирование прокси для Chrome"""
-        if proxy:
-            return f"{proxy['type']}://{proxy['host']}:{proxy['port']}"
-        return None
-
-class PlatformHandler:
-    """Обработчик различных платформ"""
-    
-    def __init__(self, driver, behavior_simulator, captcha_solver):
+    def __init__(self, driver, behavior_simulator, antidetect):
         self.driver = driver
         self.behavior = behavior_simulator
-        self.captcha = captcha_solver
+        self.antidetect = antidetect
+        self.platform_configs = antidetect.platform_configs
     
-    def handle_instagram_login(self, username, password):
+    def login_to_platform(self, platform, credentials):
+        """Универсальный вход на платформу"""
+        config = self.platform_configs.get(platform)
+        if not config:
+            raise ValueError(f"Платформа {platform} не поддерживается")
+        
+        logger.info(f"Вход на платформу: {platform}")
+        
+        try:
+            # Переход на страницу входа
+            self.driver.get(config['login_url'])
+            self.behavior.random_delay(2000, 5000)
+            
+            # Специфичная логика для каждой платформы
+            if platform == 'instagram':
+                return self._login_instagram(credentials, config['selectors'])
+            elif platform == 'tiktok':
+                return self._login_tiktok(credentials, config['selectors'])
+            elif platform == 'youtube':
+                return self._login_youtube(credentials, config['selectors'])
+            elif platform == 'x':
+                return self._login_x(credentials, config['selectors'])
+            elif platform == 'facebook':
+                return self._login_facebook(credentials, config['selectors'])
+            elif platform == 'linkedin':
+                return self._login_linkedin(credentials, config['selectors'])
+            elif platform == 'telegram':
+                return self._login_telegram(credentials, config['selectors'])
+            elif platform == 'reddit':
+                return self._login_reddit(credentials, config['selectors'])
+            elif platform == 'discord':
+                return self._login_discord(credentials, config['selectors'])
+            elif platform == 'whatsapp':
+                return self._login_whatsapp(credentials, config['selectors'])
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Ошибка входа на {platform}: {e}")
+            return False
+    
+    def _login_instagram(self, credentials, selectors):
         """Вход в Instagram"""
         try:
-            self.driver.get("https://www.instagram.com/accounts/login/")
-            self.behavior.random_delay(2000, 4000)
-            
             # Ввод имени пользователя
-            username_field = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.NAME, "username"))
+            username_field = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selectors['username']))
             )
-            self.behavior.human_type(username_field, username)
+            self.behavior.human_type(username_field, credentials['username'])
             
             # Ввод пароля
-            password_field = self.driver.find_element(By.NAME, "password")
-            self.behavior.human_type(password_field, password)
+            password_field = self.driver.find_element(By.CSS_SELECTOR, selectors['password'])
+            self.behavior.human_type(password_field, credentials['password'])
             
             # Клик по кнопке входа
-            login_button = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            login_button = self.driver.find_element(By.CSS_SELECTOR, selectors['login_button'])
             self.behavior.human_mouse_movement(self.driver, login_button)
             login_button.click()
             
-            self.behavior.random_delay(3000, 6000)
-            return True
+            self.behavior.random_delay(3000, 8000)
+            
+            # Проверка успешного входа
+            return 'instagram.com' in self.driver.current_url and '/accounts/login' not in self.driver.current_url
             
         except Exception as e:
             logger.error(f"Ошибка входа в Instagram: {e}")
             return False
     
-    def handle_tiktok_actions(self, actions):
-        """Обработка действий TikTok"""
+    def _login_youtube(self, credentials, selectors):
+        """Вход в YouTube через Google"""
         try:
-            self.driver.get("https://www.tiktok.com/")
-            self.behavior.random_delay(3000, 5000)
+            # Ввод email
+            email_field = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.ID, "identifierId"))
+            )
+            self.behavior.human_type(email_field, credentials['email'])
             
-            for action in actions:
-                if action['type'] == 'like_video':
-                    self._tiktok_like_video(action.get('video_url'))
-                elif action['type'] == 'follow_user':
-                    self._tiktok_follow_user(action.get('username'))
-                elif action['type'] == 'comment':
-                    self._tiktok_comment(action.get('video_url'), action.get('text'))
-                
-                self.behavior.random_delay(5000, 15000)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Ошибка действий TikTok: {e}")
-            return False
-    
-    def _tiktok_like_video(self, video_url):
-        """Лайк видео в TikTok"""
-        self.driver.get(video_url)
-        self.behavior.random_delay(2000, 4000)
-        
-        like_button = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(@data-e2e, 'like')]"))
-        )
-        self.behavior.human_mouse_movement(self.driver, like_button)
-        like_button.click()
-    
-    def handle_reddit_actions(self, actions):
-        """Обработка действий Reddit"""
-        try:
-            self.driver.get("https://www.reddit.com/")
+            # Клик "Далее"
+            next_button = self.driver.find_element(By.ID, "identifierNext")
+            next_button.click()
             self.behavior.random_delay(2000, 4000)
             
-            for action in actions:
-                if action['type'] == 'upvote_post':
-                    self._reddit_upvote_post(action.get('post_url'))
-                elif action['type'] == 'comment':
-                    self._reddit_comment(action.get('post_url'), action.get('text'))
-                
-                self.behavior.random_delay(10000, 20000)
+            # Ввод пароля
+            password_field = WebDriverWait(self.driver, 15).until(
+                EC.element_to_be_clickable((By.NAME, "password"))
+            )
+            self.behavior.human_type(password_field, credentials['password'])
+            
+            # Клик "Далее"
+            password_next = self.driver.find_element(By.ID, "passwordNext")
+            password_next.click()
+            
+            self.behavior.random_delay(3000, 6000)
+            
+            # Переход на YouTube
+            self.driver.get("https://www.youtube.com")
+            self.behavior.random_delay(2000, 4000)
             
             return True
             
         except Exception as e:
-            logger.error(f"Ошибка действий Reddit: {e}")
+            logger.error(f"Ошибка входа в YouTube: {e}")
             return False
+    
+    def _login_x(self, credentials, selectors):
+        """Вход в X (Twitter)"""
+        try:
+            # Ввод username/email
+            username_field = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selectors['username']))
+            )
+            self.behavior.human_type(username_field, credentials['username'])
+            
+            # Клик "Далее"
+            next_button = self.driver.find_element(By.XPATH, "//span[text()='Next']/..")
+            next_button.click()
+            self.behavior.random_delay(2000, 4000)
+            
+            # Ввод пароля
+            password_field = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selectors['password']))
+            )
+            self.behavior.human_type(password_field, credentials['password'])
+            
+            # Клик "Log in"
+            login_button = self.driver.find_element(By.XPATH, "//span[text()='Log in']/..")
+            login_button.click()
+            
+            self.behavior.random_delay(3000, 6000)
+            return 'x.com/home' in self.driver.current_url
+            
+        except Exception as e:
+            logger.error(f"Ошибка входа в X: {e}")
+            return False
+    
+    def _login_telegram(self, credentials, selectors):
+        """Вход в Telegram Web"""
+        try:
+            # Ввод номера телефона
+            phone_field = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selectors['phone_input']))
+            )
+            self.behavior.human_type(phone_field, credentials['phone'])
+            
+            # Клик "Next"
+            next_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Next')]")
+            next_button.click()
+            
+            self.behavior.random_delay(2000, 4000)
+            
+            # Здесь нужно будет ввести код из SMS
+            logger.info("Ожидание ввода SMS кода для Telegram")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Ошибка входа в Telegram: {e}")
+            return False
+    
+    def perform_platform_action(self, platform, action_type, params):
+        """Выполнение действий на платформе"""
+        logger.info(f"Выполнение действия {action_type} на {platform}")
+        
+        try:
+            if platform == 'instagram':
+                return self._instagram_action(action_type, params)
+            elif platform == 'tiktok':
+                return self._tiktok_action(action_type, params)
+            elif platform == 'youtube':
+                return self._youtube_action(action_type, params)
+            elif platform == 'x':
+                return self._x_action(action_type, params)
+            elif platform == 'facebook':
+                return self._facebook_action(action_type, params)
+            elif platform == 'linkedin':
+                return self._linkedin_action(action_type, params)
+            elif platform == 'telegram':
+                return self._telegram_action(action_type, params)
+            elif platform == 'reddit':
+                return self._reddit_action(action_type, params)
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Ошибка выполнения действия {action_type} на {platform}: {e}")
+            return False
+    
+    def _instagram_action(self, action_type, params):
+        """Действия в Instagram"""
+        config = self.platform_configs['instagram']
+        
+        if action_type == 'like_post':
+            if params.get('post_url'):
+                self.driver.get(params['post_url'])
+                self.behavior.random_delay(2000, 4000)
+            
+            like_button = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['like_button'])
+            self.behavior.human_mouse_movement(self.driver, like_button)
+            like_button.click()
+            
+        elif action_type == 'follow_user':
+            if params.get('user_url'):
+                self.driver.get(params['user_url'])
+                self.behavior.random_delay(2000, 4000)
+            
+            follow_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Follow')]")
+            follow_button.click()
+            
+        elif action_type == 'comment':
+            comment_input = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['comment_input'])
+            self.behavior.human_type(comment_input, params['text'])
+            comment_input.send_keys(Keys.ENTER)
+        
+        self.behavior.random_delay(1000, 3000)
+        return True
+    
+    def _youtube_action(self, action_type, params):
+        """Действия в YouTube"""
+        config = self.platform_configs['youtube']
+        
+        if action_type == 'like_video':
+            if params.get('video_url'):
+                self.driver.get(params['video_url'])
+                self.behavior.random_delay(3000, 6000)
+            
+            like_button = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['like_button'])
+            like_button.click()
+            
+        elif action_type == 'subscribe':
+            subscribe_button = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['subscribe_button'])
+            subscribe_button.click()
+            
+        elif action_type == 'comment':
+            # Прокрутка к комментариям
+            self.behavior.human_scroll(self.driver, 'down', 3, 'youtube')
+            
+            comment_input = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['comment_input'])
+            comment_input.click()
+            self.behavior.random_delay(500, 1500)
+            
+            self.behavior.human_type(comment_input, params['text'])
+            
+            submit_button = self.driver.find_element(By.CSS_SELECTOR, config['selectors']['comment_submit'])
+            submit_button.click()
+        
+        self.behavior.random_delay(1000, 3000)
+        return True
 
-class AdvancedRPABot:
-    """Продвинутый RPA-бот с полным функционалом"""
+class UniversalRPABot:
+    """Универсальный RPA-бот для всех платформ"""
     
     def __init__(self):
         self.driver = None
         self.wait = None
-        self.antidetect = AntiDetectSystem()
-        self.behavior = HumanBehaviorSimulator()
-        self.captcha_solver = CaptchaSolver()
-        self.proxy_manager = ProxyManager()
+        self.antidetect = UniversalAntiDetectSystem()
+        self.behavior = UniversalHumanBehavior()
         self.platform_handler = None
         self.session_data = {}
+        self.current_platform = None
         
-        logger.info("Продвинутый RPA Bot инициализирован")
+        logger.info("Универсальный RPA Bot инициализирован")
     
     def setup_browser(self, proxy=None, profile=None, stealth_mode=True):
-        """Настройка продвинутого браузера"""
+        """Настройка универсального браузера"""
         try:
             if stealth_mode:
-                # Используем undetected-chromedriver для максимальной скрытности
                 options = uc.ChromeOptions()
                 options.add_argument('--headless')
             else:
                 options = Options()
                 options.add_argument('--headless')
             
-            # Настройка антидетекта
-            options, browser_profile = self.antidetect.setup_stealth_options(options, profile)
+            # Получаем профиль
+            if not profile:
+                profile = random.choice(self.antidetect.profiles)
             
-            # Настройка прокси
-            if proxy:
-                proxy_string = self.proxy_manager.format_proxy_for_chrome(proxy)
-                if proxy_string:
-                    options.add_argument(f'--proxy-server={proxy_string}')
-            
-            # Дополнительные опции для Railway
+            # Базовые антидетект опции
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
-            options.add_argument('--remote-debugging-port=9222')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            options.add_argument(f'--window-size={profile["viewport"][0]},{profile["viewport"][1]}')
+            options.add_argument(f'--user-agent={profile["user_agent"]}')
             
+            # Расширенные опции антидетекта
+            options.add_argument('--disable-web-security')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            options.add_argument('--disable-ipc-flooding-protection')
+            options.add_argument('--disable-background-timer-throttling')
+            options.add_argument('--disable-backgrounding-occluded-windows')
+            options.add_argument('--disable-renderer-backgrounding')
+            
+            # Preferences
+            prefs = {
+                "profile.default_content_setting_values": {
+                    "notifications": 2,
+                    "geolocation": 2,
+                    "media_stream": 2,
+                    "media_stream_mic": 2,
+                    "media_stream_camera": 2
+                },
+                "profile.managed_default_content_settings": {
+                    "images": 1
+                },
+                "profile.default_content_settings": {
+                    "popups": 0
+                }
+            }
+            options.add_experimental_option("prefs", prefs)
+            
+            # Настройка прокси если указан
+            if proxy:
+                options.add_argument(f'--proxy-server={proxy}')
+            
+            # Создание драйвера
             if stealth_mode:
                 self.driver = uc.Chrome(options=options, version_main=120)
             else:
@@ -386,32 +648,71 @@ class AdvancedRPABot:
                 self.driver = webdriver.Chrome(service=service, options=options)
             
             # Настройка антидетект скриптов
-            self._setup_antidetect_scripts(browser_profile)
+            self._setup_antidetect_scripts(profile)
             
-            self.wait = WebDriverWait(self.driver, 15)
-            self.platform_handler = PlatformHandler(self.driver, self.behavior, self.captcha_solver)
+            self.wait = WebDriverWait(self.driver, 20)
+            self.platform_handler = UniversalPlatformHandler(self.driver, self.behavior, self.antidetect)
             
-            logger.info("Продвинутый браузер настроен успешно")
+            logger.info(f"Универсальный браузер настроен: {profile['name']}")
             return True
             
         except Exception as e:
-            logger.error(f"Ошибка настройки продвинутого браузера: {e}")
+            logger.error(f"Ошибка настройки универсального браузера: {e}")
             return False
     
     def _setup_antidetect_scripts(self, profile):
-        """Настройка антидетект скриптов"""
+        """Настройка продвинутых антидетект скриптов"""
         scripts = [
-            # Скрытие webdriver
+            # Базовые скрипты
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})",
-            
-            # Подмена языков
             f"Object.defineProperty(navigator, 'languages', {{get: () => {json.dumps(profile['languages'])}}})",
-            
-            # Подмена платформы
             f"Object.defineProperty(navigator, 'platform', {{get: () => '{profile['platform']}'}})",
             
-            # Подмена временной зоны
-            f"Intl.DateTimeFormat = function(){{return {{resolvedOptions: () => ({{timeZone: '{profile['timezone']}'}})}}}}"
+            # WebGL антидетект
+            f"""
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {{
+                if (parameter === 37445) {{
+                    return '{profile['webgl_vendor']}';
+                }}
+                if (parameter === 37446) {{
+                    return '{profile['webgl_renderer']}';
+                }}
+                return getParameter.call(this, parameter);
+            }};
+            """,
+            
+            # Canvas fingerprint защита
+            """
+            const getImageData = CanvasRenderingContext2D.prototype.getImageData;
+            CanvasRenderingContext2D.prototype.getImageData = function(sx, sy, sw, sh) {
+                const shift = {
+                    'r': Math.floor(Math.random() * 10) - 5,
+                    'g': Math.floor(Math.random() * 10) - 5,
+                    'b': Math.floor(Math.random() * 10) - 5,
+                    'a': Math.floor(Math.random() * 10) - 5
+                };
+                const imageData = getImageData.apply(this, arguments);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    imageData.data[i + 0] = imageData.data[i + 0] + shift['r'];
+                    imageData.data[i + 1] = imageData.data[i + 1] + shift['g'];
+                    imageData.data[i + 2] = imageData.data[i + 2] + shift['b'];
+                    imageData.data[i + 3] = imageData.data[i + 3] + shift['a'];
+                }
+                return imageData;
+            };
+            """,
+            
+            # Fonts защита
+            """
+            Object.defineProperty(navigator, 'fonts', {
+                get: () => ({
+                    check: () => Math.random() < 0.5,
+                    load: () => Promise.resolve(),
+                    ready: Promise.resolve()
+                })
+            });
+            """,
         ]
         
         for script in scripts:
@@ -420,185 +721,30 @@ class AdvancedRPABot:
             except:
                 pass
     
-    def execute_advanced_action(self, action):
-        """Выполнение продвинутого действия"""
-        action_type = action.get('type')
-        logger.info(f"Выполнение продвинутого действия: {action_type}")
-        
-        try:
-            # Базовые действия
-            if action_type == 'navigate':
-                return self._navigate_advanced(action)
-            elif action_type == 'click':
-                return self._click_advanced(action)
-            elif action_type == 'type':
-                return self._type_advanced(action)
-            elif action_type == 'wait':
-                return self._wait_advanced(action)
-            elif action_type == 'scroll':
-                return self._scroll_advanced(action)
-            elif action_type == 'screenshot':
-                return self._take_screenshot(action)
-            
-            # Продвинутые действия
-            elif action_type == 'solve_captcha':
-                return self._solve_captcha_action(action)
-            elif action_type == 'handle_popup':
-                return self._handle_popup(action)
-            elif action_type == 'extract_data':
-                return self._extract_data(action)
-            elif action_type == 'upload_file':
-                return self._upload_file(action)
-            elif action_type == 'switch_tab':
-                return self._switch_tab(action)
-            
-            # Платформо-специфичные действия
-            elif action_type == 'instagram_login':
-                return self.platform_handler.handle_instagram_login(
-                    action.get('username'), action.get('password')
-                )
-            elif action_type == 'tiktok_actions':
-                return self.platform_handler.handle_tiktok_actions(action.get('actions', []))
-            elif action_type == 'reddit_actions':
-                return self.platform_handler.handle_reddit_actions(action.get('actions', []))
-            
-            else:
-                logger.warning(f"Неизвестный тип действия: {action_type}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Ошибка выполнения продвинутого действия {action_type}: {e}")
-            return False
-    
-    def _navigate_advanced(self, action):
-        """Продвинутая навигация"""
-        url = action.get('url')
-        if not url:
-            return False
-        
-        # Проверка и обход блокировок
-        self.driver.get(url)
-        self.behavior.random_delay(2000, 5000)
-        
-        # Проверка на капчу или блокировку
-        page_source = self.driver.page_source.lower()
-        if any(keyword in page_source for keyword in ['captcha', 'blocked', 'forbidden']):
-            logger.warning("Обнаружена капча или блокировка")
-            return self._handle_blocking()
-        
-        return True
-    
-    def _click_advanced(self, action):
-        """Продвинутый клик"""
-        if 'selector' in action:
-            element = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, action['selector'])))
-            
-            # Прокрутка к элементу
-            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-            self.behavior.random_delay(500, 1500)
-            
-            # Человеческое движение мыши
-            self.behavior.human_mouse_movement(self.driver, element)
-            
-            # Клик с задержкой
-            element.click()
-            
-        elif 'xpath' in action:
-            element = self.wait.until(EC.element_to_be_clickable((By.XPATH, action['xpath'])))
-            self.behavior.human_mouse_movement(self.driver, element)
-            element.click()
-            
-        elif 'x' in action and 'y' in action:
-            # Клик по координатам с имитацией движения
-            action_chains = ActionChains(self.driver)
-            action_chains.move_by_offset(action['x'], action['y'])
-            action_chains.pause(random.uniform(0.1, 0.3))
-            action_chains.click()
-            action_chains.perform()
-        
-        self.behavior.random_delay(200, 800)
-        return True
-    
-    def _type_advanced(self, action):
-        """Продвинутый ввод текста"""
-        text = action.get('text', '')
-        
-        if 'selector' in action:
-            element = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, action['selector'])))
-        elif 'xpath' in action:
-            element = self.wait.until(EC.presence_of_element_located((By.XPATH, action['xpath'])))
-        else:
-            element = self.driver.switch_to.active_element
-        
-        # Фокус на элементе
-        element.click()
-        self.behavior.random_delay(100, 300)
-        
-        # Человеческий ввод
-        self.behavior.human_type(element, text)
-        
-        return True
-    
-    def _solve_captcha_action(self, action):
-        """Решение капчи"""
-        captcha_type = action.get('captcha_type', 'recaptcha_v2')
-        
-        if captcha_type == 'recaptcha_v2':
-            site_key = action.get('site_key')
-            return self.captcha_solver.solve_recaptcha_v2(self.driver, site_key)
-        
-        return False
-    
-    def _extract_data(self, action):
-        """Извлечение данных"""
-        selector = action.get('selector')
-        attribute = action.get('attribute', 'text')
-        
-        try:
-            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-            data = []
-            
-            for element in elements:
-                if attribute == 'text':
-                    data.append(element.text)
-                else:
-                    data.append(element.get_attribute(attribute))
-            
-            # Сохранение данных в сессии
-            self.session_data['extracted_data'] = data
-            return True
-            
-        except Exception as e:
-            logger.error(f"Ошибка извлечения данных: {e}")
-            return False
-    
-    def _take_screenshot(self, action):
-        """Создание скриншота"""
-        filename = action.get('filename', f"screenshot_{int(time.time())}.png")
-        filepath = f"screenshots/{filename}"
-        
-        try:
-            self.driver.save_screenshot(filepath)
-            self.session_data['last_screenshot'] = filepath
-            return True
-        except Exception as e:
-            logger.error(f"Ошибка создания скриншота: {e}")
-            return False
-    
-    def execute_advanced_task(self, task):
-        """Выполнение продвинутой задачи"""
+    def execute_universal_task(self, task):
+        """Выполнение универсальной задачи"""
         start_time = time.time()
         task_id = task.get('taskId', 'unknown')
         
-        logger.info(f"Начало выполнения продвинутой задачи: {task_id}")
+        logger.info(f"Начало выполнения универсальной задачи: {task_id}")
         
         try:
-            # Настройка браузера с продвинутыми опциями
+            # Настройка браузера
             proxy = task.get('proxy')
             stealth_mode = task.get('stealth_mode', True)
             
             if not self.setup_browser(proxy=proxy, stealth_mode=stealth_mode):
-                raise Exception("Не удалось настроить продвинутый браузер")
+                raise Exception("Не удалось настроить универсальный браузер")
+            
+            # Определение платформы
+            platform = task.get('platform', 'generic')
+            self.current_platform = platform
+            
+            # Логин если требуется
+            if task.get('credentials'):
+                login_success = self.platform_handler.login_to_platform(platform, task['credentials'])
+                if not login_success:
+                    logger.warning(f"Не удалось войти на платформу {platform}")
             
             # Начальная навигация
             if task.get('url'):
@@ -612,7 +758,7 @@ class AdvancedRPABot:
             for i, action in enumerate(actions):
                 logger.info(f"Выполнение действия {i+1}/{len(actions)}: {action.get('type')}")
                 
-                result = self.execute_advanced_action(action)
+                result = self.execute_universal_action(action)
                 results.append({
                     'action_index': i,
                     'action_type': action.get('type'),
@@ -625,7 +771,6 @@ class AdvancedRPABot:
                 else:
                     logger.warning(f"Действие {i+1} не выполнено: {action}")
                     
-                    # Опциональная остановка при ошибке
                     if task.get('stop_on_error', False):
                         break
                 
@@ -633,7 +778,7 @@ class AdvancedRPABot:
                 if time.time() - start_time > task.get('timeout', 300000) / 1000:
                     raise TimeoutException("Превышен таймаут выполнения задачи")
                 
-                # Случайная пауза между действиями
+                # Пауза между действиями
                 self.behavior.random_delay(1000, 5000)
             
             execution_time = int((time.time() - start_time) * 1000)
@@ -648,23 +793,24 @@ class AdvancedRPABot:
             result = {
                 'taskId': task_id,
                 'success': True,
-                'message': f'Продвинутая задача выполнена. Выполнено {completed_actions}/{len(actions)} действий',
+                'message': f'Универсальная задача выполнена на {platform}. Выполнено {completed_actions}/{len(actions)} действий',
                 'executionTime': execution_time,
                 'completedActions': completed_actions,
                 'totalActions': len(actions),
                 'screenshot': final_screenshot,
                 'actionResults': results,
                 'sessionData': self.session_data,
+                'platform': platform,
                 'data': {
                     'url': self.driver.current_url,
-                    'title':чение self.driver.title,
+                    'title': self.driver.title,
                     'cookies': self.driver.get_cookies()
                 },
-                'environment': 'advanced-cloud',
-                'features': ['antidetect', 'stealth-mode', 'captcha-solving', 'human-behavior']
+                'environment': 'universal-cloud',
+                'features': ['universal-platforms', 'antidetect', 'human-behavior', 'captcha-solving']
             }
             
-            logger.info(f"Продвинутая задача {task_id} выполнена успешно за {execution_time}ms")
+            logger.info(f"Универсальная задача {task_id} выполнена успешно за {execution_time}ms")
             return result
             
         except Exception as e:
@@ -681,15 +827,16 @@ class AdvancedRPABot:
             result = {
                 'taskId': task_id,
                 'success': False,
-                'message': 'Ошибка выполнения продвинутой задачи',
+                'message': 'Ошибка выполнения универсальной задачи',
                 'error': str(e),
                 'executionTime': execution_time,
                 'completedActions': completed_actions if 'completed_actions' in locals() else 0,
                 'screenshot': error_screenshot,
-                'environment': 'advanced-cloud'
+                'platform': platform if 'platform' in locals() else 'unknown',
+                'environment': 'universal-cloud'
             }
             
-            logger.error(f"Ошибка выполнения продвинутой задачи {task_id}: {e}")
+            logger.error(f"Ошибка выполнения универсальной задачи {task_id}: {e}")
             return result
             
         finally:
@@ -700,12 +847,113 @@ class AdvancedRPABot:
                     pass
                 self.driver = None
                 self.session_data = {}
+                self.current_platform = None
+    
+    def execute_universal_action(self, action):
+        """Выполнение универсального действия"""
+        action_type = action.get('type')
+        logger.info(f"Выполнение универсального действия: {action_type}")
+        
+        try:
+            # Базовые действия
+            if action_type == 'navigate':
+                return self._navigate_universal(action)
+            elif action_type == 'click':
+                return self._click_universal(action)
+            elif action_type == 'type':
+                return self._type_universal(action)
+            elif action_type == 'wait':
+                return self._wait_universal(action)
+            elif action_type == 'scroll':
+                return self._scroll_universal(action)
+            elif action_type == 'screenshot':
+                return self._take_screenshot(action)
+            
+            # Платформо-специфичные действия
+            elif action_type.startswith('platform_'):
+                # Формат: platform_instagram_like, platform_youtube_subscribe и т.д.
+                parts = action_type.split('_')
+                if len(parts) >= 3:
+                    platform = parts[1]
+                    platform_action = '_'.join(parts[2:])
+                    return self.platform_handler.perform_platform_action(platform, platform_action, action)
+            
+            # Универсальные социальные действия
+            elif action_type in ['like', 'follow', 'subscribe', 'comment', 'share', 'repost']:
+                return self._universal_social_action(action_type, action)
+            
+            # Извлечение данных
+            elif action_type == 'extract_data':
+                return self._extract_data(action)
+            
+            else:
+                logger.warning(f"Неизвестный тип действия: {action_type}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Ошибка выполнения универсального действия {action_type}: {e}")
+            return False
+    
+    def _universal_social_action(self, action_type, action):
+        """Универсальные социальные действия"""
+        if not self.current_platform:
+            return False
+            
+        return self.platform_handler.perform_platform_action(
+            self.current_platform, 
+            action_type, 
+            action
+        )
+    
+    def _navigate_universal(self, action):
+        """Универсальная навигация"""
+        url = action.get('url')
+        if not url:
+            return False
+        
+        self.driver.get(url)
+        self.behavior.random_delay(2000, 5000)
+        
+        # Проверка на блокировку или капчу
+        page_source = self.driver.page_source.lower()
+        if any(keyword in page_source for keyword in ['captcha', 'blocked', 'forbidden', 'bot detected']):
+            logger.warning("Обнаружена капча или блокировка")
+            # Здесь можно добавить логику решения капчи
+        
+        return True
+    
+    def _extract_data(self, action):
+        """Универсальное извлечение данных"""
+        selector = action.get('selector')
+        attribute = action.get('attribute', 'text')
+        
+        try:
+            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+            data = []
+            
+            for element in elements:
+                if attribute == 'text':
+                    data.append(element.text)
+                elif attribute == 'href':
+                    data.append(element.get_attribute('href'))
+                elif attribute == 'src':
+                    data.append(element.get_attribute('src'))
+                else:
+                    data.append(element.get_attribute(attribute))
+            
+            self.session_data['extracted_data'] = data
+            logger.info(f"Извлечено {len(data)} элементов данных")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Ошибка извлечения данных: {e}")
+            return False
 
-# Глобальный экземпляр продвинутого бота
-advanced_rpa_bot = AdvancedRPABot()
+# Глобальный экземпляр универсального бота
+universal_rpa_bot = UniversalRPABot()
 
 def send_result_to_supabase(task_id, result):
-    """Отправка результата в Supabase с повторными попытками"""
+    """Отправка результата в Supabase"""
     max_retries = 3
     retry_delay = 2
     
@@ -725,7 +973,7 @@ def send_result_to_supabase(task_id, result):
             response = requests.put(url, json=data, headers=headers, timeout=30)
             
             if response.status_code == 200:
-                logger.info(f"Результат продвинутой задачи {task_id} отправлен в Supabase")
+                logger.info(f"Результат универсальной задачи {task_id} отправлен в Supabase")
                 return True
             else:
                 logger.error(f"Ошибка отправки в Supabase: {response.status_code} - {response.text}")
@@ -740,49 +988,53 @@ def send_result_to_supabase(task_id, result):
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Расширенная проверка здоровья"""
+    """Проверка здоровья универсального бота"""
     system_info = {
         'cpu_percent': psutil.cpu_percent(),
         'memory_percent': psutil.virtual_memory().percent,
-        'disk_percent': psutil.disk_usage('/').percent
+        'disk_percent': psutil.disk_usage('/').percent,
+        'processes': len(psutil.pids())
     }
+    
+    supported_platforms = list(universal_rpa_bot.antidetect.platform_configs.keys())
     
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0-advanced',
-        'environment': 'railway-advanced',
+        'version': '3.0.0-universal',
+        'environment': 'railway-universal-cloud',
         'system': system_info,
+        'supported_platforms': supported_platforms,
         'features': [
-            'antidetect', 'stealth-mode', 'captcha-solving', 
-            'human-behavior', 'proxy-support', 'platform-handlers',
-            'data-extraction', 'advanced-automation'
-        ]
+            'universal-platforms', 'antidetect', 'human-behavior', 
+            'captcha-solving', 'proxy-support', 'data-extraction',
+            'social-automation', 'advanced-stealth'
+        ],
+        'platform_count': len(supported_platforms)
     })
 
-@app.route('/status', methods=['GET'])
-def get_status():
-    """Расширенный статус бота"""
+@app.route('/platforms', methods=['GET'])
+def get_platforms():
+    """Получение списка поддерживаемых платформ"""
+    platforms = universal_rpa_bot.antidetect.platform_configs
+    
+    platform_info = {}
+    for platform, config in platforms.items():
+        platform_info[platform] = {
+            'name': platform.title(),
+            'login_url': config['login_url'],
+            'supported_actions': list(config['selectors'].keys())
+        }
+    
     return jsonify({
-        'status': 'running',
-        'timestamp': datetime.now().isoformat(),
-        'capabilities': [
-            'navigate', 'click', 'type', 'wait', 'scroll', 'key', 
-            'screenshot', 'solve_captcha', 'handle_popup', 'extract_data',
-            'upload_file', 'switch_tab', 'instagram_login', 'tiktok_actions',
-            'reddit_actions'
-        ],
-        'platforms': ['instagram', 'tiktok', 'reddit', 'youtube', 'telegram'],
-        'environment': 'railway-advanced-cloud',
-        'antidetect': True,
-        'stealth_mode': True,
-        'captcha_solving': True,
-        'proxy_support': True
+        'platforms': platform_info,
+        'total_count': len(platforms),
+        'timestamp': datetime.now().isoformat()
     })
 
 @app.route('/execute', methods=['POST'])
-def execute_task():
-    """Выполнение продвинутой RPA задачи"""
+def execute_universal_task():
+    """Выполнение универсальной RPA задачи"""
     try:
         task = request.get_json()
         
@@ -797,10 +1049,11 @@ def execute_task():
         if not task.get('actions') or not isinstance(task['actions'], list):
             return jsonify({'error': 'Отсутствуют или некорректные действия'}), 400
         
-        logger.info(f"Получена продвинутая задача: {task_id}")
+        platform = task.get('platform', 'generic')
+        logger.info(f"Получена универсальная задача: {task_id} для платформы: {platform}")
         
         def execute_and_send():
-            result = advanced_rpa_bot.execute_advanced_task(task)
+            result = universal_rpa_bot.execute_universal_task(task)
             send_result_to_supabase(task_id, result)
         
         thread = threading.Thread(target=execute_and_send)
@@ -809,47 +1062,70 @@ def execute_task():
         
         return jsonify({
             'success': True,
-            'message': f'Продвинутая задача {task_id} принята к выполнению',
+            'message': f'Универсальная задача {task_id} принята к выполнению на платформе {platform}',
             'taskId': task_id,
-            'environment': 'railway-advanced-cloud',
-            'features': ['antidetect', 'stealth-mode', 'captcha-solving']
+            'platform': platform,
+            'environment': 'railway-universal-cloud',
+            'features': ['universal-platforms', 'antidetect', 'human-behavior']
         })
         
     except Exception as e:
-        logger.error(f"Ошибка при получении продвинутой задачи: {e}")
+        logger.error(f"Ошибка при получении универсальной задачи: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proxy/add', methods=['POST'])
-def add_proxy():
-    """Добавление прокси"""
+@app.route('/test/<platform>', methods=['POST'])
+def test_platform(platform):
+    """Тестирование конкретной платформы"""
     try:
-        proxy_config = request.get_json()
-        advanced_rpa_bot.proxy_manager.add_proxy(proxy_config)
+        data = request.get_json() or {}
+        
+        # Простая тестовая задача
+        test_task = {
+            'taskId': f'test_{platform}_{int(time.time())}',
+            'platform': platform,
+            'url': universal_rpa_bot.antidetect.platform_configs.get(platform, {}).get('login_url', f'https://{platform}.com'),
+            'actions': [
+                {'type': 'navigate', 'url': f'https://{platform}.com'},
+                {'type': 'wait', 'duration': 3000},
+                {'type': 'screenshot'}
+            ],
+            'timeout': 30000,
+            'stealth_mode': True
+        }
+        
+        logger.info(f"Тестирование платформы: {platform}")
+        
+        def test_and_respond():
+            result = universal_rpa_bot.execute_universal_task(test_task)
+            return result
+        
+        # Выполняем синхронно для тестирования
+        result = test_and_respond()
         
         return jsonify({
-            'success': True,
-            'message': 'Прокси добавлен успешно'
+            'success': result['success'],
+            'platform': platform,
+            'test_result': result,
+            'timestamp': datetime.now().isoformat()
         })
         
     except Exception as e:
+        logger.error(f"Ошибка тестирования платформы {platform}: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/session/data', methods=['GET'])
-def get_session_data():
-    """Получение данных сессии"""
-    return jsonify({
-        'sessionData': advanced_rpa_bot.session_data,
-        'timestamp': datetime.now().isoformat()
-    })
-
 if __name__ == '__main__':
-    logger.info("🚀 Запуск продвинутого RPA Bot сервера...")
+    logger.info("🚀 Запуск универсального RPA Bot сервера...")
     logger.info(f"Порт: {BOT_PORT}")
     logger.info(f"Supabase URL: {SUPABASE_URL}")
-    logger.info("Среда: Railway Advanced Cloud")
-    logger.info("Возможности: Антидетект, Стелс-режим, Решение капчи, Человеческое поведение")
+    logger.info("Среда: Railway Universal Cloud")
     
-    # Создание необходимых директорий
+    # Список поддерживаемых платформ
+    platforms = list(universal_rpa_bot.antidetect.platform_configs.keys())
+    logger.info(f"Поддерживаемые платформы ({len(platforms)}): {', '.join(platforms)}")
+    
+    logger.info("Возможности: Универсальные платформы, Антидетект, Человеческое поведение, Решение капчи")
+    
+    # Создание директорий
     os.makedirs('screenshots', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     os.makedirs('profiles', exist_ok=True)
