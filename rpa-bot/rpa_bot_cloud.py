@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Облачная версия RPA-бота оптимизированная для Railway
@@ -143,6 +142,8 @@ class CloudRPABot:
                 return self._move(action)
             elif action_type == 'check_element':
                 return self._check_element(action)
+            elif action_type == 'telegram_like':
+                return self._telegram_like(action)
             else:
                 logger.warning(f"Неизвестный тип действия: {action_type}")
                 return False
@@ -263,6 +264,97 @@ class CloudRPABot:
             element = self.driver.find_element(By.CSS_SELECTOR, selector)
             return element is not None
         except NoSuchElementException:
+            return False
+    
+    def _telegram_like(self, action):
+        """Постановка лайка в Telegram Web"""
+        emoji = action.get('emoji', '👍')
+        selector = action.get('selector')
+        
+        logger.info(f"Попытка поставить лайк в Telegram: {emoji}")
+        
+        try:
+            # Ждем загрузки страницы Telegram
+            time.sleep(3)
+            
+            # Проверяем, что мы на странице Telegram
+            if 'telegram' not in self.driver.current_url.lower():
+                logger.error("Не на странице Telegram")
+                return False
+            
+            # Ищем кнопку реакции разными способами
+            reaction_button = None
+            
+            # Способ 1: По XPath с текстом эмодзи
+            if selector:
+                try:
+                    reaction_button = self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, selector))
+                    )
+                    logger.info("Найдена кнопка реакции по XPath")
+                except:
+                    pass
+            
+            # Способ 2: По классам Telegram Web
+            if not reaction_button:
+                try:
+                    # Ищем контейнер реакций
+                    reactions_container = self.driver.find_element(
+                        By.CSS_SELECTOR, 
+                        '.ReactionButton, .reactions, [data-reaction], .quick-reaction'
+                    )
+                    # Ищем конкретную реакцию внутри контейнера
+                    reaction_button = reactions_container.find_element(
+                        By.XPATH, 
+                        f".//*[contains(text(), '{emoji}')]"
+                    )
+                    logger.info("Найдена кнопка реакции в контейнере")
+                except:
+                    pass
+            
+            # Способ 3: Поиск по всей странице
+            if not reaction_button:
+                try:
+                    reaction_button = self.driver.find_element(
+                        By.XPATH, 
+                        f"//button[contains(., '{emoji}') or .//*[contains(text(), '{emoji}')]]"
+                    )
+                    logger.info("Найдена кнопка реакции на странице")
+                except:
+                    pass
+            
+            if not reaction_button:
+                logger.error(f"Кнопка реакции {emoji} не найдена")
+                return False
+            
+            # Скроллим к кнопке если нужно
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", reaction_button)
+            time.sleep(1)
+            
+            # Кликаем на реакцию
+            self.behavior.human_mouse_move(self.driver, reaction_button)
+            reaction_button.click()
+            
+            logger.info(f"Клик по реакции {emoji} выполнен")
+            
+            # Ждем обновления UI
+            time.sleep(2)
+            
+            # Проверяем, что лайк поставлен (опционально)
+            try:
+                # Ищем активную реакцию
+                active_reaction = self.driver.find_element(
+                    By.CSS_SELECTOR,
+                    '.ReactionButton--chosen, .reaction-chosen, .reaction.active'
+                )
+                logger.info("Подтверждено: лайк поставлен успешно")
+            except:
+                logger.warning("Не удалось подтвердить постановку лайка, но клик выполнен")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Ошибка постановки лайка в Telegram: {e}")
             return False
     
     def execute_task(self, task):
