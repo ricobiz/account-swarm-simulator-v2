@@ -68,35 +68,50 @@ def send_result_to_supabase(task_id, result):
 @app.route('/health', methods=['GET'])
 def health():
     """Проверка состояния облачного сервиса"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0',
-        'environment': 'railway',
-        'capabilities': ['navigate', 'click', 'type', 'wait', 'scroll', 'key', 'move', 'check_element', 'telegram_like'],
-        'system': {
-            'cpu_percent': 15.0,
-            'memory_percent': 65.0,
-            'disk_usage': 45.0
-        }
-    })
+    try:
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'version': '2.0.0',
+            'environment': 'railway',
+            'capabilities': ['navigate', 'click', 'type', 'wait', 'scroll', 'key', 'move', 'check_element', 'telegram_like'],
+            'system': {
+                'cpu_percent': 15.0,
+                'memory_percent': 65.0,
+                'disk_usage': 45.0
+            }
+        }), 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        logger.error(f"Ошибка health check: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/status', methods=['GET'])
 def get_status():
     """Получение подробного статуса облачного бота"""
-    return jsonify({
-        'bot_status': 'online',
-        'version': '2.0.0-railway',
-        'environment': 'railway',
-        'supported_platforms': ['instagram', 'youtube', 'twitter', 'telegram'],
-        'active_sessions': 0,
-        'uptime': time.time(),
-        'system_resources': {
-            'cpu': '15.0%',
-            'memory': '65.0%',
-            'disk': '45.0%'
-        }
-    })
+    try:
+        return jsonify({
+            'bot_status': 'online',
+            'version': '2.0.0-railway',
+            'environment': 'railway',
+            'supported_platforms': ['instagram', 'youtube', 'twitter', 'telegram'],
+            'active_sessions': 0,
+            'uptime': time.time(),
+            'system_resources': {
+                'cpu': '15.0%',
+                'memory': '65.0%',
+                'disk': '45.0%'
+            }
+        }), 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        logger.error(f"Ошибка status check: {e}")
+        return jsonify({
+            'error': str(e),
+            'bot_status': 'error'
+        }), 500
 
 @app.route('/execute', methods=['POST'])
 def execute_task():
@@ -141,6 +156,14 @@ def execute_task():
     except Exception as e:
         logger.error(f"Ошибка получения облачной задачи: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     logger.info("Запуск сервера облачного RPA бота...")
