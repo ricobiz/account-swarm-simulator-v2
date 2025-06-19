@@ -20,10 +20,10 @@ import {
   Target,
   TestTube
 } from 'lucide-react';
-import type { BrowserInfo, ServerScreenshot, RecordedAction } from '@/types/serverRPA';
+import type { BrowserInfo, ServerScreenshot, ServerRecordedAction } from '@/types/serverRPA';
 
 interface ServerBasedRPARecorderProps {
-  onSaveScenario: (actions: RecordedAction[]) => void;
+  onSaveScenario: (actions: ServerRecordedAction[]) => void;
 }
 
 export const ServerBasedRPARecorder: React.FC<ServerBasedRPARecorderProps> = ({
@@ -32,7 +32,7 @@ export const ServerBasedRPARecorder: React.FC<ServerBasedRPARecorderProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
   const [serverScreenshot, setServerScreenshot] = useState<ServerScreenshot | null>(null);
-  const [actions, setActions] = useState<RecordedAction[]>([]);
+  const [actions, setActions] = useState<ServerRecordedAction[]>([]);
   const [recordingMode, setRecordingMode] = useState<'click' | 'type' | 'hover'>('click');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -103,7 +103,7 @@ export const ServerBasedRPARecorder: React.FC<ServerBasedRPARecorderProps> = ({
     const description = prompt(`Опишите действие в координатах (${serverX}, ${serverY}):`);
     if (!description) return;
 
-    const newAction: RecordedAction = {
+    const newAction: ServerRecordedAction = {
       id: `action_${Date.now()}`,
       type: recordingMode,
       coordinates: { x: serverX, y: serverY },

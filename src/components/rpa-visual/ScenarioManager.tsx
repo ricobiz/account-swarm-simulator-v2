@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,11 @@ import {
   Monitor,
   Server
 } from 'lucide-react';
-import type { RecordedAction, SavedScenario } from '@/types/serverRPA';
+import type { ServerRecordedAction, ServerSavedScenario } from '@/types/serverRPA';
 
 interface ScenarioManagerProps {
-  scenarios: SavedScenario[];
-  onExecute: (scenario: SavedScenario) => void;
+  scenarios: ServerSavedScenario[];
+  onExecute: (scenario: ServerSavedScenario) => void;
   onDelete: (id: string) => void;
   isExecuting: string | null;
 }

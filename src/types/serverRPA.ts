@@ -1,4 +1,3 @@
-
 export interface BrowserInfo {
   resolution: { width: number; height: number };
   userAgent: string;
@@ -12,7 +11,7 @@ export interface ServerScreenshot {
   sessionId: string;
 }
 
-export interface RecordedAction {
+export interface ServerRecordedAction {
   id: string;
   type: 'click' | 'type' | 'wait' | 'scroll' | 'hover';
   coordinates: { x: number; y: number };
@@ -20,13 +19,14 @@ export interface RecordedAction {
   description: string;
   value?: string;
   timestamp: number;
+  element?: string; // Making it optional for compatibility
 }
 
-export interface SavedScenario {
+export interface ServerSavedScenario {
   id: string;
   name: string;
   description: string;
-  actions: RecordedAction[];
+  actions: ServerRecordedAction[];
   created_at: string;
   platform: string;
   browserResolution: { width: number; height: number };
@@ -41,3 +41,7 @@ export interface MacroTestResult {
   afterScreenshot?: string;
   executionTime: number;
 }
+
+// Keep original exports for backward compatibility but rename to avoid conflicts
+export type RecordedAction = ServerRecordedAction;
+export type SavedScenario = ServerSavedScenario;

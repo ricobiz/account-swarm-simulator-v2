@@ -2,7 +2,7 @@
 import type { 
   BrowserInfo, 
   ServerScreenshot, 
-  RecordedAction, 
+  ServerRecordedAction, 
   MacroTestResult 
 } from '@/types/serverRPA';
 
@@ -24,7 +24,7 @@ class ServerRPAApi {
   }
 
   async testMacro(
-    actions: RecordedAction[], 
+    actions: ServerRecordedAction[], 
     url: string, 
     sessionId?: string
   ): Promise<MacroTestResult> {
@@ -42,7 +42,7 @@ class ServerRPAApi {
   }
 
   async executeMacro(
-    actions: RecordedAction[], 
+    actions: ServerRecordedAction[], 
     url: string, 
     options?: { 
       humanBehavior?: boolean;

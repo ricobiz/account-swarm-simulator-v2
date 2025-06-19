@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,15 +16,15 @@ import {
   Zap,
   Server
 } from 'lucide-react';
-import type { RecordedAction, SavedScenario } from '@/types/serverRPA';
+import type { ServerRecordedAction, ServerSavedScenario } from '@/types/serverRPA';
 
 export const VisualRPABuilder: React.FC = () => {
   const [activeTab, setActiveTab] = useState('recorder');
-  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
+  const [savedScenarios, setSavedScenarios] = useState<ServerSavedScenario[]>([]);
   const [executingScenario, setExecutingScenario] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleSaveScenario = useCallback((actions: RecordedAction[]) => {
+  const handleSaveScenario = useCallback((actions: ServerRecordedAction[]) => {
     if (actions.length === 0) {
       toast({
         title: "Нет действий",
@@ -44,7 +43,7 @@ export const VisualRPABuilder: React.FC = () => {
     // Берем разрешение браузера из первого действия
     const browserResolution = actions[0]?.browserResolution || { width: 1920, height: 1080 };
 
-    const newScenario: SavedScenario = {
+    const newScenario: ServerSavedScenario = {
       id: `scenario_${Date.now()}`,
       name: scenarioName,
       description: scenarioDescription,
@@ -65,7 +64,7 @@ export const VisualRPABuilder: React.FC = () => {
     });
   }, [savedScenarios, toast]);
 
-  const handleExecuteScenario = useCallback((scenario: SavedScenario) => {
+  const handleExecuteScenario = useCallback(async (scenario: ServerSavedScenario) => {
     if (executingScenario) {
       toast({
         title: "Выполнение уже запущено",
@@ -83,28 +82,26 @@ export const VisualRPABuilder: React.FC = () => {
     });
 
     // Асинхронное выполнение
-    (async () => {
-      try {
-        // Здесь будет интеграция с серверным RPA движком
-        console.log('Executing server-based scenario:', scenario);
-        
-        // Имитация выполнения для демонстрации
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        
-        toast({
-          title: "Серверный сценарий выполнен",
-          description: `"${scenario.name}" успешно завершен на сервере`
-        });
-      } catch (error) {
-        toast({
-          title: "Ошибка выполнения",
-          description: "Не удалось выполнить сценарий на сервере",
-          variant: "destructive"
-        });
-      } finally {
-        setExecutingScenario(null);
-      }
-    })();
+    try {
+      // Здесь будет интеграция с серверным RPA движком
+      console.log('Executing server-based scenario:', scenario);
+      
+      // Имитация выполнения для демонстрации
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      toast({
+        title: "Серверный сценарий выполнен",
+        description: `"${scenario.name}" успешно завершен на сервере`
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка выполнения",
+        description: "Не удалось выполнить сценарий на сервере",
+        variant: "destructive"
+      });
+    } finally {
+      setExecutingScenario(null);
+    }
   }, [executingScenario, toast]);
 
   // Загрузка сохраненных сценариев при инициализации
