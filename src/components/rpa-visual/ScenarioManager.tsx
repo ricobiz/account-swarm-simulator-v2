@@ -21,7 +21,7 @@ import type { ServerRecordedAction, ServerSavedScenario } from '@/types/serverRP
 
 interface ScenarioManagerProps {
   scenarios: ServerSavedScenario[];
-  onExecute: (scenario: ServerSavedScenario) => void;
+  onExecute: (scenario: ServerSavedScenario) => Promise<void>;
   onDelete: (id: string) => void;
   isExecuting: string | null;
 }

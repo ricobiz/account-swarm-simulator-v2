@@ -1,3 +1,4 @@
+
 export interface BrowserInfo {
   resolution: { width: number; height: number };
   userAgent: string;
@@ -19,7 +20,7 @@ export interface ServerRecordedAction {
   description: string;
   value?: string;
   timestamp: number;
-  element?: string; // Making it optional for compatibility
+  element?: string; // Keep as optional string for server compatibility
 }
 
 export interface ServerSavedScenario {
@@ -41,7 +42,3 @@ export interface MacroTestResult {
   afterScreenshot?: string;
   executionTime: number;
 }
-
-// Keep original exports for backward compatibility but rename to avoid conflicts
-export type RecordedAction = ServerRecordedAction;
-export type SavedScenario = ServerSavedScenario;
