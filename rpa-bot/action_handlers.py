@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Обработчики действий для RPA бота
+Обработчики действий для продвинутого RPA бота
 """
 
 import time
@@ -9,143 +9,176 @@ import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 logger = logging.getLogger(__name__)
 
 class ActionHandlers:
-    def __init__(self, driver, wait, behavior):
+    def __init__(self, driver, wait, behavior_simulator):
         self.driver = driver
         self.wait = wait
-        self.behavior = behavior
+        self.behavior = behavior_simulator
     
     def navigate(self, action):
-        """Переход по URL"""
+        """Навигация с человекоподобным поведением"""
+        url = action.get('url', '')
         try:
-            url = action.get('url')
-            if not url:
-                logger.error("URL не предоставлен для навигации")
-                return False
+            logger.info(f"Навигация к: {url}")
             
-            logger.info(f"Переход к: {url}")
+            # Предварительная задержка
+            self.behavior.random_delay(500, 2000)
+            
             self.driver.get(url)
-            time.sleep(2)
+            
+            # Ожидание загрузки + имитация чтения
+            self.behavior.random_delay(2000, 5000)
+            
+            # Случайный скролл для имитации осмотра страницы
+            scroll_params = self.behavior.scroll_behavior('down', 200)
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_params['step_size']});")
+            
             return True
+            
         except Exception as e:
-            logger.error(f"Навигация не удалась: {e}")
+            logger.error(f"Ошибка навигации: {e}")
             return False
     
     def click(self, action):
-        """Клик по элементу"""
+        """Клик с поиском элемента"""
+        selector = action.get('selector', '')
         try:
-            selector = action.get('selector')
-            if not selector:
-                logger.error("Селектор не предоставлен для клика")
-                return False
+            # Попытка найти элемент
+            element = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
             
-            element = self.driver.find_element(By.CSS_SELECTOR, selector)
-            self.behavior.human_mouse_move(self.driver, element)
+            # Человекоподобный клик
+            click_params = self.behavior.click_behavior()
+            
+            # Задержка перед кликом
+            time.sleep(click_params['pre_click_delay'])
+            
+            # Движение мыши к элементу
+            ActionChains(self.driver).move_to_element(element).perform()
+            self.behavior.random_delay(100, 300)
+            
+            # Клик
             element.click()
-            self.behavior.random_delay(500, 1500)
+            
+            # Задержка после клика
+            time.sleep(click_params['post_click_delay'])
+            
             return True
+            
         except Exception as e:
-            logger.error(f"Клик не удался: {e}")
+            logger.error(f"Ошибка клика: {e}")
             return False
     
     def type_text(self, action):
-        """Ввод текста в элемент"""
+        """Печать текста с человекоподобной скоростью"""
+        selector = action.get('selector', '')
+        text = action.get('text', '')
+        
         try:
-            selector = action.get('selector')
-            text = action.get('text', '')
+            element = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
             
-            if not selector:
-                logger.error("Селектор не предоставлен для ввода")
-                return False
+            # Очистка поля
+            element.clear()
+            self.behavior.random_delay(200, 500)
             
-            element = self.driver.find_element(By.CSS_SELECTOR, selector)
-            self.behavior.human_type(element, text)
+            # Печать по символам
+            for char in text:
+                element.send_keys(char)
+                self.behavior.typing_delay()
+            
+            # Случайная пауза после печати
+            self.behavior.random_delay(500, 1500)
+            
             return True
+            
         except Exception as e:
-            logger.error(f"Ввод текста не удался: {e}")
+            logger.error(f"Ошибка печати: {e}")
             return False
     
     def wait(self, action):
-        """Ожидание указанного времени"""
-        try:
-            duration = action.get('duration', 1000) / 1000  # Конвертация в секунды
-            time.sleep(duration)
-            return True
-        except Exception as e:
-            logger.error(f"Ожидание не удалось: {e}")
-            return False
+        """Ожидание с случайными вариациями"""
+        duration = action.get('duration', 1000)
+        
+        # Добавляем случайную вариацию ±20%
+        variation = duration * 0.2
+        actual_duration = duration + random.uniform(-variation, variation)
+        
+        time.sleep(actual_duration / 1000)
+        return True
     
     def scroll(self, action):
-        """Прокрутка страницы"""
-        try:
-            direction = action.get('direction', 'down')
-            amount = action.get('amount', 300)
+        """Естественный скролл"""
+        direction = action.get('direction', 'down')
+        amount = action.get('amount', 300)
+        
+        scroll_params = self.behavior.scroll_behavior(direction, amount)
+        
+        for i, delay in enumerate(scroll_params['delays']):
+            scroll_amount = scroll_params['step_size']
+            if direction == 'up':
+                scroll_amount = -scroll_amount
             
-            if direction == 'down':
-                self.driver.execute_script(f"window.scrollBy(0, {amount});")
-            elif direction == 'up':
-                self.driver.execute_script(f"window.scrollBy(0, -{amount});")
-            
-            self.behavior.random_delay(500, 1000)
-            return True
-        except Exception as e:
-            logger.error(f"Прокрутка не удалась: {e}")
-            return False
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            time.sleep(delay)
+        
+        return True
     
     def key_press(self, action):
-        """Нажатие клавиши клавиатуры"""
+        """Нажатие клавиш"""
+        key = action.get('key', '')
+        
         try:
-            key = action.get('key', 'ENTER')
+            # Получение активного элемента
+            active_element = self.driver.switch_to.active_element
             
-            # Карта имен клавиш к клавишам Selenium
-            key_map = {
-                'ENTER': Keys.ENTER,
-                'TAB': Keys.TAB,
-                'ESCAPE': Keys.ESCAPE,
-                'SPACE': Keys.SPACE,
-                'ARROW_DOWN': Keys.ARROW_DOWN,
-                'ARROW_UP': Keys.ARROW_UP
+            # Конвертация названий клавиш
+            key_mapping = {
+                'enter': Keys.RETURN,
+                'tab': Keys.TAB,
+                'escape': Keys.ESCAPE,
+                'space': Keys.SPACE,
+                'backspace': Keys.BACKSPACE
             }
             
-            selenium_key = key_map.get(key, Keys.ENTER)
-            ActionChains(self.driver).send_keys(selenium_key).perform()
-            self.behavior.random_delay(200, 500)
+            key_to_send = key_mapping.get(key.lower(), key)
+            active_element.send_keys(key_to_send)
+            
+            self.behavior.random_delay(200, 800)
             return True
+            
         except Exception as e:
-            logger.error(f"Нажатие клавиши не удалось: {e}")
+            logger.error(f"Ошибка нажатия клавиши: {e}")
             return False
     
     def move_mouse(self, action):
-        """Перемещение мыши к элементу"""
+        """Движение мыши"""
+        x = action.get('x', 0)
+        y = action.get('y', 0)
+        
         try:
-            selector = action.get('selector')
-            if not selector:
-                logger.error("Селектор не предоставлен для перемещения мыши")
-                return False
-            
-            element = self.driver.find_element(By.CSS_SELECTOR, selector)
-            self.behavior.human_mouse_move(self.driver, element)
+            ActionChains(self.driver).move_by_offset(x, y).perform()
+            self.behavior.mouse_movement_delay()
             return True
+            
         except Exception as e:
-            logger.error(f"Перемещение мыши не удалось: {e}")
+            logger.error(f"Ошибка движения мыши: {e}")
             return False
     
     def check_element(self, action):
         """Проверка существования элемента"""
+        selector = action.get('selector', '')
+        
         try:
-            selector = action.get('selector')
-            if not selector:
-                logger.error("Селектор не предоставлен для проверки элемента")
-                return False
+            element = self.driver.find_element(By.CSS_SELECTOR, selector)
+            return element is not None
             
-            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-            exists = len(elements) > 0
-            logger.info(f"Элемент {selector} существует: {exists}")
-            return exists
+        except NoSuchElementException:
+            return False
         except Exception as e:
-            logger.error(f"Проверка элемента не удалась: {e}")
+            logger.error(f"Ошибка проверки элемента: {e}")
             return False
