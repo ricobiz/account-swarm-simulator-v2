@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,7 @@ import {
   PlayCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { RPABotStatusCard } from '@/components/rpa/RPABotStatusCard';
+import RPABotStatusCard from '@/components/rpa/RPABotStatusCard';
 import { TestRPAButton } from '@/components/TestRPAButton';
 
 const Index = () => {
