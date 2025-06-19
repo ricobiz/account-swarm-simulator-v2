@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { 
   Bot, 
   Users, 
@@ -20,7 +21,8 @@ import { RPABotStatusCard } from '@/components/rpa/RPABotStatusCard';
 import { TestRPAButton } from '@/components/TestRPAButton';
 
 const Index = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
   if (!user) {
     return (
