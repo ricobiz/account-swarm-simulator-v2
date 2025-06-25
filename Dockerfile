@@ -34,8 +34,10 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
 RUN useradd --create-home --shell /bin/bash app
 WORKDIR /app
 
+# Копирование файла зависимостей из правильной папки
+COPY rpa-bot-cloud/requirements.txt .
+
 # Обновление pip и установка Python зависимостей
-COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
