@@ -39,8 +39,9 @@ COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копирование кода приложения
-COPY rpa_bot.py health_check.py ./
+# Копирование кода приложения из правильных путей
+COPY rpa-bot-cloud/rpa_bot_cloud.py ./rpa_bot.py
+COPY health_check.py ./
 
 # Создание директорий с правильными правами
 RUN mkdir -p /app/logs /app/screenshots /app/frontend \
