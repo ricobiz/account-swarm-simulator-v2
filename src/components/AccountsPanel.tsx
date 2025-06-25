@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,13 +106,21 @@ const AccountsPanel: React.FC<AccountsPanelProps> = ({ onAccountAdded }) => {
     try {
       setIsAdding(true);
       
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Пользователь не авторизован');
+      }
+
       const { error } = await supabase
         .from('accounts')
         .insert([{
           platform: newAccount.platform,
           username: newAccount.username,
           password: newAccount.password,
-          status: 'idle'
+          status: 'idle',
+          user_id: user.id
         }]);
 
       if (error) throw error;
