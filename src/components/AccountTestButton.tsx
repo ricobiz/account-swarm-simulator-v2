@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRPAService } from '@/hooks/useRPAService';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Play, 
   CheckCircle, 
@@ -12,7 +13,8 @@ import {
   Loader2,
   Globe,
   User,
-  AlertTriangle
+  AlertTriangle,
+  Wifi
 } from 'lucide-react';
 
 interface Account {
@@ -32,8 +34,29 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
   const [isTestingAccount, setIsTestingAccount] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null);
   const [testDetails, setTestDetails] = useState<string>('');
+  const [isUsingProxy, setIsUsingProxy] = useState<boolean>(false);
   const { toast } = useToast();
   const { submitRPATask, waitForRPACompletion } = useRPAService();
+
+  const getAvailableProxy = async () => {
+    try {
+      const { data: proxies, error } = await supabase
+        .from('proxies')
+        .select('*')
+        .in('status', ['excellent', 'good'])
+        .limit(1);
+
+      if (error) {
+        console.log('Ошибка получения прокси (будем работать без прокси):', error);
+        return null;
+      }
+
+      return proxies && proxies.length > 0 ? proxies[0] : null;
+    } catch (error) {
+      console.log('Не удалось получить прокси (будем работать без прокси):', error);
+      return null;
+    }
+  };
 
   const testAccount = async () => {
     setIsTestingAccount(true);
@@ -41,15 +64,18 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
     setTestDetails('');
 
     try {
+      // Пытаемся получить прокси, но это не критично
+      const proxy = await getAvailableProxy();
+      setIsUsingProxy(!!proxy);
+
       toast({
         title: "Запуск реального теста",
-        description: `Тестируем аккаунт ${account.username} через RPA-бот...`
+        description: `Тестируем аккаунт ${account.username} ${proxy ? 'через прокси' : 'напрямую'}...`
       });
 
-      // Создаём реальную RPA задачу для тестирования аккаунта
       const testTaskId = `account_test_${account.id}_${Date.now()}`;
       
-      // Определяем URL для тестирования в зависимости от платформы
+      // Определяем URL и действия для тестирования
       let testUrl = '';
       let testActions = [];
 
@@ -65,15 +91,15 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
               delay: 3000
             },
             {
-              id: 'find_username_field',
-              type: 'click',
+              id: 'check_page_loaded',
+              type: 'check_element',
               timestamp: Date.now() + 1000,
               element: {
                 selector: 'input[name="username"]',
                 text: 'Username field',
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 1000
+              delay: 2000
             },
             {
               id: 'type_username',
@@ -84,51 +110,40 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
                 text: account.username,
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 500
-            },
-            {
-              id: 'find_password_field',
-              type: 'click',
-              timestamp: Date.now() + 3000,
-              element: {
-                selector: 'input[name="password"]',
-                text: 'Password field',
-                coordinates: { x: 0, y: 0 }
-              },
               delay: 1000
             },
             {
               id: 'type_password',
               type: 'type',
-              timestamp: Date.now() + 4000,
+              timestamp: Date.now() + 3000,
               element: {
                 selector: 'input[name="password"]',
                 text: account.password,
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 500
+              delay: 1000
             },
             {
               id: 'click_login',
               type: 'click',
-              timestamp: Date.now() + 5000,
+              timestamp: Date.now() + 4000,
               element: {
                 selector: 'button[type="submit"]',
                 text: 'Log In',
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 3000
+              delay: 5000
             },
             {
-              id: 'check_login_result',
+              id: 'check_login_success',
               type: 'check_element',
-              timestamp: Date.now() + 6000,
+              timestamp: Date.now() + 5000,
               element: {
-                selector: 'nav[role="navigation"]',
-                text: 'Main navigation',
+                selector: 'nav[role="navigation"], [data-testid="search-input"], .x1n2onr6',
+                text: 'Main navigation or search',
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 2000
+              delay: 3000
             }
           ];
           break;
@@ -144,23 +159,47 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
               delay: 3000
             },
             {
+              id: 'check_email_field',
+              type: 'check_element',
+              timestamp: Date.now() + 1000,
+              element: {
+                selector: 'input[type="email"]',
+                text: 'Email field',
+                coordinates: { x: 0, y: 0 }
+              },
+              delay: 2000
+            },
+            {
               id: 'type_email',
               type: 'type',
-              timestamp: Date.now() + 1000,
+              timestamp: Date.now() + 2000,
               element: {
                 selector: 'input[type="email"]',
                 text: account.username,
                 coordinates: { x: 0, y: 0 }
               },
               delay: 1000
+            }
+          ];
+          break;
+
+        case 'facebook':
+          testUrl = 'https://www.facebook.com/login';
+          testActions = [
+            {
+              id: 'nav_to_login',
+              type: 'navigate',
+              timestamp: Date.now(),
+              url: testUrl,
+              delay: 3000
             },
             {
-              id: 'click_next',
-              type: 'click',
-              timestamp: Date.now() + 2000,
+              id: 'check_page_loaded',
+              type: 'check_element',
+              timestamp: Date.now() + 1000,
               element: {
-                selector: '#identifierNext',
-                text: 'Next',
+                selector: '#email',
+                text: 'Email field',
                 coordinates: { x: 0, y: 0 }
               },
               delay: 2000
@@ -169,7 +208,7 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
           break;
 
         default:
-          // Универсальный тест - просто проверяем доступность URL
+          // Универсальный тест - переход на сайт платформы
           testUrl = `https://${account.platform.toLowerCase()}.com`;
           testActions = [
             {
@@ -188,7 +227,7 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
                 text: 'Page body',
                 coordinates: { x: 0, y: 0 }
               },
-              delay: 1000
+              delay: 2000
             }
           ];
       }
@@ -200,10 +239,26 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
         accountId: account.id,
         scenarioId: 'account_test',
         blockId: 'test_block',
-        timeout: 60000
+        timeout: 120000, // Увеличиваем таймаут до 2 минут
+        proxy: proxy ? {
+          ip: proxy.ip,
+          port: proxy.port,
+          username: proxy.username,
+          password: proxy.password,
+          country: proxy.country
+        } : null, // Если прокси нет - работаем без него
+        metadata: {
+          platform: account.platform,
+          username: account.username,
+          testType: 'account_login',
+          usingProxy: !!proxy
+        }
       };
 
-      console.log('Отправляем реальную RPA задачу для тестирования:', rpaTask);
+      console.log('Отправляем задачу тестирования:', {
+        ...rpaTask,
+        proxy: rpaTask.proxy ? 'PROXY_CONFIGURED' : 'NO_PROXY'
+      });
 
       // Отправляем задачу
       const submitResult = await submitRPATask(rpaTask);
@@ -214,28 +269,40 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
 
       toast({
         title: "Задача отправлена",
-        description: "Ожидаем результат от RPA-бота...",
-        duration: 2000
+        description: `Ожидаем результат тестирования ${proxy ? 'через прокси' : 'напрямую'}...`,
+        duration: 3000
       });
 
       // Ждём результат выполнения
-      const result = await waitForRPACompletion(testTaskId, 90000); // 90 секунд таймаут
+      const result = await waitForRPACompletion(testTaskId, 150000); // 2.5 минуты таймаут
 
       if (result?.success) {
         setTestResult('success');
         setTestDetails(result.message || 'Аккаунт успешно прошёл тестирование');
         
+        // Обновляем статус аккаунта в базе
+        await supabase
+          .from('accounts')
+          .update({ status: 'active' })
+          .eq('id', account.id);
+        
         toast({
           title: "✅ Аккаунт работает!",
-          description: `${account.username} успешно авторизован на ${account.platform}`,
+          description: `${account.username} успешно протестирован на ${account.platform}`,
         });
       } else {
         setTestResult('failed');
         setTestDetails(result?.error || 'Тестирование не прошло');
         
+        // Обновляем статус аккаунта в базе
+        await supabase
+          .from('accounts')
+          .update({ status: 'failed' })
+          .eq('id', account.id);
+        
         toast({
-          title: "❌ Ошибка аккаунта",
-          description: result?.error || `Не удалось войти в аккаунт ${account.username}`,
+          title: "❌ Проблема с аккаунтом",
+          description: result?.error || `Тест аккаунта ${account.username} не прошёл`,
           variant: "destructive"
         });
       }
@@ -252,6 +319,7 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
       });
     } finally {
       setIsTestingAccount(false);
+      setIsUsingProxy(false);
     }
   };
 
@@ -261,6 +329,12 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
         <CardTitle className="text-white flex items-center gap-2">
           <User className="h-5 w-5 text-blue-400" />
           Реальный тест: {account.username}
+          {isTestingAccount && isUsingProxy && (
+            <Badge variant="outline" className="ml-2 text-green-400 border-green-400">
+              <Wifi className="h-3 w-3 mr-1" />
+              Прокси
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -274,11 +348,6 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
               <User className="h-4 w-4 text-gray-400" />
               <span className="text-gray-300">{account.username}</span>
             </div>
-            {account.proxy && (
-              <div className="text-sm text-gray-400">
-                Прокси: {account.proxy}
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -303,7 +372,7 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
           {isTestingAccount ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Реальное тестирование...
+              Тестируем реально...
             </>
           ) : (
             <>
@@ -317,7 +386,7 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
           <div className="p-3 bg-blue-900 border border-blue-700 rounded text-blue-300 text-sm">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              RPA-бот выполняет реальный тест аккаунта...
+              RPA-бот тестирует аккаунт {isUsingProxy ? 'через прокси' : 'напрямую'}...
             </div>
           </div>
         )}
@@ -340,13 +409,14 @@ export const AccountTestButton: React.FC<AccountTestButtonProps> = ({ account })
             </div>
             <p className="text-xs">{testDetails}</p>
             <p className="text-xs mt-2 opacity-75">
-              Проверьте логин/пароль и настройки прокси
+              Проверьте логин/пароль аккаунта
             </p>
           </div>
         )}
 
         <div className="text-xs text-gray-500 text-center">
-          💡 Тест выполняется через реальный RPA-бот
+          💡 Тест выполняется через реальный RPA-бот<br/>
+          🌐 Автоматически использует прокси если доступен
         </div>
       </CardContent>
     </Card>

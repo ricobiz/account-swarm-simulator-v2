@@ -39,8 +39,8 @@ COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копирование кода приложения из правильных путей
-COPY rpa-bot-cloud/rpa_bot_cloud.py ./rpa_bot.py
+# Копирование всех необходимых файлов RPA-бота
+COPY rpa-bot-cloud/ ./
 COPY health_check.py ./
 
 # Создание директорий с правильными правами
@@ -56,4 +56,4 @@ USER app
 
 EXPOSE 8080
 
-CMD ["python", "rpa_bot.py"]
+CMD ["python", "rpa_bot_cloud.py"]
