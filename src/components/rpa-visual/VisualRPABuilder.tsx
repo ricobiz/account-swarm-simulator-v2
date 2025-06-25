@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,8 @@ import {
   Database,
   Server,
   ArrowLeft,
-  Workflow
+  Workflow,
+  Home
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Node, Edge } from '@xyflow/react';
@@ -189,25 +191,50 @@ export const VisualRPABuilder: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center gap-4">
-          <Button
-            onClick={() => navigate('/')}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Назад
-          </Button>
-          
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Bot className="h-8 w-8 text-purple-400" />
-              Визуальный RPA Конструктор
-            </h1>
-            <p className="text-gray-400 mt-2">
-              Создавайте автоматизированные сценарии с помощью визуального конструктора
-            </p>
+        {/* Улучшенная навигация */}
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Назад
+            </Button>
+            
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Bot className="h-8 w-8 text-purple-400" />
+                Визуальный RPA Конструктор
+              </h1>
+              <p className="text-gray-400 mt-2">
+                Создавайте автоматизированные сценарии с помощью визуального конструктора
+              </p>
+            </div>
+          </div>
+
+          {/* Дополнительные кнопки навигации */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/accounts')}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+            >
+              <Settings className="h-4 w-4" />
+              Аккаунты
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+            >
+              <Home className="h-4 w-4" />
+              Главная
+            </Button>
           </div>
         </div>
 
@@ -238,13 +265,26 @@ export const VisualRPABuilder: React.FC = () => {
           <TabsContent value="constructor">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Workflow className="h-5 w-5 text-blue-400" />
-                  Визуальный конструктор сценариев
-                </CardTitle>
-                <p className="text-gray-400">
-                  Перетаскивайте блоки и соединяйте их для создания сценариев автоматизации
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Workflow className="h-5 w-5 text-blue-400" />
+                      Визуальный конструктор сценариев
+                    </CardTitle>
+                    <p className="text-gray-400 mt-2">
+                      Перетаскивайте блоки и соединяйте их для создания сценариев автоматизации
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/')}
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Вернуться в меню
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="h-[800px]">
@@ -255,28 +295,84 @@ export const VisualRPABuilder: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="recorder">
-            <ServerBasedRPARecorder onSaveScenario={handleSaveScenario} />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Записывать действия</h2>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Вернуться в меню
+                </Button>
+              </div>
+              <ServerBasedRPARecorder onSaveScenario={handleSaveScenario} />
+            </div>
           </TabsContent>
 
           <TabsContent value="scenarios">
-            <ScenarioManager
-              scenarios={savedScenarios}
-              onExecute={handleExecuteScenario}
-              onDelete={handleDeleteScenario}
-              isExecuting={executingScenario}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Управление сценариями</h2>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Вернуться в меню
+                </Button>
+              </div>
+              <ScenarioManager
+                scenarios={savedScenarios}
+                onExecute={handleExecuteScenario}
+                onDelete={handleDeleteScenario}
+                isExecuting={executingScenario}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="executor">
-            <MacroExecutor
-              scenarios={savedScenarios}
-              onExecute={handleExecuteScenario}
-              isExecuting={executingScenario}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Выполнение макросов</h2>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Вернуться в меню
+                </Button>
+              </div>
+              <MacroExecutor
+                scenarios={savedScenarios}
+                onExecute={handleExecuteScenario}
+                isExecuting={executingScenario}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="settings">
-            <APIKeysManager />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Настройки API</h2>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Вернуться в меню
+                </Button>
+              </div>
+              <APIKeysManager />
+            </div>
           </TabsContent>
         </Tabs>
 
