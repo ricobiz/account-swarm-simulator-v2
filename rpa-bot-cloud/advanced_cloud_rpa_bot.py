@@ -24,11 +24,11 @@ class AdvancedCloudRPABot:
         self.logger = logging.getLogger(__name__)
         
     def create_chrome_options(self):
-        """Создание правильных опций Chrome для Railway"""
+        """Создание стабильных опций Chrome для Railway"""
         options = Options()
         
-        # Базовые опции для headless режима
-        options.add_argument('--headless')
+        # Основные опции для Railway
+        options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
@@ -37,132 +37,187 @@ class AdvancedCloudRPABot:
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-plugins')
         options.add_argument('--disable-images')
-        options.add_argument('--disable-javascript')
         options.add_argument('--window-size=1920,1080')
+        options.add_argument('--single-process')
+        options.add_argument('--no-zygote')
         
-        # Антидетект опции (убираем проблемные)
+        # Стабильные антидетект опции
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_experimental_option("useAutomationExtension", False)
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
         
         # User agent
-        ua = UserAgent()
-        options.add_argument(f'--user-agent={ua.random}')
+        try:
+            ua = UserAgent()
+            options.add_argument(f'--user-agent={ua.random}')
+        except:
+            # Fallback user agent если UserAgent не работает
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
-        # Прокси поддержка
+        # Дополнительные стабильные опции
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--ignore-ssl-errors')
         options.add_argument('--ignore-certificate-errors-spki-list')
-        
-        # Память и производительность
         options.add_argument('--memory-pressure-off')
-        options.add_argument('--max_old_space_size=4096')
         
         return options
         
     def setup_browser(self, proxy=None):
-        """Настройка браузера с правильными опциями"""
+        """Улучшенная настройка браузера с лучшей обработкой ошибок"""
         try:
-            self.logger.info("Настройка универсального браузера...")
+            self.logger.info("🔧 Настройка универсального RPA браузера...")
             
             options = self.create_chrome_options()
             
-            # Прокси
+            # Прокси если указан
             if proxy:
                 proxy_str = f"{proxy['ip']}:{proxy['port']}"
                 options.add_argument(f'--proxy-server=http://{proxy_str}')
-                self.logger.info(f"Использование прокси: {proxy_str}")
+                self.logger.info(f"🌐 Используем прокси: {proxy_str}")
             
-            # Создание драйвера с простыми опциями
+            # Попытка создания драйвера
             try:
+                self.logger.info("Пробуем обычный Chrome WebDriver...")
                 self.driver = webdriver.Chrome(options=options)
-                self.logger.info("✅ Chrome WebDriver создан успешно")
+                self.logger.info("✅ Обычный Chrome WebDriver создан успешно")
             except Exception as e:
-                self.logger.warning(f"Обычный Chrome не работает, пробуем undetected-chromedriver: {e}")
-                # Fallback на undetected chromedriver с минимальными опциями
+                self.logger.warning(f"⚠️ Обычный Chrome не удался: {e}")
+                self.logger.info("🔄 Переходим на undetected-chromedriver...")
+                
+                # Fallback на undetected chromedriver
                 uc_options = uc.ChromeOptions()
-                uc_options.add_argument('--headless')
-                uc_options.add_argument('--no-sandbox')
+                uc_options.add_argument('--headless=new')
+                uc_options.add_argument('--no-sandbox') 
                 uc_options.add_argument('--disable-dev-shm-usage')
+                uc_options.add_argument('--disable-gpu')
+                uc_options.add_argument('--single-process')
+                uc_options.add_argument('--window-size=1920,1080')
                 
                 self.driver = uc.Chrome(options=uc_options, version_main=None)
                 self.logger.info("✅ Undetected Chrome создан успешно")
             
-            # Настройка wait
-            self.wait = WebDriverWait(self.driver, 10)
+            # Настройка WebDriverWait
+            self.wait = WebDriverWait(self.driver, 15)
             
-            # Базовые настройки
-            self.driver.set_page_load_timeout(30)
-            self.driver.implicitly_wait(5)
+            # Таймауты
+            self.driver.set_page_load_timeout(45)
+            self.driver.implicitly_wait(10)
             
-            # Скрываем автоматизацию
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            # Антидетект скрипты
+            try:
+                self.driver.execute_script("""
+                    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => [1, 2, 3, 4, 5].map(() => ({ name: 'Plugin' }))
+                    });
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['en-US', 'en', 'ru']
+                    });
+                """)
+                self.logger.info("🥷 Антидетект скрипты применены")
+            except Exception as e:
+                self.logger.warning(f"⚠️ Антидетект скрипты не применились: {e}")
             
-            self.logger.info("✅ Браузер настроен успешно")
+            self.logger.info("🎉 Браузер настроен и готов к работе!")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Ошибка настройки браузера: {e}")
+            self.logger.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА настройки браузера: {e}")
+            self.logger.error(f"Тип ошибки: {type(e).__name__}")
             return False
     
     def navigate_to_url(self, url):
-        """Переход на страницу"""
+        """Безопасный переход на страницу с проверками"""
         try:
-            self.logger.info(f"Переход на: {url}")
+            self.logger.info(f"🌐 Переход на: {url}")
             self.driver.get(url)
-            time.sleep(3)  # Ждем загрузки
+            
+            # Ждем частичной загрузки
+            time.sleep(3)
             
             current_url = self.driver.current_url
-            self.logger.info(f"Текущий URL: {current_url}")
+            self.logger.info(f"📍 Текущий URL: {current_url}")
+            
+            # Проверяем, что страница хотя бы частично загрузилась
+            page_state = self.driver.execute_script("return document.readyState")
+            self.logger.info(f"📄 Состояние страницы: {page_state}")
             
             return True
         except Exception as e:
-            self.logger.error(f"Ошибка перехода на {url}: {e}")
+            self.logger.error(f"❌ Ошибка перехода на {url}: {e}")
             return False
     
     def find_element_safe(self, selector):
-        """Безопасный поиск элемента"""
+        """Улучшенный безопасный поиск элемента с множественными стратегиями"""
         try:
-            # Пробуем разные способы поиска
+            self.logger.info(f"🔍 Поиск элемента: {selector}")
+            
+            # Различные стратегии поиска
             strategies = [
                 (By.CSS_SELECTOR, selector),
                 (By.XPATH, f"//*[@name='{selector.replace('input[name=\"', '').replace('\"]', '')}']"),
+                (By.XPATH, f"//*[contains(@class, '{selector.replace('.', '')}')]"),
                 (By.ID, selector.replace('#', '')),
-                (By.CLASS_NAME, selector.replace('.', ''))
+                (By.NAME, selector.replace('input[name="', '').replace('"]', '')),
+                (By.TAG_NAME, selector.replace('input[type="', '').replace('"]', '') if 'input[type=' in selector else selector)
             ]
             
             for by, value in strategies:
                 try:
-                    element = self.wait.until(EC.presence_of_element_located((by, value)))
-                    self.logger.info(f"Элемент найден: {by} = {value}")
+                    # Ждем появления элемента до 10 секунд
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((by, value))
+                    )
+                    self.logger.info(f"✅ Элемент найден через {by.name}: {value}")
                     return element
-                except:
+                except TimeoutException:
+                    continue
+                except Exception as search_error:
+                    self.logger.debug(f"Стратегия {by.name} не сработала: {search_error}")
                     continue
                     
+            self.logger.warning(f"⚠️ Элемент не найден ни одной стратегией: {selector}")
             return None
+            
         except Exception as e:
-            self.logger.error(f"Элемент не найден {selector}: {e}")
+            self.logger.error(f"❌ Критическая ошибка поиска элемента {selector}: {e}")
             return None
     
     def execute_action(self, action):
-        """Выполнение действия"""
+        """Выполнение действия с улучшенной обработкой"""
         try:
             action_type = action.get('type')
-            self.logger.info(f"Выполнение действия: {action_type}")
+            self.logger.info(f"🎬 Выполнение действия: {action_type}")
             
             if action_type == 'navigate':
                 url = action.get('url')
                 return self.navigate_to_url(url)
                 
+            elif action_type == 'wait':
+                duration = action.get('duration', 1000)
+                self.logger.info(f"⏱️ Ожидание {duration}ms")
+                time.sleep(duration / 1000)
+                return True
+                
             elif action_type == 'check_element':
                 selector = action.get('element', {}).get('selector')
                 element = self.find_element_safe(selector)
-                return element is not None
+                found = element is not None
+                self.logger.info(f"🔍 Элемент {'найден' if found else 'НЕ найден'}: {selector}")
+                return found
                 
             elif action_type == 'click':
                 selector = action.get('element', {}).get('selector')
                 element = self.find_element_safe(selector)
                 if element:
-                    element.click()
+                    try:
+                        # Пробуем обычный клик
+                        element.click()
+                        self.logger.info(f"👆 Клик выполнен: {selector}")
+                    except:
+                        # Если не получается, пробуем JavaScript клик
+                        self.driver.execute_script("arguments[0].click();", element)
+                        self.logger.info(f"👆 JS клик выполнен: {selector}")
                     time.sleep(2)
                     return True
                 return False
@@ -172,24 +227,28 @@ class AdvancedCloudRPABot:
                 text = action.get('element', {}).get('text')
                 element = self.find_element_safe(selector)
                 if element:
-                    element.clear()
-                    element.send_keys(text)
-                    time.sleep(1)
-                    return True
+                    try:
+                        element.clear()
+                        element.send_keys(text)
+                        self.logger.info(f"⌨️ Текст введен в {selector}: {text[:20]}...")
+                        time.sleep(1)
+                        return True
+                    except Exception as type_error:
+                        self.logger.error(f"❌ Ошибка ввода текста: {type_error}")
                 return False
                 
             else:
-                self.logger.warning(f"Неизвестный тип действия: {action_type}")
+                self.logger.warning(f"⚠️ Неизвестный тип действия: {action_type}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Ошибка выполнения действия {action_type}: {e}")
+            self.logger.error(f"❌ Ошибка выполнения действия {action_type}: {e}")
             return False
     
     def execute_task(self, task):
-        """Выполнение RPA задачи"""
+        """Выполнение RPA задачи с подробным логированием"""
         task_id = task.get('taskId', 'unknown')
-        self.logger.info(f"=== ВЫПОЛНЕНИЕ ЗАДАЧИ {task_id} ===")
+        self.logger.info(f"🚀 === ВЫПОЛНЕНИЕ RPA ЗАДАЧИ {task_id} ===")
         
         try:
             # Настройка браузера
@@ -204,9 +263,13 @@ class AdvancedCloudRPABot:
             # Выполнение действий
             actions = task.get('actions', [])
             completed_actions = 0
+            total_actions = len(actions)
+            
+            self.logger.info(f"📋 Всего действий к выполнению: {total_actions}")
             
             for i, action in enumerate(actions):
-                self.logger.info(f"Действие {i+1}/{len(actions)}: {action.get('type')}")
+                action_type = action.get('type', 'unknown')
+                self.logger.info(f"🎬 Действие {i+1}/{total_actions}: {action_type}")
                 
                 if self.execute_action(action):
                     completed_actions += 1
@@ -216,31 +279,37 @@ class AdvancedCloudRPABot:
                 
                 # Задержка между действиями
                 delay = action.get('delay', 1000)
-                time.sleep(delay / 1000)
+                if delay > 0:
+                    time.sleep(delay / 1000)
             
             # Результат
             success = completed_actions > 0
-            message = f"Выполнено {completed_actions}/{len(actions)} действий"
+            success_rate = (completed_actions / total_actions * 100) if total_actions > 0 else 0
+            message = f"Выполнено {completed_actions}/{total_actions} действий ({success_rate:.1f}%)"
             
-            self.logger.info(f"=== ЗАДАЧА {task_id} ЗАВЕРШЕНА: {message} ===")
+            self.logger.info(f"🏁 === ЗАДАЧА {task_id} ЗАВЕРШЕНА ===")
+            self.logger.info(f"📊 Результат: {message}")
             
             return {
                 'taskId': task_id,
                 'success': success,
                 'message': message,
                 'completedActions': completed_actions,
-                'totalActions': len(actions),
-                'environment': 'railway-fixed',
-                'platform': task.get('metadata', {}).get('platform', 'unknown')
+                'totalActions': total_actions,
+                'successRate': success_rate,
+                'environment': 'railway-universal-cloud',
+                'platform': task.get('metadata', {}).get('platform', 'unknown'),
+                'features': ['universal-platforms', 'antidetect', 'human-behavior']
             }
             
         except Exception as e:
-            self.logger.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА В ЗАДАЧЕ {task_id}: {e}")
+            self.logger.error(f"💥 КРИТИЧЕСКАЯ ОШИБКА В ЗАДАЧЕ {task_id}: {e}")
+            self.logger.error(f"Тип ошибки: {type(e).__name__}")
             return {
                 'taskId': task_id,
                 'success': False,
                 'error': str(e),
-                'environment': 'railway-fixed'
+                'environment': 'railway-universal-cloud'
             }
         finally:
             self.cleanup()
@@ -250,9 +319,9 @@ class AdvancedCloudRPABot:
         try:
             if self.driver:
                 self.driver.quit()
-                self.logger.info("Браузер закрыт")
+                self.logger.info("🧹 Браузер закрыт и ресурсы освобождены")
         except Exception as e:
-            self.logger.error(f"Ошибка закрытия браузера: {e}")
+            self.logger.error(f"❌ Ошибка при закрытии браузера: {e}")
     
     def test_vision_connection(self):
         """Тест подключения к Vision API"""
