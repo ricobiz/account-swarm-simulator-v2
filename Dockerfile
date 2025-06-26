@@ -4,14 +4,14 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# 2. Системные зависимости
-RUN apt-get update && apt-get install -y \
-    wget gnupg unzip curl ca-certificates \
-    fonts-liberation libappindicator3-1 libasound2 \
-    libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 \
-    libxrandr2 libgbm1 libxss1 libgconf-2-4 build-essential \
-    tesseract-ocr libtesseract-dev \               #  OCR
-    --no-install-recommends && \
+# # 2. Системные зависимости
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wget gnupg unzip curl ca-certificates \
+        fonts-liberation libappindicator3-1 libasound2 \
+        libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 \
+        libxrandr2 libgbm1 libxss1 libgconf-2-4 build-essential \
+        tesseract-ocr libtesseract-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # 3. Google Chrome Stable
