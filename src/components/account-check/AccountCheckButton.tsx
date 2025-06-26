@@ -181,8 +181,9 @@ export const AccountCheckButton: React.FC<AccountCheckButtonProps> = ({
               return;
               
             } else if (taskData.status === 'failed') {
-              // Ошибка выполнения
-              const errorDetails = taskData.result_data?.error || 'Неизвестная ошибка';
+              // Ошибка выполнения - исправляем TypeScript ошибку
+              const resultData = taskData.result_data as any;
+              const errorDetails = resultData?.error || 'Неизвестная ошибка';
               throw new Error(`RPA-бот: ${errorDetails}`);
               
             } else if (attempts >= maxAttempts) {
