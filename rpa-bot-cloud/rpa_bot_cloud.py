@@ -609,7 +609,8 @@ class UniversalRPABot:
             #options.add_experimental_option('useAutomationExtension', False)
             options.add_argument(f'--window-size={profile["viewport"][0]},{profile["viewport"][1]}')
             options.add_argument(f'--user-agent={profile["user_agent"]}')
-            
+            options.add_argument("--remote-debugging-port=9222")
+            options.add_argument("--remote-debugging-address=0.0.0.0")
             # Расширенные опции антидетекта
             options.add_argument('--disable-web-security')
             options.add_argument('--disable-features=VizDisplayCompositor')
