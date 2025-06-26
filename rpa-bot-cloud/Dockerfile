@@ -31,7 +31,7 @@ WORKDIR /app
 COPY rpa-bot-cloud/requirements.txt ./requirements.txt
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir "undetected-chromedriver==3.5.8"
+    pip install --no-cache-dir "undetected-chromedriver==3.5.6"
 
 # 4. source code
 COPY rpa-bot-cloud/ ./
