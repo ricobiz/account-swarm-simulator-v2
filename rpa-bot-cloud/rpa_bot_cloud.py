@@ -605,8 +605,8 @@ class UniversalRPABot:
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
             options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
+            #options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            #options.add_experimental_option('useAutomationExtension', False)
             options.add_argument(f'--window-size={profile["viewport"][0]},{profile["viewport"][1]}')
             options.add_argument(f'--user-agent={profile["user_agent"]}')
             
