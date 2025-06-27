@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcursor1 libxrender1 libxinerama1 libxtst6 libfontconfig1 \
     libatk-bridge2.0-0 libxrandr2 libgbm1 libxss1 libdrm2 \
     fonts-liberation libasound2 libxcomposite1 libxdamage1 \
-    git && \
-    rm -rf /var/lib/apt/lists/*
+    git \
+    && rm -rf /var/lib/apt/lists/* 
 
 # Устанавливаем СТАРЫЙ Chrome (120)
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
