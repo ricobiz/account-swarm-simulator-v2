@@ -9,19 +9,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 libx11-6 libx11-xcb1 libxext6 libxfixes3 libxi6 \
     libxcursor1 libxrender1 libxinerama1 libxtst6 libfontconfig1 \
     libatk-bridge2.0-0 libxrandr2 libgbm1 libxss1 libdrm2 \
-    fonts-liberation libasound2 libxcomposite1 libxdamage1 \
-    && rm -rf /var/lib/apt/lists/*
+    fonts-liberation libasound2 libxcomposite1 libxdamage1 && \
+    rm -rf /var/lib/apt/lists/*
 
-# Ставим нужный Chrome 120!
-RUN wget -O /tmp/chrome.deb "https://edgedl.me.gvt1.com/edgedl/chrome/linux/stable/120.0.6099.109/google-chrome-stable_120.0.6099.109-1_amd64.deb" \
-    && apt-get update && apt-get install -y /tmp/chrome.deb \
-    && rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/*
+# Перечисляем все известные deb-пакеты Chrome 120 (по очереди)
+RUN (wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.216-1_amd64.deb" || \
+     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.199-1_amd64.deb" || \
+     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.129-1_amd64.deb" || \
+     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.62-1_amd64.deb" ) && \
+    apt-get update && apt-get install -y /tmp/chrome.deb && \
+    rm /tmp/chrome.deb && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --shell /bin/bash app \
-    && echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
-    && mkdir -p /app/screenshots /app/logs /app/downloads \
-    && touch /app/logs/rpa_bot.log \
-    && chown -R app:app /app
+# (дальше как раньше)
+RUN useradd --create-home --shell /bin/bash app && \
+    echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    mkdir -p /app/screenshots /app/logs /app/downloads && \
+    touch /app/logs/rpa_bot.log && \
+    chown -R app:app /app
 
 WORKDIR /app
 
