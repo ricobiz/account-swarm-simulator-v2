@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Перечисляем все известные deb-пакеты Chrome 120 (по очереди)
-RUN (wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.216-1_amd64.deb" || \
-     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.199-1_amd64.deb" || \
-     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.129-1_amd64.deb" || \
-     wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.62-1_amd64.deb" ) && \
-    apt-get update && apt-get install -y /tmp/chrome.deb && \
-    rm /tmp/chrome.deb && \
-    rm -rf /var/lib/apt/lists/*
+# Ставим Chrome (ищем живой .deb)
+RUN (wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.216-1_amd64.deb" \
+  || wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.199-1_amd64.deb" \
+  || wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.129-1_amd64.deb" \
+  || wget -O /tmp/chrome.deb "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.62-1_amd64.deb" ) \
+  && apt-get update && apt-get install -y /tmp/chrome.deb && \
+  rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/*
 
 # (дальше как раньше)
 RUN useradd --create-home --shell /bin/bash app && \
