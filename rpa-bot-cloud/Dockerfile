@@ -3,7 +3,7 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# 1. Системные пакеты + git + Chrome + OCR
+# 1. Системные пакеты (всё что нужно) + git
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg curl ca-certificates xvfb fluxbox sudo git \
     tesseract-ocr libtesseract-dev \
@@ -13,14 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation libasound2 libxcomposite1 libxdamage1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Google Chrome (новый, если нужен определённый — меняй версию)
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
-    gpg --dearmor -o /usr/share/keyrings/google-key.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-key.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+# 2. УСТАНОВКА СТРОГО Chrome 120 — прямая ссылка на .deb!
+RUN wget -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_120.0.6099.109-1_amd64.deb && \
+    apt-get update && apt-get install -y /tmp/chrome.deb && \
+    rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/*
 
-# 3. Новый пользователь и папки (создаём всё сразу)
+# 3. Новый пользователь + все папки (делай всё заранее!)
 RUN useradd --create-home --shell /bin/bash app && \
     echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     mkdir -p /app/screenshots /app/logs /app/downloads && \
@@ -29,15 +27,15 @@ RUN useradd --create-home --shell /bin/bash app && \
 
 WORKDIR /app
 
-# 4. Копируем requirements
+# 4. Requirements
 COPY rpa-bot-cloud/requirements.txt ./requirements.txt
 
-# 5. Python deps + undetected-chromedriver (dev-ветка, если хочешь)
+# 5. Python deps + undetected-chromedriver строго 3.5.4
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir undetected-chromedriver==3.5.4
+    pip install --no-cache-dir "undetected-chromedriver==3.5.4"
 
-# 6. Копируем исходники
+# 6. Исходники
 COPY rpa-bot-cloud/ ./
 RUN chown -R app:app /app
 
@@ -51,5 +49,5 @@ ENV CHROME_BIN=/usr/bin/google-chrome
 
 EXPOSE 8080
 
-# 8. Запуск через gunicorn
+# 8. Запуск gunicorn
 CMD ["gunicorn", "-b", "0.0.0.0:8080", "rpa_bot_cloud:app"]
