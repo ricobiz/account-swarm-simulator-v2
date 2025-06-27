@@ -35,7 +35,7 @@ COPY rpa-bot-cloud/requirements.txt ./requirements.txt
 # 5. Python deps + undetected-chromedriver (dev-ветка, если хочешь)
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir git+https://github.com/ultrafunkamsterdam/undetected-chromedriver@dev
+    pip install --no-cache-dir git+https://github.com/ultrafunkamsterdam/undetected-chromedriver@v4
 
 # 6. Копируем исходники
 COPY rpa-bot-cloud/ ./
