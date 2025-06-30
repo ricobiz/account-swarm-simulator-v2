@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TestRPAButton } from '@/components/TestRPAButton';
@@ -7,16 +7,107 @@ import { MultiloginStatus } from './MultiloginStatus';
 import { CloudRPAStatus } from './CloudRPAStatus';
 import { RPATaskMonitor } from './RPATaskMonitor';
 import { APIKeysManager } from '@/components/rpa-visual/APIKeysManager';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Bot, 
   Shield, 
   Activity, 
   Settings,
   Zap,
-  Target
+  Target,
+  RefreshCw
 } from 'lucide-react';
 
 export const EnhancedRPADashboard: React.FC = () => {
+  const [rpaTasks, setRpaTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Проверяем авторизацию пользователя
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (error: any) {
+        console.error('Ошибка проверки авторизации:', error);
+      }
+    };
+
+    checkAuth();
+
+    // Слушаем изменения авторизации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchRPATasks = async () => {
+    if (!user) {
+      setRpaTasks([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Загружаем задачи напрямую из таблицы rpa_tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('rpa_tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (tasksError) {
+        console.error('Ошибка загрузки RPA задач:', tasksError);
+        toast({
+          title: "Ошибка загрузки RPA задач",
+          description: tasksError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Преобразуем данные в нужный формат
+      const tasks = (tasksData || []).map((task: any) => ({
+        id: task.id,
+        taskId: task.task_id,
+        status: task.status,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+        result: task.result_data,
+        task: task.task_data
+      }));
+      
+      setRpaTasks(tasks);
+
+    } catch (error: any) {
+      console.error('Ошибка при загрузке RPA задач:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить RPA задачи",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRPATasks();
+      
+      // Обновляем каждые 10 секунд только если пользователь авторизован
+      const interval = setInterval(fetchRPATasks, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   return (
     <div className="space-y-6">
       {/* Заголовок */}
@@ -122,7 +213,7 @@ export const EnhancedRPADashboard: React.FC = () => {
 
         {/* Мониторинг */}
         <TabsContent value="monitoring" className="space-y-6">
-          <RPATaskMonitor />
+          <RPATaskMonitor tasks={rpaTasks} onRefresh={fetchRPATasks} />
         </TabsContent>
 
         {/* Настройки */}
