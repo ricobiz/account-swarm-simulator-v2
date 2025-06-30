@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Простой и надежный RPA бот для Railway
+Максимально простой RPA бот для Railway
 """
 
 import os
@@ -16,7 +16,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, TimeoutException
-import undetected_chromedriver as uc
 
 # Настройка логирования
 logging.basicConfig(
@@ -35,78 +34,79 @@ app = Flask(__name__)
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://izmgzstdgoswlozinmyk.supabase.co')
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
 ELEMENT_WAIT_TIMEOUT = 10
-HEADLESS_MODE = True
 
-class SimpleRPABot:
+class BasicRPABot:
     def __init__(self):
         self.driver = None
         self.wait = None
+        logger.info("Базовый RPA бот инициализирован")
     
     def setup_browser(self):
-        """Настройка простого антидетект браузера"""
+        """Максимально простая настройка браузера"""
         try:
-            logger.info("Настройка антидетект браузера...")
+            logger.info("🔧 Начинаем настройку базового браузера...")
+            
+            # Проверяем наличие Chrome
+            chrome_path = '/usr/bin/google-chrome'
+            if not os.path.exists(chrome_path):
+                logger.error(f"❌ Chrome не найден по пути: {chrome_path}")
+                return False
+            
+            logger.info(f"✅ Chrome найден: {chrome_path}")
             
             options = Options()
             
-            # Базовые настройки для облака
+            # Минимальные настройки для Railway
+            options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
-            options.add_argument('--headless=new')
             options.add_argument('--window-size=1920,1080')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--disable-features=VizDisplayCompositor')
             
-            # Антидетект настройки
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
+            logger.info("🔧 Опции Chrome настроены")
             
-            # User Agent
-            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            # Создаём драйвер
+            logger.info("🚀 Создаём WebDriver...")
+            self.driver = webdriver.Chrome(options=options)
+            logger.info("✅ WebDriver создан успешно")
             
-            # Отключаем изображения для скорости
-            prefs = {
-                "profile.managed_default_content_settings": {
-                    "images": 2
-                }
-            }
-            options.add_experimental_option("prefs", prefs)
-            
-            # Пробуем undetected-chromedriver
-            try:
-                self.driver = uc.Chrome(options=options, version_main=None)
-                logger.info("Используется undetected-chromedriver")
-            except Exception as e:
-                logger.warning(f"Не удалось использовать undetected-chromedriver: {e}")
-                # Fallback на обычный Chrome
-                self.driver = webdriver.Chrome(options=options)
-                logger.info("Используется обычный Chrome WebDriver")
-            
-            # Убираем признаки автоматизации
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
+            # Настраиваем ожидания
             self.wait = WebDriverWait(self.driver, ELEMENT_WAIT_TIMEOUT)
+            logger.info("✅ WebDriverWait настроен")
             
-            logger.info("Браузер настроен успешно")
+            # Тестовый переход
+            logger.info("🧪 Тестируем браузер...")
+            self.driver.get("https://www.google.com")
+            logger.info(f"✅ Тестовый переход успешен. Заголовок: {self.driver.title}")
+            
             return True
             
         except Exception as e:
-            logger.error(f"Ошибка настройки браузера: {e}")
+            logger.error(f"❌ Критическая ошибка настройки браузера: {e}")
+            logger.error(f"Тип ошибки: {type(e).__name__}")
+            
+            # Попытка очистки
+            try:
+                if self.driver:
+                    self.driver.quit()
+            except:
+                pass
+            
             return False
     
     def execute_task(self, task):
         """Выполнение RPA задачи"""
         task_id = task.get('taskId', 'unknown')
-        logger.info(f"Выполнение задачи: {task_id}")
+        logger.info(f"📋 Начало выполнения задачи: {task_id}")
         
         try:
             # Настраиваем браузер
             if not self.setup_browser():
-                return {
-                    'success': False,
-                    'error': 'Не удалось настроить браузер',
-                    'taskId': task_id
-                }
+                raise Exception("Не удалось настроить базовый браузер")
+            
+            logger.info("✅ Браузер настроен, выполняем действия...")
             
             # Выполняем действия
             result = self._execute_actions(task)
@@ -139,32 +139,39 @@ class SimpleRPABot:
         results = []
         
         try:
-            for action in actions:
-                logger.info(f"Выполнение действия: {action.get('type')}")
+            for i, action in enumerate(actions):
+                action_type = action.get('type')
+                logger.info(f"🎯 Действие {i+1}/{len(actions)}: {action_type}")
                 
-                if action['type'] == 'navigate':
-                    self.driver.get(action['url'])
-                    time.sleep(action.get('delay', 1000) / 1000.0)
-                    results.append(f"Переход на {action['url']}")
+                if action_type == 'navigate':
+                    url = action.get('url')
+                    logger.info(f"🌐 Переходим на: {url}")
+                    self.driver.get(url)
+                    time.sleep(2)
+                    results.append(f"Переход на {url}")
                     
-                elif action['type'] == 'check_element':
+                elif action_type == 'check_element':
                     element = action.get('element', {})
                     selector = element.get('selector')
                     
                     if selector:
                         try:
+                            logger.info(f"🔍 Ищем элемент: {selector}")
                             self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
                             results.append(f"Элемент найден: {selector}")
+                            logger.info(f"✅ Элемент найден: {selector}")
                         except TimeoutException:
                             results.append(f"Элемент не найден: {selector}")
+                            logger.warning(f"⚠️ Элемент не найден: {selector}")
                 
-                elif action['type'] == 'type':
+                elif action_type == 'type':
                     element = action.get('element', {})
                     selector = element.get('selector')
                     text = element.get('text', '')
                     
                     if selector and text:
                         try:
+                            logger.info(f"⌨️ Вводим текст в: {selector}")
                             field = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
                             field.clear()
                             field.send_keys(text)
@@ -172,12 +179,13 @@ class SimpleRPABot:
                         except TimeoutException:
                             results.append(f"Не удалось найти поле: {selector}")
                 
-                elif action['type'] == 'click':
+                elif action_type == 'click':
                     element = action.get('element', {})
                     selector = element.get('selector')
                     
                     if selector:
                         try:
+                            logger.info(f"🖱️ Кликаем по: {selector}")
                             button = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
                             button.click()
                             results.append(f"Клик по {selector}")
@@ -185,17 +193,19 @@ class SimpleRPABot:
                             results.append(f"Не удалось кликнуть: {selector}")
                 
                 # Пауза между действиями
-                time.sleep(action.get('delay', 1000) / 1000.0)
+                delay = action.get('delay', 1000) / 1000.0
+                time.sleep(delay)
             
             return {
                 'success': True,
                 'taskId': task_id,
                 'results': results,
                 'message': f'Задача {task_id} выполнена успешно',
-                'browser_type': 'simple_antidetect'
+                'browser_type': 'basic_chrome'
             }
             
         except Exception as e:
+            logger.error(f"❌ Ошибка выполнения действий: {e}")
             return {
                 'success': False,
                 'taskId': task_id,
@@ -227,37 +237,37 @@ class SimpleRPABot:
             )
             
             if response.ok:
-                logger.info(f"Результат задачи {task_id} отправлен")
+                logger.info(f"📤 Результат задачи {task_id} отправлен в Supabase")
             else:
-                logger.error(f"Ошибка отправки результата: {response.status_code}")
+                logger.error(f"❌ Ошибка отправки результата: {response.status_code} - {response.text}")
                 
         except Exception as e:
-            logger.error(f"Ошибка отправки результата: {e}")
+            logger.error(f"❌ Ошибка отправки результата: {e}")
     
     def cleanup(self):
         """Очистка ресурсов"""
         try:
             if self.driver:
+                logger.info("🧹 Закрываем браузер...")
                 self.driver.quit()
                 self.driver = None
                 self.wait = None
+                logger.info("✅ Браузер закрыт")
                 
-            logger.info("Ресурсы очищены")
-            
         except Exception as e:
-            logger.warning(f"Ошибка очистки ресурсов: {e}")
+            logger.warning(f"⚠️ Ошибка очистки ресурсов: {e}")
 
 # Глобальный экземпляр бота
-rpa_bot = SimpleRPABot()
+rpa_bot = BasicRPABot()
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Проверка здоровья сервиса"""
     return jsonify({
         'status': 'healthy',
-        'environment': 'railway-simple',
-        'version': '1.0.0-simple',
-        'capabilities': ['navigate', 'click', 'type', 'check_element', 'antidetect_browser']
+        'environment': 'railway-basic',
+        'version': '1.0.1-basic',
+        'capabilities': ['navigate', 'click', 'type', 'check_element', 'basic_browser']
     })
 
 @app.route('/execute', methods=['POST'])
@@ -272,22 +282,22 @@ def execute_task():
                 'error': 'Отсутствуют данные задачи'
             }), 400
         
-        logger.info(f"Получена задача: {task.get('taskId')}")
+        task_id = task.get('taskId')
+        logger.info(f"📨 Получена задача: {task_id}")
         
         # Выполняем задачу
         result = rpa_bot.execute_task(task)
         
         return jsonify({
             'success': True,
-            'message': f'Задача {task.get("taskId")} принята к выполнению',
-            'taskId': task.get('taskId'),
+            'message': f'Задача {task_id} принята к выполнению',
+            'taskId': task_id,
             'result': result,
-            'environment': 'railway-simple',
-            'features': ['antidetect', 'simple-automation']
+            'environment': 'railway-basic'
         })
         
     except Exception as e:
-        logger.error(f"Ошибка выполнения задачи: {e}")
+        logger.error(f"❌ Ошибка выполнения задачи: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -297,26 +307,32 @@ def execute_task():
 def test_bot():
     """Тест RPA бота"""
     try:
+        logger.info("🧪 Запуск теста браузера...")
+        
         # Простой тест браузера
         test_result = rpa_bot.setup_browser()
         
         if test_result:
-            rpa_bot.driver.get("https://www.google.com")
             title = rpa_bot.driver.title
+            current_url = rpa_bot.driver.current_url
             rpa_bot.cleanup()
             
+            logger.info("✅ Тест браузера прошел успешно")
             return jsonify({
                 'success': True,
                 'message': 'Тест прошел успешно',
-                'title': title
+                'title': title,
+                'url': current_url
             })
         else:
+            logger.error("❌ Тест браузера не прошел")
             return jsonify({
                 'success': False,
                 'error': 'Не удалось настроить браузер'
             }), 500
             
     except Exception as e:
+        logger.error(f"❌ Критическая ошибка теста: {e}")
         rpa_bot.cleanup()
         return jsonify({
             'success': False,
@@ -329,5 +345,14 @@ if __name__ == '__main__':
     
     # Запускаем сервер
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Запуск простого RPA бота на порту {port}")
+    logger.info(f"🚀 Запуск базового RPA бота на порту {port}")
+    logger.info(f"🔗 Supabase URL: {SUPABASE_URL}")
+    
+    # Проверяем Chrome при запуске
+    chrome_path = '/usr/bin/google-chrome'
+    if os.path.exists(chrome_path):
+        logger.info(f"✅ Chrome найден: {chrome_path}")
+    else:
+        logger.error(f"❌ Chrome НЕ найден: {chrome_path}")
+    
     app.run(host='0.0.0.0', port=port, debug=False)

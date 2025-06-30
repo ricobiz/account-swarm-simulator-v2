@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Системные пакеты + Chrome
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg curl ca-certificates xvfb \
+    wget gnupg curl ca-certificates \
     libnss3 libx11-6 libx11-xcb1 libxext6 libxfixes3 libxi6 \
     libxcursor1 libxrender1 libxinerama1 libxtst6 libfontconfig1 \
     libatk-bridge2.0-0 libxrandr2 libgbm1 libxss1 libdrm2 \
@@ -40,7 +40,6 @@ RUN chown -R app:app /app
 USER app
 
 # Окружение
-ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/google-chrome
 
