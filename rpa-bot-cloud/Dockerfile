@@ -4,10 +4,9 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Системные пакеты + Chrome + OCR
+# Системные пакеты + Chrome
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg curl ca-certificates xvfb fluxbox sudo git \
-    tesseract-ocr libtesseract-dev \
+    wget gnupg curl ca-certificates xvfb \
     libnss3 libx11-6 libx11-xcb1 libxext6 libxfixes3 libxi6 \
     libxcursor1 libxrender1 libxinerama1 libxtst6 libfontconfig1 \
     libatk-bridge2.0-0 libxrandr2 libgbm1 libxss1 libdrm2 \
@@ -23,8 +22,7 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
 
 # Пользователь и папки
 RUN useradd --create-home --shell /bin/bash app && \
-    echo 'app ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    mkdir -p /app/screenshots /app/logs /app/downloads && \
+    mkdir -p /app/logs && \
     touch /app/logs/rpa_bot.log && \
     chown -R app:app /app
 
@@ -32,7 +30,7 @@ WORKDIR /app
 
 # Python зависимости
 COPY requirements.txt ./requirements.txt
-RUN pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Исходники
@@ -44,7 +42,6 @@ USER app
 # Окружение
 ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
-ENV PATH="/home/app/.local/bin:${PATH}"
 ENV CHROME_BIN=/usr/bin/google-chrome
 
 EXPOSE 8080

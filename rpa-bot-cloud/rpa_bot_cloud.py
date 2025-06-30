@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 """
-Продвинутый RPA бот с интеграцией Multilogin для Railway
+Простой и надежный RPA бот для Railway
 """
 
 import os
@@ -17,13 +17,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, TimeoutException
 import undetected_chromedriver as uc
-from multilogin_integration import MultiloginManager
-from config import *
 
 # Настройка логирования
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL),
-    format=LOG_FORMAT,
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler('logs/rpa_bot.log', encoding='utf-8')
@@ -33,123 +31,67 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-class EnhancedRPABot:
+# Конфигурация
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://izmgzstdgoswlozinmyk.supabase.co')
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
+ELEMENT_WAIT_TIMEOUT = 10
+HEADLESS_MODE = True
+
+class SimpleRPABot:
     def __init__(self):
         self.driver = None
         self.wait = None
-        self.multilogin = None
-        self.current_profile = None
-        
-        # Инициализация Multilogin если включен
-        if is_multilogin_enabled():
-            try:
-                self.multilogin = MultiloginManager(MULTILOGIN_TOKEN)
-                self.multilogin.decode_token_info()
-                logger.info("Multilogin интегрирован успешно")
-            except Exception as e:
-                logger.warning(f"Ошибка инициализации Multilogin: {e}")
-                self.multilogin = None
     
-    def setup_browser(self, account_data=None):
-        """Настройка браузера с Multilogin или обычного антидетект браузера"""
+    def setup_browser(self):
+        """Настройка простого антидетект браузера"""
         try:
-            # Пробуем использовать Multilogin если доступен
-            if self.multilogin and account_data:
-                return self._setup_multilogin_browser(account_data)
-            else:
-                return self._setup_regular_browser()
-                
-        except Exception as e:
-            logger.error(f"Ошибка настройки браузера: {e}")
-            # Fallback на обычный браузер
-            return self._setup_regular_browser()
-    
-    def _setup_multilogin_browser(self, account_data):
-        """Настройка браузера через Multilogin"""
-        try:
-            logger.info("Настройка браузера через Multilogin...")
-            
-            # Получаем или создаем профиль
-            profile_id = self.multilogin.get_profile_for_account(account_data)
-            if not profile_id:
-                logger.error("Не удалось получить профиль Multilogin")
-                return self._setup_regular_browser()
-            
-            # Запускаем профиль
-            profile_info = self.multilogin.start_profile(profile_id)
-            if not profile_info:
-                logger.error("Не удалось запустить профиль Multilogin")
-                return self._setup_regular_browser()
-            
-            self.current_profile = profile_info
-            
-            # Подключаемся к запущенному браузеру
-            options = Options()
-            options.add_experimental_option("debuggerAddress", f"127.0.0.1:{profile_info['selenium_port']}")
-            
-            self.driver = webdriver.Chrome(options=options)
-            self.wait = WebDriverWait(self.driver, ELEMENT_WAIT_TIMEOUT)
-            
-            logger.info(f"Multilogin браузер настроен на порту {profile_info['selenium_port']}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Ошибка настройки Multilogin браузера: {e}")
-            return self._setup_regular_browser()
-    
-    def _setup_regular_browser(self):
-        """Настройка обычного антидетект браузера"""
-        try:
-            logger.info("Настройка обычного антидетект браузера...")
+            logger.info("Настройка антидетект браузера...")
             
             options = Options()
             
-            # Антидетект настройки
+            # Базовые настройки для облака
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--headless=new')
+            options.add_argument('--window-size=1920,1080')
+            
+            # Антидетект настройки
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
-            # Headless режим для облака
-            if HEADLESS_MODE:
-                options.add_argument('--headless=new')
-            
-            # Размер окна
-            options.add_argument('--window-size=1920,1080')
-            
             # User Agent
-            options.add_argument(f'--user-agent={get_random_user_agent()}')
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
             
-            # Настройки для производительности
+            # Отключаем изображения для скорости
             prefs = {
-                "profile.default_content_setting_values": {
-                    "notifications": 2,
-                    "media_stream": 2,
-                },
                 "profile.managed_default_content_settings": {
-                    "images": 2  # Отключаем изображения для скорости
+                    "images": 2
                 }
             }
             options.add_experimental_option("prefs", prefs)
             
-            # Создание драйвера
+            # Пробуем undetected-chromedriver
             try:
                 self.driver = uc.Chrome(options=options, version_main=None)
-            except:
+                logger.info("Используется undetected-chromedriver")
+            except Exception as e:
+                logger.warning(f"Не удалось использовать undetected-chromedriver: {e}")
                 # Fallback на обычный Chrome
                 self.driver = webdriver.Chrome(options=options)
+                logger.info("Используется обычный Chrome WebDriver")
             
-            # Антидетект скрипты
+            # Убираем признаки автоматизации
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             self.wait = WebDriverWait(self.driver, ELEMENT_WAIT_TIMEOUT)
             
-            logger.info("Обычный антидетект браузер настроен")
+            logger.info("Браузер настроен успешно")
             return True
             
         except Exception as e:
-            logger.error(f"Ошибка настройки обычного браузера: {e}")
+            logger.error(f"Ошибка настройки браузера: {e}")
             return False
     
     def execute_task(self, task):
@@ -158,15 +100,8 @@ class EnhancedRPABot:
         logger.info(f"Выполнение задачи: {task_id}")
         
         try:
-            # Подготавливаем данные аккаунта
-            account_data = {
-                'platform': task.get('metadata', {}).get('platform', 'generic'),
-                'username': task.get('metadata', {}).get('username', 'user'),
-                'accountId': task.get('accountId')
-            }
-            
             # Настраиваем браузер
-            if not self.setup_browser(account_data):
+            if not self.setup_browser():
                 return {
                     'success': False,
                     'error': 'Не удалось настроить браузер',
@@ -176,7 +111,7 @@ class EnhancedRPABot:
             # Выполняем действия
             result = self._execute_actions(task)
             
-            # Сообщаем об успехе
+            # Отправляем результат
             self._report_result(task_id, result)
             
             return result
@@ -210,6 +145,7 @@ class EnhancedRPABot:
                 if action['type'] == 'navigate':
                     self.driver.get(action['url'])
                     time.sleep(action.get('delay', 1000) / 1000.0)
+                    results.append(f"Переход на {action['url']}")
                     
                 elif action['type'] == 'check_element':
                     element = action.get('element', {})
@@ -256,7 +192,7 @@ class EnhancedRPABot:
                 'taskId': task_id,
                 'results': results,
                 'message': f'Задача {task_id} выполнена успешно',
-                'browser_type': 'multilogin' if self.current_profile else 'regular'
+                'browser_type': 'simple_antidetect'
             }
             
         except Exception as e:
@@ -270,6 +206,10 @@ class EnhancedRPABot:
     def _report_result(self, task_id, result):
         """Отправка результата в Supabase"""
         try:
+            if not SUPABASE_SERVICE_KEY:
+                logger.warning("SUPABASE_SERVICE_KEY не установлен")
+                return
+                
             supabase_url = SUPABASE_URL.rstrip('/')
             headers = {
                 'Content-Type': 'application/json',
@@ -301,10 +241,6 @@ class EnhancedRPABot:
                 self.driver.quit()
                 self.driver = None
                 self.wait = None
-            
-            if self.multilogin and self.current_profile:
-                self.multilogin.stop_profile(self.current_profile['profile_id'])
-                self.current_profile = None
                 
             logger.info("Ресурсы очищены")
             
@@ -312,60 +248,17 @@ class EnhancedRPABot:
             logger.warning(f"Ошибка очистки ресурсов: {e}")
 
 # Глобальный экземпляр бота
-rpa_bot = EnhancedRPABot()
+rpa_bot = SimpleRPABot()
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Проверка здоровья сервиса"""
-    status = {
+    return jsonify({
         'status': 'healthy',
-        'environment': ENVIRONMENT,
-        'multilogin_enabled': is_multilogin_enabled(),
-        'version': BOT_VERSION
-    }
-    
-    if rpa_bot.multilogin:
-        status['multilogin_connected'] = rpa_bot.multilogin.check_connection()
-    
-    return jsonify(status)
-
-@app.route('/multilogin/status', methods=['GET'])
-def multilogin_status():
-    """Статус Multilogin"""
-    if not rpa_bot.multilogin:
-        return jsonify({
-            'connected': False,
-            'error': 'Multilogin не инициализирован'
-        })
-    
-    try:
-        # Проверяем подключение
-        connected = rpa_bot.multilogin.check_connection()
-        
-        if connected:
-            # Декодируем токен
-            token_info = rpa_bot.multilogin.decode_token_info()
-            profiles = rpa_bot.multilogin.get_profiles()
-            
-            return jsonify({
-                'connected': True,
-                'workspace_id': rpa_bot.multilogin.workspace_id,
-                'email': token_info.get('email'),
-                'plan': token_info.get('planName'),
-                'profiles_count': len(profiles),
-                'active_profiles': len(rpa_bot.multilogin.active_profiles)
-            })
-        else:
-            return jsonify({
-                'connected': False,
-                'error': 'Не удалось подключиться к Multilogin API'
-            })
-            
-    except Exception as e:
-        return jsonify({
-            'connected': False,
-            'error': str(e)
-        })
+        'environment': 'railway-simple',
+        'version': '1.0.0-simple',
+        'capabilities': ['navigate', 'click', 'type', 'check_element', 'antidetect_browser']
+    })
 
 @app.route('/execute', methods=['POST'])
 def execute_task():
@@ -389,8 +282,8 @@ def execute_task():
             'message': f'Задача {task.get("taskId")} принята к выполнению',
             'taskId': task.get('taskId'),
             'result': result,
-            'environment': ENVIRONMENT,
-            'features': ['universal-platforms', 'antidetect', 'human-behavior'] + (['multilogin'] if is_multilogin_enabled() else [])
+            'environment': 'railway-simple',
+            'features': ['antidetect', 'simple-automation']
         })
         
     except Exception as e:
@@ -415,8 +308,7 @@ def test_bot():
             return jsonify({
                 'success': True,
                 'message': 'Тест прошел успешно',
-                'title': title,
-                'multilogin_enabled': is_multilogin_enabled()
+                'title': title
             })
         else:
             return jsonify({
@@ -433,15 +325,9 @@ def test_bot():
 
 if __name__ == '__main__':
     # Создаем необходимые директории
-    os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
-    os.makedirs(LOGS_DIR, exist_ok=True)
-    
-    # Проверяем конфигурацию
-    config_errors = validate_config()
-    if config_errors:
-        logger.warning(f"Проблемы конфигурации: {config_errors}")
+    os.makedirs('logs', exist_ok=True)
     
     # Запускаем сервер
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Запуск RPA бота на порту {port}")
+    logger.info(f"Запуск простого RPA бота на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
