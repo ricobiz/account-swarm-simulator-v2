@@ -1,24 +1,24 @@
-# Используем Python 3.11 slim
-FROM python:3.11-slim
+# Используем Python 3.11 alpine для обхода кэша Railway
+FROM python:3.11-alpine
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем файл requirements
+# Устанавливаем системные зависимости
+RUN apk add --no-cache gcc musl-dev
+
+# Копируем requirements файл
 COPY rpa-bot-cloud/requirements_multilogin.txt .
 
 # Устанавливаем Python зависимости
 RUN pip install --no-cache-dir -r requirements_multilogin.txt
 
-# Копируем все файлы из rpa-bot-cloud
-COPY rpa-bot-cloud/ .
-
-# Устанавливаем переменную окружения для порта
-ENV PORT=8080
+# Копируем файлы приложения
+COPY rpa-bot-cloud/multilogin_enhanced.py .
 
 # Открываем порт
 EXPOSE 8080
 
-# Запускаем приложение
+# Команда запуска
 CMD ["python", "multilogin_enhanced.py"]
 
