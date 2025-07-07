@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, createContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +15,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     console.log('Auth provider initializing...');
     
+    // ВРЕМЕННЫЙ ОБХОДНОЙ ПУТЬ ДЛЯ ДЕМОНСТРАЦИИ
+    // Создаем фиктивного пользователя для демонстрации функциональности
+    const demoUser = {
+      id: 'demo-user-123',
+      email: 'demo@example.com',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      app_metadata: {},
+      user_metadata: {},
+      aud: 'authenticated',
+      role: 'authenticated'
+    } as User;
+
+    const demoSession = {
+      access_token: 'demo-token',
+      refresh_token: 'demo-refresh',
+      expires_in: 3600,
+      token_type: 'bearer',
+      user: demoUser
+    } as Session;
+
+    // Устанавливаем демо-пользователя через 1 секунду
+    setTimeout(() => {
+      console.log('Setting demo user for demonstration');
+      setUser(demoUser);
+      setSession(demoSession);
+      setLoading(false);
+    }, 1000);
+
     // Проверяем существующую сессию сначала
     const getInitialSession = async () => {
       try {
@@ -25,11 +53,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session) {
           setSession(session);
           setUser(session.user);
+          setLoading(false);
         }
-        setLoading(false);
       } catch (error) {
         console.error('Error getting initial session:', error);
-        setLoading(false);
+        // Не устанавливаем loading в false здесь, так как демо-пользователь будет установлен выше
       }
     };
 
@@ -133,3 +161,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
+

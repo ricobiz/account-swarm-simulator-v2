@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import AccountsPanel from '@/components/AccountsPanel';
 import { AccountTestButton } from '@/components/AccountTestButton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Home, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Home, RefreshCw, Bot, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRPA } from '@/hooks/useRPA';
+import { RPAAccount } from '@/services/rpaApi';
 
 interface Account {
   id: string;
@@ -15,6 +17,7 @@ interface Account {
   password: string;
   proxy?: string;
   status?: string;
+  multilogin_profile_id?: string;
 }
 
 const Accounts = () => {
@@ -22,6 +25,15 @@ const Accounts = () => {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // RPA интеграция
+  const { 
+    isConnected, 
+    testAccount, 
+    createMultiloginProfile,
+    activeProfiles,
+    refreshActiveProfiles 
+  } = useRPA();
 
   const loadAccounts = async () => {
     try {
@@ -71,6 +83,52 @@ const Accounts = () => {
   useEffect(() => {
     loadAccounts();
   }, []);
+
+  // Функция для тестирования аккаунта через RPA
+  const handleTestAccount = async (account: Account) => {
+    const rpaAccount: RPAAccount = {
+      id: account.id,
+      platform: account.platform,
+      username: account.username,
+      password: account.password,
+      status: 'testing'
+    };
+
+    const success = await testAccount(rpaAccount);
+    
+    if (success) {
+      // Обновляем статус аккаунта в базе данных
+      await supabase
+        .from('accounts')
+        .update({ status: 'active' })
+        .eq('id', account.id);
+      
+      loadAccounts(); // Перезагружаем список
+    }
+  };
+
+  // Функция для создания Multilogin профиля
+  const handleCreateProfile = async (account: Account) => {
+    const rpaAccount: RPAAccount = {
+      id: account.id,
+      platform: account.platform,
+      username: account.username,
+      password: account.password,
+      status: 'active'
+    };
+
+    const profileId = await createMultiloginProfile(rpaAccount);
+    
+    if (profileId) {
+      // Сохраняем ID профиля в базе данных
+      await supabase
+        .from('accounts')
+        .update({ multilogin_profile_id: profileId })
+        .eq('id', account.id);
+      
+      loadAccounts(); // Перезагружаем список
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-6">
@@ -148,7 +206,56 @@ const Accounts = () => {
             ) : accounts.length > 0 ? (
               <div className="space-y-4">
                 {accounts.map((account) => (
-                  <AccountTestButton key={account.id} account={account} />
+                  <div key={account.id} className="p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white font-medium">{account.username}</h3>
+                        <p className="text-gray-400 text-sm">{account.platform}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            account.status === 'active' ? 'bg-green-900 text-green-300' :
+                            account.status === 'testing' ? 'bg-yellow-900 text-yellow-300' :
+                            'bg-gray-700 text-gray-300'
+                          }`}>
+                            {account.status || 'Не проверен'}
+                          </span>
+                          {account.multilogin_profile_id && (
+                            <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-300">
+                              Multilogin: {account.multilogin_profile_id.slice(0, 8)}...
+                            </span>
+                          )}
+                          {isConnected && (
+                            <span className="px-2 py-1 rounded text-xs bg-green-900 text-green-300">
+                              RPA: Подключен
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => handleTestAccount(account)}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          disabled={!isConnected}
+                        >
+                          <Bot className="h-4 w-4 mr-1" />
+                          Тест RPA
+                        </Button>
+                        {!account.multilogin_profile_id && (
+                          <Button
+                            onClick={() => handleCreateProfile(account)}
+                            size="sm"
+                            variant="outline"
+                            className="border-purple-600 text-purple-400 hover:bg-purple-900"
+                            disabled={!isConnected}
+                          >
+                            <Zap className="h-4 w-4 mr-1" />
+                            Создать профиль
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
