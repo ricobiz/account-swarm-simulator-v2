@@ -23,13 +23,13 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
     apt-get update && apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Копируем requirements и устанавливаем зависимости
-COPY rpa-bot-cloud/requirements.txt .
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# Копируем весь проект сначала
+COPY . /app/
 
-# Копируем весь проект
-COPY . .
+# Устанавливаем зависимости
+WORKDIR /app/rpa-bot-cloud
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements_multilogin.txt
 
 # Создаем необходимые директории
 RUN mkdir -p /app/logs /app/screenshots && \
@@ -43,6 +43,5 @@ ENV PYTHONPATH=/app/rpa-bot-cloud
 EXPOSE 8080
 
 # Запуск RPA бота с Multilogin
-WORKDIR /app/rpa-bot-cloud
 CMD ["gunicorn", "-b", "0.0.0.0:8080", "rpa_bot_multilogin:app"]
 
