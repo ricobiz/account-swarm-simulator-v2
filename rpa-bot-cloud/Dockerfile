@@ -1,48 +1,54 @@
-
 FROM python:3.11-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Установка зависимостей для Chrome
+RUN apt-get update && apt-get install -y \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
+    wget \
+    xdg-utils \
+    --no-install-recommends
+
+# Установка Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+RUN apt-get update && apt-get install -y google-chrome-stable
+
+# Установка зависимостей Python
 WORKDIR /app
+COPY rpa-bot-cloud/requirements_multilogin.txt .
+RUN pip install --no-cache-dir -r requirements_multilogin.txt
 
-# Системные пакеты + Chrome
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg curl ca-certificates \
-    libnss3 libx11-6 libx11-xcb1 libxext6 libxfixes3 libxi6 \
-    libxcursor1 libxrender1 libxinerama1 libxtst6 libfontconfig1 \
-    libatk-bridge2.0-0 libxrandr2 libgbm1 libxss1 libdrm2 \
-    fonts-liberation libasound2 libxcomposite1 libxdamage1 \
-    && rm -rf /var/lib/apt/lists/*
+# Копирование файлов приложения
+COPY rpa-bot-cloud/multilogin_enhanced.py .
+COPY rpa-bot-cloud/rpa_bot_multilogin.py .
+COPY rpa-bot-cloud/config.py .
 
-# Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
-    gpg --dearmor -o /usr/share/keyrings/google-key.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-key.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+# Запуск приложения
+CMD ["python3", "rpa_bot_multilogin.py"]
 
-# Пользователь и папки
-RUN useradd --create-home --shell /bin/bash app && \
-    mkdir -p /app/logs && \
-    touch /app/logs/rpa_bot.log && \
-    chown -R app:app /app
-
-WORKDIR /app
-
-# Python зависимости
-COPY requirements.txt ./requirements.txt
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Исходники
-COPY . ./
-RUN chown -R app:app /app
-
-USER app
-
-# Окружение
-ENV PYTHONUNBUFFERED=1
-ENV CHROME_BIN=/usr/bin/google-chrome
-
-EXPOSE 8080
-
-CMD ["python", "rpa_bot_cloud.py"]
