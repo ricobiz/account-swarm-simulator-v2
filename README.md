@@ -373,3 +373,4 @@ MIT License - см. [LICENSE](LICENSE) файл для деталей.
 
 *Создано с ❤️ для автоматизации рутинных задач*
 
+# Railway deployment trigger
