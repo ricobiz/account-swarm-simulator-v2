@@ -1,14 +1,13 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "rpa-bot-cloud/Dockerfile"
-  },
   "deploy": {
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 120
+    "healthcheckTimeout": 120,
+    "startCommand": "python rpa-bot-cloud/rpa_bot_multilogin.py"
   },
   "env": {
     "PORT": "8080"
   }
 }
+
+
