@@ -3,10 +3,12 @@
   "deploy": {
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
-    "startCommand": "python app.py"
+    "startCommand": "cd rpa-bot-cloud && gunicorn -b 0.0.0.0:$PORT rpa_bot_multilogin:app"
   },
   "env": {
-    "PORT": "8080"
+    "PORT": "8080",
+    "PYTHONUNBUFFERED": "1",
+    "CHROME_BIN": "/usr/bin/google-chrome"
   }
 }
 
