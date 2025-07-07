@@ -1,47 +1,54 @@
 FROM python:3.11-slim
 
-# Установка системных зависимостей
+# Установка зависимостей для Chrome
 RUN apt-get update && apt-get install -y \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
     wget \
-    gnupg \
-    unzip \
-    curl \
-    xvfb \
-    && rm -rf /var/lib/apt/lists/*
+    xdg-utils \
+    --no-install-recommends
 
-# Установка Google Chrome (без фиксированной версии, так как undetected-chromedriver сам управляет версиями)
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+# Установка Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+RUN apt-get update && apt-get install -y google-chrome-stable
 
-# Создание рабочей директории
+# Установка зависимостей Python
 WORKDIR /app
+COPY rpa-bot-cloud/requirements_multilogin.txt .
+RUN pip install --no-cache-dir -r requirements_multilogin.txt
 
-# Копирование файлов зависимостей
-COPY requirements_multilogin.txt requirements.txt
+# Копирование файлов приложения
+COPY rpa-bot-cloud/multilogin_enhanced.py .
+COPY rpa-bot-cloud/rpa_bot_multilogin.py .
+COPY rpa-bot-cloud/config.py .
 
-# Установка Python зависимостей
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копирование исходного кода
-COPY multilogin_enhanced.py .
-COPY rpa_bot_multilogin.py .
-COPY config.py .
-
-# Создание директорий
-RUN mkdir -p /tmp/logs
-
-# Переменные окружения
-ENV PYTHONUNBUFFERED=1
-ENV DISPLAY=:99
-ENV PORT=5000
-
-# Экспорт порта
-EXPOSE 5000
-
-# Команда запуска (изменено имя файла)
-CMD ["python", "rpa_bot_multilogin.py"]
-
+# Запуск приложения
+CMD ["python3", "rpa_bot_multilogin.py"]
 

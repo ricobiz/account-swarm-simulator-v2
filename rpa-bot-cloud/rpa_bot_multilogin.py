@@ -14,7 +14,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests
-from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -40,7 +40,7 @@ CORS(app)
 # Конфигурация
 SUPABASE_URL = os.getenv(\'SUPABASE_URL\', \'https://izmgzstdgoswlozinmyk.supabase.co\')
 SUPABASE_SERVICE_KEY = os.getenv(\'SUPABASE_SERVICE_KEY\', \'\')
-MULTILOGIN_TOKEN = os.getenv(\'MULTILOGIN_TOKEN\', \'eyJhbGciOiJIUzUxMiJ9.eyJicGRzLmJ1Y2tldCI6Im1seC1icGRzLXByb2QtZXUtMSIsIm1hY2hpbmVJRCI6IiIsInByb2R1Y3RJRCI6IiIsIndvcmtzcGFjZVJvbGUiOiJvd25lciIsInZlcmllZCI6dHJ1ZSwicGxhbk5hbWUiOiJQcm9fMTAgKG1vbnRobHkpIiwic2hhcmVJRCI6ImNiZTEzODAwLWJiYWYtNGM4Zi04MGIzLTE5N2Y4OTYzOTRmMiIsInVzZXJJRCI6IjU5NTM2MTcyLWJiYWUtNDAxZi1hMGVjLTgzMGUwNGE1YmQxMCIsImVtYWlsIjoidGhhbGFuZGlzbGl2ZUBnbWFpbC5jb20iLCJpc0F1dG9tYXRpb24iOmZhbHNlLCJ3b3Jrc3BhY2VJRCI6IjI0NmQ5NWJlLWUzYzktNDJjOS04ZjlkLTE3YTNkNGRkNzMxYiIsImp0aSI6ImQxMzVlMjY0LTIyYzgtNGM0OS04NGE5LWQyODc0OTcxNTNjNSIsInN1YiI6Ik1MWCIsImlzcyI6IjU5NTM2MTcyLWJiYWUtNDAxZi1hMGVjLTgzMGUwNGE1YmQxMCIsImlhdCI6MTc1MTg4MzE1OCwiZXhwIjoxNzUxODg2NzU4fQ.wt_phFtb8PrqiJ131rqYSC5P176YTV4o4PnZOuuiM3C2sjsJWotz_mgA_jpdxqhDsRNNNBTJbUXqE9Rpb2v8jw\')
+MULTILOGIN_TOKEN = os.getenv(\'MULTILOGIN_TOKEN\') # Теперь берется из переменной окружения
 ELEMENT_WAIT_TIMEOUT = 10
 
 class MultiloginRPABot:
@@ -127,7 +127,7 @@ class MultiloginRPABot:
             # User agent
             options.add_argument(\'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\')
             
-            self.driver = webdriver.Chrome(options=options)
+            self.driver = uc.Chrome(options=options)
             self.wait = WebDriverWait(self.driver, ELEMENT_WAIT_TIMEOUT)
             
             # Выполняем скрипт для скрытия автоматизации
@@ -184,7 +184,7 @@ class MultiloginRPABot:
                     
                 except Exception as e:
                     logger.error(f"❌ Ошибка выполнения действия {i+1}: {e}")
-                    results.append({\'success\': False, \'error\': str(e)})
+                    results.append({\'success\': False, \'error\': str(e)}\')
             
             # Отчет о выполнении
             success_count = sum(1 for r in results if r.get(\'success\', False))
@@ -426,6 +426,8 @@ if __name__ == \'__main__\':
     
     port = int(os.getenv(\'PORT\', 5000))
     app.run(host=\'0.0.0.0\', port=port, debug=False)
+
+
 
 
 
