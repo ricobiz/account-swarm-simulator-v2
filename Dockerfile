@@ -23,11 +23,10 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
     apt-get update && apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Копируем весь проект сначала
-COPY . /app/
+# Копируем файлы requirements сначала для кэширования слоев
+COPY ./rpa-bot-cloud/requirements_multilogin.txt /app/requirements_multilogin.txt
 
 # Устанавливаем зависимости
-WORKDIR /app/rpa-bot-cloud
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements_multilogin.txt
 
@@ -35,10 +34,13 @@ RUN pip install --upgrade pip setuptools wheel && \
 RUN mkdir -p /app/logs /app/screenshots && \
     chmod -R 755 /app
 
+# Копируем файлы приложения
+COPY ./rpa-bot-cloud/*.py /app/
+
 # Переменные окружения
 ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/google-chrome
-ENV PYTHONPATH=/app/rpa-bot-cloud
+ENV PYTHONPATH=/app
 
 EXPOSE 8080
 
