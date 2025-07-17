@@ -5,15 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Orchestra - Многооконный браузер</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Диагностические стили для iPhone */
+        .debug-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff4444;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            z-index: 9999;
+            font-size: 14px;
+        }
+        .debug-banner.success {
+            background: #44ff44;
+            color: black;
+        }
+        .debug-log {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9998;
+        }
+        .btn-test {
+            background: #ff0 !important;
+            color: #000 !important;
+            border: 2px solid #f00 !important;
+            font-weight: bold !important;
+        }
+    </style>
 </head>
 <body>
+    <!-- Диагностический баннер -->
+    <div id="debugBanner" class="debug-banner">
+        🔧 Загрузка диагностики...
+    </div>
+
     <div id="app">
         <header class="header">
             <h1>🎼 AI Orchestra</h1>
             <div class="controls">
-                <button id="addWindow" class="btn btn-primary">+ Добавить окно</button>
-                <button id="toggleChat" class="btn btn-secondary">💬 Общий чат</button>
-                <button id="settings" class="btn btn-secondary">⚙️ Настройки</button>
+                <button id="addWindow" class="btn btn-primary btn-test">+ Добавить окно</button>
+                <button id="toggleChat" class="btn btn-secondary btn-test">💬 Общий чат</button>
+                <button id="settings" class="btn btn-secondary btn-test">⚙️ Настройки</button>
             </div>
         </header>
 
@@ -56,30 +100,122 @@
         </div>
     </div>
 
+    <!-- Диагностический лог -->
+    <div id="debugLog" class="debug-log"></div>
+
     <script>
-        // Диагностика перед загрузкой основного скрипта
+        // Диагностические функции
+        let debugMessages = [];
+        
+        function debugLog(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const fullMessage = `[${time}] ${message}`;
+            debugMessages.push(fullMessage);
+            
+            const logEl = document.getElementById('debugLog');
+            if (logEl) {
+                logEl.innerHTML = debugMessages.slice(-10).join('<br>');
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+            
+            console.log(fullMessage);
+            
+            // Обновляем баннер
+            updateDebugBanner(message, type);
+        }
+        
+        function updateDebugBanner(message, type) {
+            const banner = document.getElementById('debugBanner');
+            if (banner) {
+                banner.textContent = message;
+                banner.className = type === 'success' ? 'debug-banner success' : 'debug-banner';
+            }
+        }
+        
+        // Простые тестовые функции
+        function testAddWindow() {
+            debugLog('✅ Кнопка "Добавить окно" нажата!', 'success');
+            alert('Кнопка "Добавить окно" работает!');
+        }
+        
+        function testToggleChat() {
+            debugLog('✅ Кнопка "Чат" нажата!', 'success');
+            const chatPanel = document.getElementById('chatPanel');
+            if (chatPanel) {
+                chatPanel.classList.toggle('hidden');
+                debugLog('Панель чата переключена');
+            }
+            alert('Кнопка "Чат" работает!');
+        }
+        
+        function testSettings() {
+            debugLog('✅ Кнопка "Настройки" нажата!', 'success');
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                debugLog('Модальное окно настроек открыто');
+            }
+            alert('Кнопка "Настройки" работает!');
+        }
+        
+        // Обработка ошибок
         window.addEventListener('error', function(e) {
-            console.error('JavaScript error:', e.message, 'at', e.filename, ':', e.lineno);
-            alert('Ошибка JavaScript: ' + e.message);
+            debugLog('❌ Ошибка: ' + e.message, 'error');
         });
         
         // Проверка загрузки DOM
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM загружен, проверяем элементы...');
+            debugLog('🚀 DOM загружен');
             
+            // Проверяем элементы
             const addBtn = document.getElementById('addWindow');
             const chatBtn = document.getElementById('toggleChat');
             const settingsBtn = document.getElementById('settings');
             
-            if (!addBtn) console.error('Кнопка addWindow не найдена!');
-            if (!chatBtn) console.error('Кнопка toggleChat не найдена!');
-            if (!settingsBtn) console.error('Кнопка settings не найдена!');
+            if (!addBtn) {
+                debugLog('❌ Кнопка addWindow НЕ НАЙДЕНА!', 'error');
+                return;
+            }
+            if (!chatBtn) {
+                debugLog('❌ Кнопка toggleChat НЕ НАЙДЕНА!', 'error'); 
+                return;
+            }
+            if (!settingsBtn) {
+                debugLog('❌ Кнопка settings НЕ НАЙДЕНА!', 'error');
+                return;
+            }
             
-            if (addBtn && chatBtn && settingsBtn) {
-                console.log('✅ Все кнопки найдены, ждем загрузки script.js...');
+            debugLog('✅ Все кнопки найдены');
+            
+            // Добавляем простые обработчики для тестирования
+            try {
+                addBtn.addEventListener('click', testAddWindow);
+                chatBtn.addEventListener('click', testToggleChat);
+                settingsBtn.addEventListener('click', testSettings);
+                
+                // Обработчик для закрытия настроек
+                const closeBtn = document.getElementById('closeSettings');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function() {
+                        document.getElementById('settingsModal').classList.add('hidden');
+                        debugLog('Настройки закрыты');
+                    });
+                }
+                
+                debugLog('✅ Тестовые обработчики установлены', 'success');
+                
+            } catch (error) {
+                debugLog('❌ Ошибка при установке обработчиков: ' + error.message, 'error');
             }
         });
+        
+        // Показываем статус загрузки
+        setTimeout(() => {
+            debugLog('📱 Готово к тестированию на iPhone!', 'success');
+        }, 1000);
     </script>
-    <script src="script.js"></script>
+    
+    <!-- Основной скрипт (пока отключен для тестирования) -->
+    <!-- <script src="script.js"></script> -->
 </body>
 </html>
