@@ -30,8 +30,36 @@ class AIOrchestraContent {
                     this.simulateUserInput(request.text);
                     sendResponse({ success: true });
                     break;
+                
+                case 'AUTO_INJECT_AND_SEND':
+                    this.autoInjectAndSend(request.message, request.source);
+                    sendResponse({ success: true });
+                    break;
             }
         });
+    }
+
+    autoInjectAndSend(message, source) {
+        // Показываем уведомление о входящем сообщении
+        this.showNotification(`📨 Автосообщение от ${source}: ${message.substring(0, 50)}...`);
+        
+        // Добавляем небольшую задержку для имитации человеческого поведения
+        setTimeout(() => {
+            // Вставляем текст в поле ввода
+            this.injectText(message);
+            
+            // Еще одна задержка перед отправкой
+            setTimeout(() => {
+                // Автоматически отправляем сообщение
+                const sendButton = document.querySelector(this.sendButtonSelector);
+                if (sendButton && !sendButton.disabled) {
+                    sendButton.click();
+                    console.log(`🚀 Автоотправка в ${this.getServiceName()}: ${message.substring(0, 50)}...`);
+                } else {
+                    console.log(`❌ Кнопка отправки не найдена в ${this.getServiceName()}`);
+                }
+            }, 1000 + Math.random() * 2000); // Случайная задержка 1-3 секунды
+        }, 500 + Math.random() * 1000); // Случайная задержка 0.5-1.5 секунды
     }
 
     setupPageIntegration() {
@@ -251,7 +279,7 @@ class AIOrchestraContent {
             mutations.forEach((mutation) => {
                 if (mutation.addedNodes.length > 0) {
                     // Реагируем на новые сообщения
-                    this.onNewContent();
+                    this.onNewContent(mutation.addedNodes);
                 }
             });
         });
@@ -262,9 +290,135 @@ class AIOrchestraContent {
         });
     }
 
-    onNewContent() {
-        // Здесь можно добавить логику реакции на новый контент
-        // Например, автоматическая пересылка ответов в Orchestra
+    onNewContent(addedNodes) {
+        // Автоматический перехват новых ответов ИИ
+        setTimeout(() => {
+            this.detectAndForwardAIResponse(addedNodes);
+        }, 1000); // Даем время на полную загрузку сообщения
+    }
+
+    detectAndForwardAIResponse(addedNodes) {
+        let newAIMessage = this.extractLatestAIMessage();
+        
+        if (newAIMessage && newAIMessage !== this.lastProcessedMessage) {
+            this.lastProcessedMessage = newAIMessage;
+            console.log(`🤖 Новый ответ от ${this.getServiceName()}:`, newAIMessage);
+            
+            // Отправляем сообщение в Orchestra для автоматической пересылки
+            this.forwardToOrchestra(newAIMessage);
+        }
+    }
+
+    extractLatestAIMessage() {
+        const messages = document.querySelectorAll(this.messagesSelector);
+        if (messages.length === 0) return null;
+        
+        // Получаем последнее сообщение от ИИ (не от пользователя)
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const message = messages[i];
+            if (this.isAIMessage(message)) {
+                const text = message.textContent.trim();
+                if (text.length > 10) { // Фильтруем слишком короткие сообщения
+                    return text;
+                }
+            }
+        }
+        return null;
+    }
+
+    isAIMessage(messageElement) {
+        const text = messageElement.textContent.toLowerCase();
+        const classList = messageElement.className.toLowerCase();
+        
+        // Определяем, является ли сообщение от ИИ
+        switch(this.serviceType) {
+            case 'chatgpt':
+                return messageElement.hasAttribute('data-message-author-role') && 
+                       messageElement.getAttribute('data-message-author-role') === 'assistant';
+            case 'claude':
+                return classList.includes('claude') || classList.includes('assistant');
+            case 'bard':
+                return classList.includes('model-response') || classList.includes('response');
+            case 'bing':
+                return classList.includes('ac-textblock') && !classList.includes('user');
+            case 'perplexity':
+                return classList.includes('prose') && !messageElement.closest('[data-testid="user-message"]');
+            default:
+                // Общая эвристика - если не содержит маркеров пользователя
+                return !classList.includes('user') && !classList.includes('human');
+        }
+    }
+
+    forwardToOrchestra(message) {
+        // Получаем настройки автопересылки из localStorage
+        const orchestraSettings = JSON.parse(localStorage.getItem('aiOrchestra') || '{}');
+        const autoForwardRules = orchestraSettings.autoForwardRules || [];
+        
+        // Проверяем правила автопересылки
+        autoForwardRules.forEach(rule => {
+            if (this.matchesRule(message, rule)) {
+                this.executeAutoForward(message, rule);
+            }
+        });
+        
+        // Также отправляем в общий буфер Orchestra
+        chrome.runtime.sendMessage({
+            type: 'AI_RESPONSE_INTERCEPTED',
+            source: this.getServiceName(),
+            message: message,
+            timestamp: Date.now(),
+            url: window.location.href
+        });
+    }
+
+    matchesRule(message, rule) {
+        // Проверяем, подходит ли сообщение под правило
+        if (rule.sourceService && rule.sourceService !== this.getServiceName()) {
+            return false;
+        }
+        
+        if (rule.trigger) {
+            const trigger = rule.trigger.toLowerCase();
+            return message.toLowerCase().includes(trigger);
+        }
+        
+        return rule.autoForwardAll === true;
+    }
+
+    executeAutoForward(message, rule) {
+        console.log(`🔄 Автопересылка: ${this.getServiceName()} → ${rule.targetService}`);
+        
+        // Форматируем сообщение для пересылки
+        const forwardedMessage = this.formatForwardedMessage(message, rule);
+        
+        // Отправляем через background script
+        chrome.runtime.sendMessage({
+            type: 'AUTO_FORWARD_MESSAGE',
+            targetService: rule.targetService,
+            message: forwardedMessage,
+            originalSource: this.getServiceName(),
+            rule: rule
+        });
+        
+        this.showNotification(`🔄 Автопересылка в ${rule.targetService}: ${message.substring(0, 50)}...`);
+    }
+
+    formatForwardedMessage(message, rule) {
+        let formatted = message;
+        
+        if (rule.addSourcePrefix) {
+            formatted = `[От ${this.getServiceName()}]: ${formatted}`;
+        }
+        
+        if (rule.addInstructions) {
+            formatted = `${rule.instructions}\n\n${formatted}`;
+        }
+        
+        if (rule.translateTo) {
+            formatted = `Переведи на ${rule.translateTo}: ${formatted}`;
+        }
+        
+        return formatted;
     }
 
     setupHotkeys() {

@@ -378,29 +378,138 @@ class AIOrchestra {
                 <div class="rule-content">
                     <div style="margin-bottom: 0.5rem;">
                         <label>Триггер:</label>
-                        <input type="text" value="${rule.trigger}" placeholder="Ключевое слово или фраза" style="width: 100%; padding: 0.25rem;">
+                        <input type="text" value="${rule.trigger || ''}" placeholder="Ключевое слово или фраза (пусто = все сообщения)" style="width: 100%; padding: 0.25rem;" onchange="aiOrchestra.updateRuleField('${rule.id}', 'trigger', this.value)">
                     </div>
-                    <div style="display: flex; gap: 1rem;">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
                         <div style="flex: 1;">
-                            <label>От:</label>
-                            <select style="width: 100%; padding: 0.25rem;">
-                                <option value="">Любое окно</option>
-                                ${this.windows.map(w => `<option value="${w.callsign}" ${rule.from === w.callsign ? 'selected' : ''}>${w.callsign}</option>`).join('')}
+                            <label>От сервиса:</label>
+                            <select style="width: 100%; padding: 0.25rem;" onchange="aiOrchestra.updateRuleField('${rule.id}', 'sourceService', this.value)">
+                                <option value="">Любой сервис</option>
+                                ${this.aiServices.map(s => `<option value="${s.name}" ${rule.sourceService === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
                             </select>
                         </div>
                         <div style="flex: 1;">
-                            <label>К:</label>
-                            <select style="width: 100%; padding: 0.25rem;">
-                                <option value="all">Всем</option>
-                                ${this.windows.map(w => `<option value="${w.callsign}" ${rule.to === w.callsign ? 'selected' : ''}>${w.callsign}</option>`).join('')}
+                            <label>К сервису:</label>
+                            <select style="width: 100%; padding: 0.25rem;" onchange="aiOrchestra.updateRuleField('${rule.id}', 'targetService', this.value)">
+                                <option value="">Выберите сервис</option>
+                                ${this.aiServices.map(s => `<option value="${s.name}" ${rule.targetService === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
                             </select>
                         </div>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <label>
+                            <input type="checkbox" ${rule.autoForwardAll ? 'checked' : ''} onchange="aiOrchestra.updateRuleField('${rule.id}', 'autoForwardAll', this.checked)">
+                            Автопересылка всех ответов ИИ
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <label>
+                            <input type="checkbox" ${rule.addSourcePrefix ? 'checked' : ''} onchange="aiOrchestra.updateRuleField('${rule.id}', 'addSourcePrefix', this.checked)">
+                            Добавлять префикс источника
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <label>Инструкции для ИИ:</label>
+                        <textarea style="width: 100%; padding: 0.25rem; height: 50px;" placeholder="Например: 'Переведи следующий текст на английский'" onchange="aiOrchestra.updateRuleField('${rule.id}', 'instructions', this.value)">${rule.instructions || ''}</textarea>
                     </div>
                 </div>
                 <button class="btn btn-small" onclick="aiOrchestra.removeRoutingRule('${rule.id}')" style="background: #ef4444; color: white;">Удалить</button>
             `;
             container.appendChild(ruleEl);
         });
+        
+        // Показываем автоправила отдельно
+        this.updateAutoForwardRules();
+    }
+
+    updateAutoForwardRules() {
+        // Создаем секцию автоправил если её нет
+        let autoRulesContainer = document.getElementById('autoForwardRules');
+        if (!autoRulesContainer) {
+            const settingsBody = document.querySelector('.modal-body');
+            const autoRulesSection = document.createElement('div');
+            autoRulesSection.className = 'setting-group';
+            autoRulesSection.innerHTML = `
+                <label>🤖 Автоматическая пересылка между ИИ:</label>
+                <p style="font-size: 0.875rem; color: #666; margin-bottom: 1rem;">
+                    Эти правила работают автоматически - когда ИИ отвечает, его ответ автоматически отправляется другому ИИ без участия пользователя.
+                </p>
+                <div id="autoForwardRules"></div>
+                <button id="addAutoRule" class="btn btn-secondary">+ Добавить автоправило</button>
+            `;
+            settingsBody.appendChild(autoRulesSection);
+            
+            document.getElementById('addAutoRule').addEventListener('click', () => this.addAutoForwardRule());
+            autoRulesContainer = document.getElementById('autoForwardRules');
+        }
+        
+        // Получаем автоправила
+        const autoForwardRules = this.getAutoForwardRules();
+        autoRulesContainer.innerHTML = '';
+        
+        autoForwardRules.forEach(rule => {
+            const ruleEl = document.createElement('div');
+            ruleEl.className = 'routing-rule';
+            ruleEl.style.backgroundColor = '#f0f9ff';
+            ruleEl.style.borderLeft = '4px solid #0ea5e9';
+            ruleEl.innerHTML = `
+                <div class="rule-content">
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong>🔄 ${rule.sourceService} → ${rule.targetService}</strong>
+                    </div>
+                    <div style="font-size: 0.875rem; color: #666;">
+                        ${rule.trigger ? `Триггер: "${rule.trigger}"` : 'Все ответы'}
+                        ${rule.instructions ? `<br>Инструкции: "${rule.instructions}"` : ''}
+                    </div>
+                </div>
+                <button class="btn btn-small" onclick="aiOrchestra.removeAutoForwardRule('${rule.id}')" style="background: #ef4444; color: white;">Удалить</button>
+            `;
+            autoRulesContainer.appendChild(ruleEl);
+        });
+    }
+
+    updateRuleField(ruleId, field, value) {
+        const rule = this.routingRules.find(r => r.id === ruleId);
+        if (rule) {
+            rule[field] = value;
+            this.saveAutoForwardRules();
+        }
+    }
+
+    addAutoForwardRule() {
+        const rule = {
+            id: 'auto-rule-' + Date.now(),
+            sourceService: '',
+            targetService: '',
+            trigger: '',
+            instructions: '',
+            autoForwardAll: true,
+            addSourcePrefix: true,
+            isAutoRule: true
+        };
+        
+        this.routingRules.push(rule);
+        this.updateRoutingRules();
+        this.saveAutoForwardRules();
+    }
+
+    removeAutoForwardRule(ruleId) {
+        this.routingRules = this.routingRules.filter(rule => rule.id !== ruleId);
+        this.updateRoutingRules();
+        this.saveAutoForwardRules();
+    }
+
+    getAutoForwardRules() {
+        return this.routingRules.filter(rule => rule.isAutoRule && rule.sourceService && rule.targetService);
+    }
+
+    saveAutoForwardRules() {
+        // Сохраняем правила в localStorage для доступа из content script
+        const autoRules = this.getAutoForwardRules();
+        const settings = JSON.parse(localStorage.getItem('aiOrchestra') || '{}');
+        settings.autoForwardRules = autoRules;
+        localStorage.setItem('aiOrchestra', JSON.stringify(settings));
+        this.saveSettings();
     }
     
     removeRoutingRule(ruleId) {
@@ -411,6 +520,32 @@ class AIOrchestra {
     addInitialWindow() {
         // Добавляем первое окно с ChatGPT по умолчанию
         this.addWindow(this.aiServices[0]);
+        
+        // Добавляем пример автоправила
+        setTimeout(() => {
+            if (this.routingRules.length === 0) {
+                this.addExampleAutoRule();
+            }
+        }, 2000);
+    }
+    
+    addExampleAutoRule() {
+        const exampleRule = {
+            id: 'example-auto-rule-' + Date.now(),
+            sourceService: 'ChatGPT',
+            targetService: 'Claude',
+            trigger: '',
+            instructions: 'Проанализируй следующий ответ и дай свое мнение:',
+            autoForwardAll: true,
+            addSourcePrefix: true,
+            isAutoRule: true
+        };
+        
+        this.routingRules.push(exampleRule);
+        this.saveAutoForwardRules();
+        
+        this.showMessage('🎯 Добавлен пример автоправила: ChatGPT → Claude', 'system');
+        this.showMessage('📝 Теперь ответы от ChatGPT будут автоматически пересылаться в Claude для анализа', 'system');
     }
     
     loadSettings() {
