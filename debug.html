@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Диагностика кнопок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        
+        .btn:hover {
+            opacity: 0.8;
+        }
+        
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 300px;
+        }
+        
+        .chat-panel {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .chat-panel.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-section">
+        <h1>🔧 Диагностика функций</h1>
+        <p>Проверка работы основных кнопок интерфейса</p>
+    </div>
+
+    <div class="debug-section">
+        <h3>Основные кнопки управления:</h3>
+        <button id="addWindow" class="btn btn-primary">+ Добавить окно</button>
+        <button id="toggleChat" class="btn btn-secondary">💬 Общий чат</button>
+        <button id="settings" class="btn btn-secondary">⚙️ Настройки</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>Лог событий:</h3>
+        <div id="log"></div>
+    </div>
+
+    <!-- Панель чата -->
+    <div id="chatPanel" class="chat-panel">
+        <h3>Панель чата открыта!</h3>
+        <p>Эта панель должна появляться/исчезать при нажатии на кнопку "Общий чат"</p>
+        <button id="closeChat" class="btn btn-secondary">Закрыть чат</button>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Настройки</h3>
+            <p>Это модальное окно настроек</p>
+            <button id="closeSettings" class="btn btn-secondary">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // Функция для вывода логов
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        // Переменные состояния
+        let windowCount = 0;
+        let chatVisible = false;
+
+        // Функции для кнопок
+        function addWindow() {
+            windowCount++;
+            log(`✅ Кнопка "Добавить окно" нажата. Создано окно ${windowCount}`);
+            alert(`Окно ${windowCount} добавлено!`);
+        }
+
+        function toggleChat() {
+            chatVisible = !chatVisible;
+            const chatPanel = document.getElementById('chatPanel');
+            
+            if (chatVisible) {
+                chatPanel.classList.add('show');
+                log('✅ Чат открыт');
+            } else {
+                chatPanel.classList.remove('show');
+                log('✅ Чат закрыт');
+            }
+        }
+
+        function openSettings() {
+            log('✅ Кнопка "Настройки" нажата');
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        function closeSettings() {
+            log('✅ Настройки закрыты');
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function closeChat() {
+            chatVisible = false;
+            document.getElementById('chatPanel').classList.remove('show');
+            log('✅ Чат закрыт через внутреннюю кнопку');
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Страница загружена, инициализация...');
+            
+            // Проверяем, что элементы существуют
+            const addBtn = document.getElementById('addWindow');
+            const chatBtn = document.getElementById('toggleChat');
+            const settingsBtn = document.getElementById('settings');
+            
+            if (!addBtn || !chatBtn || !settingsBtn) {
+                log('❌ ОШИБКА: Не найдены элементы кнопок!');
+                return;
+            }
+            
+            log('✅ Все кнопки найдены');
+            
+            // Добавляем обработчики событий
+            try {
+                addBtn.addEventListener('click', addWindow);
+                chatBtn.addEventListener('click', toggleChat);
+                settingsBtn.addEventListener('click', openSettings);
+                document.getElementById('closeSettings').addEventListener('click', closeSettings);
+                document.getElementById('closeChat').addEventListener('click', closeChat);
+                
+                log('✅ Все обработчики событий установлены');
+                log('🎯 Попробуйте нажать на кнопки выше');
+                
+            } catch (error) {
+                log('❌ ОШИБКА при добавлении обработчиков: ' + error.message);
+            }
+        });
+
+        // Обработка ошибок JavaScript
+        window.addEventListener('error', function(e) {
+            log('❌ JavaScript ошибка: ' + e.message);
+        });
+    </script>
+</body>
+</html>
