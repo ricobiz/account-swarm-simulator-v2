@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎼 AI Orchestra Mobile Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .mobile-header {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .mobile-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .mobile-header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .demo-container {
+            padding: 20px;
+            max-width: 100%;
+        }
+
+        .ai-window {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .window-header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .window-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .callsign {
+            background: #4CAF50;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .window-content {
+            padding: 20px;
+            min-height: 150px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .send-btn {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:active {
+            transform: scale(0.98);
+            background: #45a049;
+        }
+
+        .chat-history {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .message.user {
+            background: rgba(76, 175, 80, 0.3);
+            align-self: flex-end;
+            margin-left: 20%;
+        }
+
+        .message.ai {
+            background: rgba(255,255,255,0.1);
+            margin-right: 20%;
+        }
+
+        .demo-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4CAF50;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .orchestration-demo {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .orchestration-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+
+        .flow-arrow {
+            color: #4CAF50;
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 375px) {
+            .demo-container {
+                padding: 15px;
+            }
+            
+            .mobile-header h1 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <h1>🎼 AI Orchestra Mobile</h1>
+        <p>Демонстрация оркестрации ИИ на мобильном</p>
+    </div>
+
+    <div class="demo-container">
+        <!-- Окно ChatGPT -->
+        <div class="ai-window">
+            <div class="window-header">
+                <div>
+                    <span class="status-indicator"></span>
+                    <span class="window-title">ChatGPT</span>
+                </div>
+                <span class="callsign">GPT</span>
+            </div>
+            <div class="window-content">
+                <input type="text" class="message-input" placeholder="Введите сообщение для ChatGPT..." id="gpt-input">
+                <button class="send-btn" onclick="sendMessage('gpt')">Отправить в GPT</button>
+                <div class="chat-history" id="gpt-history">
+                    <div class="message ai">Привет! Я ChatGPT. Готов к работе в команде! 🤖</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Окно Claude -->
+        <div class="ai-window">
+            <div class="window-header">
+                <div>
+                    <span class="status-indicator"></span>
+                    <span class="window-title">Claude AI</span>
+                </div>
+                <span class="callsign" style="background: #FF6B6B;">CLAUDE</span>
+            </div>
+            <div class="window-content">
+                <input type="text" class="message-input" placeholder="Введите сообщение для Claude..." id="claude-input">
+                <button class="send-btn" onclick="sendMessage('claude')">Отправить в Claude</button>
+                <div class="chat-history" id="claude-history">
+                    <div class="message ai">Здравствуйте! Я Claude. Готов к совместной работе! 🎭</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Демо автоматической оркестрации -->
+        <div class="orchestration-demo">
+            <h3>🎼 Автоматическая оркестрация</h3>
+            <p style="margin: 10px 0; font-size: 0.9rem; opacity: 0.8;">
+                ИИ общаются друг с другом автоматически
+            </p>
+            
+            <div class="orchestration-flow">
+                <span>Пользователь</span>
+                <span class="flow-arrow">→</span>
+                <span>GPT</span>
+                <span class="flow-arrow">→</span>
+                <span>Claude</span>
+                <span class="flow-arrow">→</span>
+                <span>Анализ</span>
+            </div>
+            
+            <button class="send-btn" onclick="startOrchestration()" style="margin-top: 15px;">
+                🎼 Запустить демо-оркестрацию
+            </button>
+        </div>
+    </div>
+
+    <div class="demo-controls">
+        <button class="control-btn" onclick="addWindow()">+ Окно</button>
+        <button class="control-btn" onclick="toggleChat()">💬 Чат</button>
+        <button class="control-btn" onclick="showSettings()">⚙️ Настройки</button>
+    </div>
+
+    <script>
+        let messageCount = 0;
+        
+        function sendMessage(ai) {
+            const input = document.getElementById(ai + '-input');
+            const history = document.getElementById(ai + '-history');
+            
+            if (!input.value.trim()) return;
+            
+            // Добавляем сообщение пользователя
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.textContent = input.value;
+            history.appendChild(userMsg);
+            
+            // Симуляция ответа ИИ
+            setTimeout(() => {
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'message ai';
+                
+                const responses = {
+                    gpt: [
+                        'Отличный вопрос! Позвольте мне проанализировать это...',
+                        'Интересно! Я вижу несколько подходов к решению.',
+                        'Это напоминает мне о важном принципе...',
+                        'Давайте разберем это пошагово.'
+                    ],
+                    claude: [
+                        'Я согласен с анализом GPT, но хочу добавить...',
+                        'Интересная перспектива! Можно также рассмотреть...',
+                        'Позвольте предложить альтернативный взгляд...',
+                        'Отличная работа в команде! Мой вклад:'
+                    ]
+                };
+                
+                aiMsg.textContent = responses[ai][Math.floor(Math.random() * responses[ai].length)];
+                history.appendChild(aiMsg);
+                history.scrollTop = history.scrollHeight;
+                
+                // Автоматическая пересылка между ИИ
+                if (ai === 'gpt' && Math.random() > 0.5) {
+                    setTimeout(() => autoForward('claude', 'GPT передал: ' + input.value), 2000);
+                } else if (ai === 'claude' && Math.random() > 0.5) {
+                    setTimeout(() => autoForward('gpt', 'Claude ответил: ' + aiMsg.textContent), 2000);
+                }
+            }, 1000 + Math.random() * 2000);
+            
+            input.value = '';
+        }
+        
+        function autoForward(targetAI, message) {
+            const history = document.getElementById(targetAI + '-history');
+            const autoMsg = document.createElement('div');
+            autoMsg.className = 'message user';
+            autoMsg.style.background = 'rgba(255, 193, 7, 0.3)';
+            autoMsg.innerHTML = '🔄 ' + message;
+            history.appendChild(autoMsg);
+            
+            // Автоответ
+            setTimeout(() => {
+                const responseMsg = document.createElement('div');
+                responseMsg.className = 'message ai';
+                responseMsg.textContent = 'Получил автопересылку! Анализирую и отвечаю...';
+                history.appendChild(responseMsg);
+                history.scrollTop = history.scrollHeight;
+            }, 1500);
+        }
+        
+        function startOrchestration() {
+            const demoMessage = "Как работает квантовая запутанность?";
+            
+            // Отправляем в GPT
+            document.getElementById('gpt-input').value = demoMessage;
+            sendMessage('gpt');
+            
+            // Через 3 секунды автопересылка в Claude
+            setTimeout(() => {
+                autoForward('claude', 'Автопересылка от GPT: ' + demoMessage);
+            }, 3000);
+            
+            showNotification('🎼 Демо-оркестрация запущена!');
+        }
+        
+        function addWindow() {
+            showNotification('📱 На мобильном доступно 2 окна. Полная версия - на десктопе!');
+        }
+        
+        function toggleChat() {
+            showNotification('💬 Общий чат доступен в полной версии');
+        }
+        
+        function showSettings() {
+            showNotification('⚙️ Настройки оркестрации в разработке для мобильной версии');
+        }
+        
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 20px;
+                right: 20px;
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Обработка Enter для отправки сообщений
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const activeInput = document.activeElement;
+                if (activeInput.id === 'gpt-input') sendMessage('gpt');
+                if (activeInput.id === 'claude-input') sendMessage('claude');
+            }
+        });
+        
+        // Приветственное сообщение
+        setTimeout(() => {
+            showNotification('👋 Добро пожаловать в AI Orchestra Mobile!');
+        }, 1000);
+    </script>
+
+    <style>
+        @keyframes slideIn {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+        }
+    </style>
+</body>
+</html>
