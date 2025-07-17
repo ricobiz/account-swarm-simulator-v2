@@ -38,10 +38,7 @@
             z-index: 9998;
         }
         .btn-test {
-            background: #ff0 !important;
-            color: #000 !important;
-            border: 2px solid #f00 !important;
-            font-weight: bold !important;
+            /* Убираем ярко-желтый стиль, оставляем нормальный вид */
         }
     </style>
 </head>
@@ -132,31 +129,8 @@
             }
         }
         
-        // Простые тестовые функции
-        function testAddWindow() {
-            debugLog('✅ Кнопка "Добавить окно" нажата!', 'success');
-            alert('Кнопка "Добавить окно" работает!');
-        }
-        
-        function testToggleChat() {
-            debugLog('✅ Кнопка "Чат" нажата!', 'success');
-            const chatPanel = document.getElementById('chatPanel');
-            if (chatPanel) {
-                chatPanel.classList.toggle('hidden');
-                debugLog('Панель чата переключена');
-            }
-            alert('Кнопка "Чат" работает!');
-        }
-        
-        function testSettings() {
-            debugLog('✅ Кнопка "Настройки" нажата!', 'success');
-            const modal = document.getElementById('settingsModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                debugLog('Модальное окно настроек открыто');
-            }
-            alert('Кнопка "Настройки" работает!');
-        }
+        // Функции диагностики для основного скрипта
+        window.debugLog = debugLog; // Делаем доступным для других скриптов
         
         // Обработка ошибок
         window.addEventListener('error', function(e) {
@@ -186,27 +160,7 @@
             }
             
             debugLog('✅ Все кнопки найдены');
-            
-            // Добавляем простые обработчики для тестирования
-            try {
-                addBtn.addEventListener('click', testAddWindow);
-                chatBtn.addEventListener('click', testToggleChat);
-                settingsBtn.addEventListener('click', testSettings);
-                
-                // Обработчик для закрытия настроек
-                const closeBtn = document.getElementById('closeSettings');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', function() {
-                        document.getElementById('settingsModal').classList.add('hidden');
-                        debugLog('Настройки закрыты');
-                    });
-                }
-                
-                debugLog('✅ Тестовые обработчики установлены', 'success');
-                
-            } catch (error) {
-                debugLog('❌ Ошибка при установке обработчиков: ' + error.message, 'error');
-            }
+            debugLog('⏳ Ожидание загрузки основного скрипта...');
         });
         
         // Показываем статус загрузки
@@ -215,7 +169,7 @@
         }, 1000);
     </script>
     
-    <!-- Основной скрипт (пока отключен для тестирования) -->
-    <!-- <script src="script.js"></script> -->
+    <!-- Основной скрипт включен -->
+    <script src="script.js"></script>
 </body>
 </html>

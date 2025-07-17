@@ -27,11 +27,26 @@ class AIOrchestra {
     }
     
     initializeEventListeners() {
+        // Логируем инициализацию
+        if (window.debugLog) window.debugLog('🔧 Инициализация обработчиков событий...');
+        
         // Кнопки управления
-        document.getElementById('addWindow').addEventListener('click', () => this.addWindow());
-        document.getElementById('toggleChat').addEventListener('click', () => this.toggleChat());
-        document.getElementById('settings').addEventListener('click', () => this.openSettings());
-        document.getElementById('closeSettings').addEventListener('click', () => this.closeSettings());
+        document.getElementById('addWindow').addEventListener('click', () => {
+            if (window.debugLog) window.debugLog('🆕 Добавление нового окна');
+            this.addWindow();
+        });
+        document.getElementById('toggleChat').addEventListener('click', () => {
+            if (window.debugLog) window.debugLog('💬 Переключение чата');
+            this.toggleChat();
+        });
+        document.getElementById('settings').addEventListener('click', () => {
+            if (window.debugLog) window.debugLog('⚙️ Открытие настроек');
+            this.openSettings();
+        });
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            if (window.debugLog) window.debugLog('❌ Закрытие настроек');
+            this.closeSettings();
+        });
         
         // Чат
         document.getElementById('sendMessage').addEventListener('click', () => this.sendMessage());
@@ -583,14 +598,22 @@ class AIOrchestra {
 let aiOrchestra;
 
 document.addEventListener('DOMContentLoaded', () => {
-    aiOrchestra = new AIOrchestra();
+    if (window.debugLog) window.debugLog('🚀 Инициализация AI Orchestra...');
     
-    // Показываем приветственное сообщение
-    setTimeout(() => {
-        aiOrchestra.showMessage('🎼 Добро пожаловать в AI Orchestra! Создайте до 6 окон с ИИ-сервисами и настройте оркестрацию сообщений между ними.', 'system');
-        aiOrchestra.showMessage('📝 Используйте команды: @позывной сообщение (отправить конкретному окну) или @all сообщение (отправить всем)', 'system');
-        aiOrchestra.showMessage('⌨️ Горячие клавиши: Ctrl+N (новое окно), Ctrl+M (чат), Ctrl+, (настройки)', 'system');
-    }, 1000);
+    try {
+        aiOrchestra = new AIOrchestra();
+        if (window.debugLog) window.debugLog('✅ AI Orchestra успешно создан!', 'success');
+        
+        // Показываем приветственное сообщение
+        setTimeout(() => {
+            aiOrchestra.showMessage('🎼 Добро пожаловать в AI Orchestra! Создайте до 6 окон с ИИ-сервисами и настройте оркестрацию сообщений между ними.', 'system');
+            aiOrchestra.showMessage('📝 Используйте команды: @позывной сообщение (отправить конкретному окну) или @all сообщение (отправить всем)', 'system');
+            aiOrchestra.showMessage('⌨️ Горячие клавиши: Ctrl+N (новое окно), Ctrl+M (чат), Ctrl+, (настройки)', 'system');
+            if (window.debugLog) window.debugLog('📱 AI Orchestra готов к работе!', 'success');
+        }, 1000);
+    } catch (error) {
+        if (window.debugLog) window.debugLog('❌ Ошибка инициализации: ' + error.message, 'error');
+    }
 });
 
 // Автосохранение при закрытии
