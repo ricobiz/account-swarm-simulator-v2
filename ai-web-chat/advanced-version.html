@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Chat Advanced - Автоматическая пересылка между ИИ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .app {
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.active {
+            background: rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .ai-select {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-select option {
+            background: #333;
+            color: white;
+        }
+
+        .chat-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            flex: 1;
+            margin-bottom: 20px;
+        }
+
+        .chat-window {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-btn-small {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn-small:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .message-log {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .log-entry {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+        }
+
+        .log-entry.sent {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-entry.received {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 3px solid #2196F3;
+        }
+
+        .auto-forward-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .auto-forward-panel h3 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .forward-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .forward-rule {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+
+        .forward-rule label {
+            color: white;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+
+        .forward-rule input {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+
+        .forward-rule input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin-top: auto;
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn, .ai-select {
+                width: 100%;
+                max-width: 200px;
+            }
+            
+            .chat-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .chat-window {
+                min-height: 500px;
+            }
+            
+            .ai-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .forward-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Улучшения для touch устройств */
+        @media (hover: none) and (pointer: coarse) {
+            .control-btn, .control-btn-small {
+                min-height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>🤖 AI Web Chat Advanced</h1>
+            <div class="controls">
+                <button id="autoModeBtn" class="control-btn">
+                    ▶️ Запустить авторежим
+                </button>
+                <select id="ai1Select" class="ai-select">
+                    <option value="https://chat.openai.com">ChatGPT</option>
+                    <option value="https://claude.ai">Claude</option>
+                    <option value="https://bard.google.com">Bard</option>
+                    <option value="https://bing.com/chat">Bing Chat</option>
+                    <option value="https://perplexity.ai">Perplexity</option>
+                </select>
+                <select id="ai2Select" class="ai-select">
+                    <option value="https://claude.ai">Claude</option>
+                    <option value="https://chat.openai.com" selected>ChatGPT</option>
+                    <option value="https://bard.google.com">Bard</option>
+                    <option value="https://bing.com/chat">Bing Chat</option>
+                    <option value="https://perplexity.ai">Perplexity</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="auto-forward-panel">
+            <h3>🔄 Автоматическая пересылка сообщений</h3>
+            <div class="forward-controls">
+                <div class="forward-rule">
+                    <label>От AI 1 к AI 2:</label>
+                    <input type="text" id="forward1to2" placeholder="Введите сообщение для пересылки...">
+                    <button class="control-btn-small" onclick="forwardMessage(1, 2)">📤 Переслать</button>
+                </div>
+                <div class="forward-rule">
+                    <label>От AI 2 к AI 1:</label>
+                    <input type="text" id="forward2to1" placeholder="Введите сообщение для пересылки...">
+                    <button class="control-btn-small" onclick="forwardMessage(2, 1)">📤 Переслать</button>
+                </div>
+                <button id="autoForwardBtn" class="control-btn">
+                    🔄 Автопересылка
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <!-- AI 1 Window -->
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h2 id="ai1Title">🤖 AI 1</h2>
+                    <div class="ai-controls">
+                        <button class="control-btn-small" onclick="loadAI(1)">
+                            🔄 Перезагрузить
+                        </button>
+                        <button class="control-btn-small" onclick="toggleFullscreen(1)">
+                            ⛶ Полноэкран
+                        </button>
+                        <button class="control-btn-small" onclick="extractText(1)">
+                            📋 Извлечь текст
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="iframe-container">
+                    <iframe 
+                        id="ai1Frame" 
+                        class="ai-iframe"
+                        src="https://chat.openai.com"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    ></iframe>
+                    <div id="ai1Loading" class="loading">Загрузка...</div>
+                </div>
+                
+                <div class="message-log">
+                    <div class="log-entry">✅ ChatGPT загружен</div>
+                </div>
+            </div>
+
+            <!-- AI 2 Window -->
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h2 id="ai2Title">🤖 AI 2</h2>
+                    <div class="ai-controls">
+                        <button class="control-btn-small" onclick="loadAI(2)">
+                            🔄 Перезагрузить
+                        </button>
+                        <button class="control-btn-small" onclick="toggleFullscreen(2)">
+                            ⛶ Полноэкран
+                        </button>
+                        <button class="control-btn-small" onclick="extractText(2)">
+                            📋 Извлечь текст
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="iframe-container">
+                    <iframe 
+                        id="ai2Frame" 
+                        class="ai-iframe"
+                        src="https://claude.ai"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    ></iframe>
+                    <div id="ai2Loading" class="loading">Загрузка...</div>
+                </div>
+                
+                <div class="message-log">
+                    <div class="log-entry">✅ Claude загружен</div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>💡 Автоматическая пересылка сообщений между ИИ-сервисами!</p>
+        </footer>
+    </div>
+
+    <script>
+        // Список доступных ИИ-сервисов
+        const aiServices = {
+            'https://chat.openai.com': 'ChatGPT',
+            'https://claude.ai': 'Claude',
+            'https://bard.google.com': 'Bard',
+            'https://bing.com/chat': 'Bing Chat',
+            'https://perplexity.ai': 'Perplexity'
+        };
+
+        let isAutoMode = false;
+        let isAutoForward = false;
+        let currentAI1 = 'https://chat.openai.com';
+        let currentAI2 = 'https://claude.ai';
+        let extractedTexts = { ai1: '', ai2: '' };
+
+        // Загрузка ИИ в окно
+        function loadAI(windowId) {
+            const frame = document.getElementById(`ai${windowId}Frame`);
+            const loading = document.getElementById(`ai${windowId}Loading`);
+            const title = document.getElementById(`ai${windowId}Title`);
+            const log = frame.parentElement.nextElementSibling;
+            
+            const url = windowId === 1 ? currentAI1 : currentAI2;
+            const serviceName = aiServices[url];
+            
+            // Показываем загрузку
+            loading.style.display = 'block';
+            frame.style.opacity = '0.5';
+            
+            // Обновляем заголовок
+            title.textContent = `🤖 ${serviceName}`;
+            
+            // Загружаем новый URL
+            frame.src = url;
+            
+            // Логируем действие
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `🔄 Загружается ${serviceName}...`;
+            log.insertBefore(logEntry, log.firstChild);
+            
+            // Скрываем загрузку через 3 секунды
+            setTimeout(() => {
+                loading.style.display = 'none';
+                frame.style.opacity = '1';
+                
+                const successEntry = document.createElement('div');
+                successEntry.className = 'log-entry';
+                successEntry.textContent = `✅ ${serviceName} загружен`;
+                log.insertBefore(successEntry, log.firstChild);
+            }, 3000);
+        }
+
+        // Переключение полноэкранного режима
+        function toggleFullscreen(windowId) {
+            const frame = document.getElementById(`ai${windowId}Frame`);
+            
+            if (frame.requestFullscreen) {
+                frame.requestFullscreen();
+            } else if (frame.webkitRequestFullscreen) {
+                frame.webkitRequestFullscreen();
+            } else if (frame.msRequestFullscreen) {
+                frame.msRequestFullscreen();
+            }
+        }
+
+        // Извлечение текста из iframe (имитация)
+        function extractText(windowId) {
+            const log = document.querySelector(`#ai${windowId}Frame`).parentElement.nextElementSibling;
+            const serviceName = windowId === 1 ? aiServices[currentAI1] : aiServices[currentAI2];
+            
+            // Имитируем извлечение текста
+            const extractedText = `Последнее сообщение от ${serviceName}: "Это пример извлеченного текста из чата ${serviceName}."`;
+            extractedTexts[`ai${windowId}`] = extractedText;
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry received';
+            logEntry.textContent = `📋 Извлечен текст: ${extractedText.substring(0, 50)}...`;
+            log.insertBefore(logEntry, log.firstChild);
+        }
+
+        // Пересылка сообщения между ИИ
+        function forwardMessage(fromId, toId) {
+            const input = document.getElementById(`forward${fromId}to${toId}`);
+            const message = input.value.trim();
+            
+            if (message) {
+                const fromLog = document.querySelector(`#ai${fromId}Frame`).parentElement.nextElementSibling;
+                const toLog = document.querySelector(`#ai${toId}Frame`).parentElement.nextElementSibling;
+                
+                // Логируем отправку
+                const sentEntry = document.createElement('div');
+                sentEntry.className = 'log-entry sent';
+                sentEntry.textContent = `📤 Отправлено: ${message.substring(0, 30)}...`;
+                fromLog.insertBefore(sentEntry, fromLog.firstChild);
+                
+                // Логируем получение
+                const receivedEntry = document.createElement('div');
+                receivedEntry.className = 'log-entry received';
+                receivedEntry.textContent = `📥 Получено: ${message.substring(0, 30)}...`;
+                toLog.insertBefore(receivedEntry, toLog.firstChild);
+                
+                // Очищаем поле ввода
+                input.value = '';
+                
+                // Имитируем автоматическую вставку в iframe
+                setTimeout(() => {
+                    const autoEntry = document.createElement('div');
+                    autoEntry.className = 'log-entry';
+                    autoEntry.textContent = `🤖 Сообщение автоматически вставлено в ${aiServices[toId === 1 ? currentAI1 : currentAI2]}`;
+                    toLog.insertBefore(autoEntry, toLog.firstChild);
+                }, 1000);
+            }
+        }
+
+        // Автоматический режим
+        function toggleAutoMode() {
+            isAutoMode = !isAutoMode;
+            const btn = document.getElementById('autoModeBtn');
+            
+            if (isAutoMode) {
+                btn.textContent = '⏸️ Остановить авторежим';
+                btn.classList.add('active');
+                startAutoMode();
+            } else {
+                btn.textContent = '▶️ Запустить авторежим';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Автоматическая пересылка
+        function toggleAutoForward() {
+            isAutoForward = !isAutoForward;
+            const btn = document.getElementById('autoForwardBtn');
+            
+            if (isAutoForward) {
+                btn.textContent = '⏸️ Остановить автопересылку';
+                btn.classList.add('active');
+                startAutoForward();
+            } else {
+                btn.textContent = '🔄 Автопересылка';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Автоматический режим (имитация)
+        function startAutoMode() {
+            if (!isAutoMode) return;
+            
+            setTimeout(() => {
+                if (isAutoMode) {
+                    const log1 = document.querySelector('#ai1Frame').parentElement.nextElementSibling;
+                    const log2 = document.querySelector('#ai2Frame').parentElement.nextElementSibling;
+                    
+                    const entry1 = document.createElement('div');
+                    entry1.className = 'log-entry sent';
+                    entry1.textContent = '🤖 AI 1 отправляет сообщение...';
+                    log1.insertBefore(entry1, log1.firstChild);
+                    
+                    setTimeout(() => {
+                        if (isAutoMode) {
+                            const entry2 = document.createElement('div');
+                            entry2.className = 'log-entry received';
+                            entry2.textContent = '🤖 AI 2 отвечает...';
+                            log2.insertBefore(entry2, log2.firstChild);
+                            
+                            startAutoMode(); // Рекурсивно продолжаем
+                        }
+                    }, 2000);
+                }
+            }, 3000);
+        }
+
+        // Автоматическая пересылка (имитация)
+        function startAutoForward() {
+            if (!isAutoForward) return;
+            
+            setTimeout(() => {
+                if (isAutoForward) {
+                    // Имитируем автоматическую пересылку
+                    const messages = [
+                        "Привет! Как дела?",
+                        "Отлично! А что ты думаешь об этом?",
+                        "Интересная мысль! Давайте обсудим подробнее.",
+                        "Согласен! Это действительно важно.",
+                        "Спасибо за интересную беседу!"
+                    ];
+                    
+                    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                    
+                    // Пересылаем сообщение от AI 1 к AI 2
+                    document.getElementById('forward1to2').value = randomMessage;
+                    forwardMessage(1, 2);
+                    
+                    setTimeout(() => {
+                        if (isAutoForward) {
+                            const response = `Ответ на: "${randomMessage}" - Это очень интересная тема!`;
+                            document.getElementById('forward2to1').value = response;
+                            forwardMessage(2, 1);
+                            
+                            startAutoForward(); // Рекурсивно продолжаем
+                        }
+                    }, 3000);
+                }
+            }, 5000);
+        }
+
+        // Обработчики событий
+        document.getElementById('autoModeBtn').addEventListener('click', toggleAutoMode);
+        document.getElementById('autoForwardBtn').addEventListener('click', toggleAutoForward);
+
+        document.getElementById('ai1Select').addEventListener('change', function() {
+            currentAI1 = this.value;
+            loadAI(1);
+        });
+
+        document.getElementById('ai2Select').addEventListener('change', function() {
+            currentAI2 = this.value;
+            loadAI(2);
+        });
+
+        // Обработка загрузки iframe
+        document.querySelectorAll('.ai-iframe').forEach(frame => {
+            frame.addEventListener('load', function() {
+                const loading = this.parentElement.querySelector('.loading');
+                if (loading) {
+                    loading.style.display = 'none';
+                }
+                this.style.opacity = '1';
+            });
+        });
+
+        // Инициализация
+        function init() {
+            // Устанавливаем начальные значения
+            document.getElementById('ai1Select').value = currentAI1;
+            document.getElementById('ai2Select').value = currentAI2;
+            
+            // Обновляем заголовки
+            document.getElementById('ai1Title').textContent = `🤖 ${aiServices[currentAI1]}`;
+            document.getElementById('ai2Title').textContent = `🤖 ${aiServices[currentAI2]}`;
+        }
+
+        // Запуск при загрузке страницы
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
