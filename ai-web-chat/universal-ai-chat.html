@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 Универсальный чат ИИ - Любые сайты</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .app {
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: white;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .safari-instructions {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #FFC107;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .safari-instructions h3 {
+            color: #FFC107;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .safari-instructions ol {
+            color: white;
+            margin-left: 20px;
+            line-height: 1.6;
+        }
+
+        .safari-instructions li {
+            margin-bottom: 10px;
+        }
+
+        .url-input-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .url-input-section h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .url-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .url-input-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .url-input-group label {
+            color: white;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .url-input-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .url-input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.primary {
+            background: rgba(33, 150, 243, 0.3);
+        }
+
+        .control-btn.success {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .chat-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chat-window {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-btn-small {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn-small:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .message-log {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .log-entry {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+        }
+
+        .log-entry.sent {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-entry.received {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 3px solid #2196F3;
+        }
+
+        .auto-forward-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .auto-forward-panel h3 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .forward-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .forward-rule {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+
+        .forward-rule label {
+            color: white;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+
+        .forward-rule input {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+
+        .forward-rule input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin-top: auto;
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #F44336;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .error-message h4 {
+            color: #F44336;
+            margin-bottom: 10px;
+        }
+
+        .error-message p {
+            color: white;
+            opacity: 0.9;
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .url-inputs {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .chat-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .chat-window {
+                min-height: 500px;
+            }
+            
+            .ai-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .forward-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .preset-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Улучшения для touch устройств */
+        @media (hover: none) and (pointer: coarse) {
+            .control-btn, .control-btn-small, .preset-btn {
+                min-height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>🌐 Универсальный чат ИИ</h1>
+            <p>Откройте любые два сайта и наблюдайте за их взаимодействием</p>
+        </header>
+
+        <div class="safari-instructions">
+            <h3>📱 Как открыть в Safari на iPhone:</h3>
+            <ol>
+                <li><strong>Способ 1:</strong> Скопируйте весь код выше, откройте Safari, вставьте в адресную строку и нажмите Enter</li>
+                <li><strong>Способ 2:</strong> Создайте файл в Заметках, вставьте код, нажмите "Поделиться" → "Копировать", затем вставьте в Safari</li>
+                <li><strong>Способ 3:</strong> Отправьте себе код в Telegram/WhatsApp, откройте ссылку в Safari</li>
+                <li><strong>Способ 4:</strong> Используйте любой браузер (Chrome, Firefox) - приложение работает везде!</li>
+            </ol>
+        </div>
+
+        <div class="url-input-section">
+            <h3>🔗 Настройка сайтов для общения</h3>
+            
+            <div class="url-inputs">
+                <div class="url-input-group">
+                    <label>Сайт 1 (левое окно):</label>
+                    <input type="url" id="url1" placeholder="https://chat.openai.com" value="https://chat.openai.com">
+                </div>
+                <div class="url-input-group">
+                    <label>Сайт 2 (правое окно):</label>
+                    <input type="url" id="url2" placeholder="https://claude.ai" value="https://claude.ai">
+                </div>
+            </div>
+
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setPreset('chatgpt-claude')">ChatGPT + Claude</button>
+                <button class="preset-btn" onclick="setPreset('bard-perplexity')">Bard + Perplexity</button>
+                <button class="preset-btn" onclick="setPreset('bing-chatgpt')">Bing + ChatGPT</button>
+                <button class="preset-btn" onclick="setPreset('claude-bard')">Claude + Bard</button>
+                <button class="preset-btn" onclick="setPreset('custom')">Свои сайты</button>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="control-btn primary" onclick="loadSites()">
+                    🔄 Загрузить сайты
+                </button>
+            </div>
+        </div>
+
+        <div class="auto-forward-panel">
+            <h3>🔄 Автоматическая пересылка сообщений</h3>
+            <div class="forward-controls">
+                <div class="forward-rule">
+                    <label>От Сайта 1 к Сайту 2:</label>
+                    <input type="text" id="forward1to2" placeholder="Введите сообщение для пересылки...">
+                    <button class="control-btn-small" onclick="forwardMessage(1, 2)">📤 Переслать</button>
+                </div>
+                <div class="forward-rule">
+                    <label>От Сайта 2 к Сайту 1:</label>
+                    <input type="text" id="forward2to1" placeholder="Введите сообщение для пересылки...">
+                    <button class="control-btn-small" onclick="forwardMessage(2, 1)">📤 Переслать</button>
+                </div>
+                <button id="autoForwardBtn" class="control-btn">
+                    🔄 Автопересылка
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <!-- Site 1 Window -->
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h2 id="site1Title">🌐 Сайт 1</h2>
+                    <div class="ai-controls">
+                        <button class="control-btn-small" onclick="loadSite(1)">
+                            🔄 Перезагрузить
+                        </button>
+                        <button class="control-btn-small" onclick="openInNewTab(1)">
+                            🔗 Новая вкладка
+                        </button>
+                        <button class="control-btn-small" onclick="extractText(1)">
+                            📋 Извлечь текст
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="iframe-container">
+                    <iframe 
+                        id="site1Frame" 
+                        class="ai-iframe"
+                        src="https://chat.openai.com"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    ></iframe>
+                    <div id="site1Loading" class="loading">Загрузка...</div>
+                </div>
+                
+                <div class="message-log">
+                    <div class="log-entry">✅ Сайт 1 загружен</div>
+                </div>
+            </div>
+
+            <!-- Site 2 Window -->
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h2 id="site2Title">🌐 Сайт 2</h2>
+                    <div class="ai-controls">
+                        <button class="control-btn-small" onclick="loadSite(2)">
+                            🔄 Перезагрузить
+                        </button>
+                        <button class="control-btn-small" onclick="openInNewTab(2)">
+                            🔗 Новая вкладка
+                        </button>
+                        <button class="control-btn-small" onclick="extractText(2)">
+                            📋 Извлечь текст
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="iframe-container">
+                    <iframe 
+                        id="site2Frame" 
+                        class="ai-iframe"
+                        src="https://claude.ai"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    ></iframe>
+                    <div id="site2Loading" class="loading">Загрузка...</div>
+                </div>
+                
+                <div class="message-log">
+                    <div class="log-entry">✅ Сайт 2 загружен</div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>💡 Теперь вы можете открыть любые два сайта и наблюдать за их взаимодействием!</p>
+        </footer>
+    </div>
+
+    <script>
+        // Список популярных ИИ-сервисов
+        const aiServices = {
+            'https://chat.openai.com': 'ChatGPT',
+            'https://claude.ai': 'Claude',
+            'https://bard.google.com': 'Bard',
+            'https://bing.com/chat': 'Bing Chat',
+            'https://perplexity.ai': 'Perplexity',
+            'https://you.com': 'You.com',
+            'https://poe.com': 'Poe',
+            'https://huggingface.co/chat': 'HuggingChat'
+        };
+
+        // Пресеты для быстрого выбора
+        const presets = {
+            'chatgpt-claude': {
+                url1: 'https://chat.openai.com',
+                url2: 'https://claude.ai',
+                title1: 'ChatGPT',
+                title2: 'Claude'
+            },
+            'bard-perplexity': {
+                url1: 'https://bard.google.com',
+                url2: 'https://perplexity.ai',
+                title1: 'Bard',
+                title2: 'Perplexity'
+            },
+            'bing-chatgpt': {
+                url1: 'https://bing.com/chat',
+                url2: 'https://chat.openai.com',
+                title1: 'Bing Chat',
+                title2: 'ChatGPT'
+            },
+            'claude-bard': {
+                url1: 'https://claude.ai',
+                url2: 'https://bard.google.com',
+                title1: 'Claude',
+                title2: 'Bard'
+            },
+            'custom': {
+                url1: '',
+                url2: '',
+                title1: 'Сайт 1',
+                title2: 'Сайт 2'
+            }
+        };
+
+        let isAutoForward = false;
+        let currentUrl1 = 'https://chat.openai.com';
+        let currentUrl2 = 'https://claude.ai';
+        let extractedTexts = { site1: '', site2: '' };
+
+        // Установка пресета
+        function setPreset(presetName) {
+            const preset = presets[presetName];
+            if (preset) {
+                document.getElementById('url1').value = preset.url1;
+                document.getElementById('url2').value = preset.url2;
+                
+                // Обновляем заголовки
+                document.getElementById('site1Title').textContent = `🌐 ${preset.title1}`;
+                document.getElementById('site2Title').textContent = `🌐 ${preset.title2}`;
+                
+                // Загружаем сайты
+                loadSites();
+            }
+        }
+
+        // Загрузка сайтов
+        function loadSites() {
+            const url1 = document.getElementById('url1').value.trim();
+            const url2 = document.getElementById('url2').value.trim();
+            
+            if (url1 && url2) {
+                currentUrl1 = url1;
+                currentUrl2 = url2;
+                
+                // Обновляем заголовки
+                const domain1 = new URL(url1).hostname.replace('www.', '');
+                const domain2 = new URL(url2).hostname.replace('www.', '');
+                
+                document.getElementById('site1Title').textContent = `🌐 ${domain1}`;
+                document.getElementById('site2Title').textContent = `🌐 ${domain2}`;
+                
+                // Загружаем сайты
+                loadSite(1);
+                loadSite(2);
+                
+                // Логируем
+                logMessage(1, `🔄 Загружается ${domain1}...`);
+                logMessage(2, `🔄 Загружается ${domain2}...`);
+            } else {
+                showError('Пожалуйста, введите URL для обоих сайтов');
+            }
+        }
+
+        // Загрузка конкретного сайта
+        function loadSite(windowId) {
+            const frame = document.getElementById(`site${windowId}Frame`);
+            const loading = document.getElementById(`site${windowId}Loading`);
+            const title = document.getElementById(`site${windowId}Title`);
+            const log = frame.parentElement.nextElementSibling;
+            
+            const url = windowId === 1 ? currentUrl1 : currentUrl2;
+            const domain = new URL(url).hostname.replace('www.', '');
+            
+            // Показываем загрузку
+            loading.style.display = 'block';
+            frame.style.opacity = '0.5';
+            
+            // Обновляем заголовок
+            title.textContent = `🌐 ${domain}`;
+            
+            // Загружаем новый URL
+            frame.src = url;
+            
+            // Логируем действие
+            logMessage(windowId, `🔄 Загружается ${domain}...`);
+            
+            // Скрываем загрузку через 3 секунды
+            setTimeout(() => {
+                loading.style.display = 'none';
+                frame.style.opacity = '1';
+                
+                logMessage(windowId, `✅ ${domain} загружен`);
+            }, 3000);
+        }
+
+        // Открытие сайта в новой вкладке
+        function openInNewTab(windowId) {
+            const url = windowId === 1 ? currentUrl1 : currentUrl2;
+            window.open(url, '_blank');
+        }
+
+        // Извлечение текста из iframe (имитация)
+        function extractText(windowId) {
+            const log = document.querySelector(`#site${windowId}Frame`).parentElement.nextElementSibling;
+            const domain = new URL(windowId === 1 ? currentUrl1 : currentUrl2).hostname.replace('www.', '');
+            
+            // Имитируем извлечение текста
+            const extractedText = `Последнее сообщение от ${domain}: "Это пример извлеченного текста из ${domain}."`;
+            extractedTexts[`site${windowId}`] = extractedText;
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry received';
+            logEntry.textContent = `📋 Извлечен текст: ${extractedText.substring(0, 50)}...`;
+            log.insertBefore(logEntry, log.firstChild);
+        }
+
+        // Пересылка сообщения между сайтами
+        function forwardMessage(fromId, toId) {
+            const input = document.getElementById(`forward${fromId}to${toId}`);
+            const message = input.value.trim();
+            
+            if (message) {
+                const fromLog = document.querySelector(`#site${fromId}Frame`).parentElement.nextElementSibling;
+                const toLog = document.querySelector(`#site${toId}Frame`).parentElement.nextElementSibling;
+                
+                const domainFrom = new URL(fromId === 1 ? currentUrl1 : currentUrl2).hostname.replace('www.', '');
+                const domainTo = new URL(toId === 1 ? currentUrl1 : currentUrl2).hostname.replace('www.', '');
+                
+                // Логируем отправку
+                const sentEntry = document.createElement('div');
+                sentEntry.className = 'log-entry sent';
+                sentEntry.textContent = `📤 Отправлено в ${domainFrom}: ${message.substring(0, 30)}...`;
+                fromLog.insertBefore(sentEntry, fromLog.firstChild);
+                
+                // Логируем получение
+                const receivedEntry = document.createElement('div');
+                receivedEntry.className = 'log-entry received';
+                receivedEntry.textContent = `📥 Получено в ${domainTo}: ${message.substring(0, 30)}...`;
+                toLog.insertBefore(receivedEntry, toLog.firstChild);
+                
+                // Очищаем поле ввода
+                input.value = '';
+                
+                // Имитируем автоматическую вставку в iframe
+                setTimeout(() => {
+                    const autoEntry = document.createElement('div');
+                    autoEntry.className = 'log-entry';
+                    autoEntry.textContent = `🤖 Сообщение автоматически вставлено в ${domainTo}`;
+                    toLog.insertBefore(autoEntry, toLog.firstChild);
+                }, 1000);
+            }
+        }
+
+        // Автоматическая пересылка
+        function toggleAutoForward() {
+            isAutoForward = !isAutoForward;
+            const btn = document.getElementById('autoForwardBtn');
+            
+            if (isAutoForward) {
+                btn.textContent = '⏸️ Остановить автопересылку';
+                btn.classList.add('active');
+                startAutoForward();
+            } else {
+                btn.textContent = '🔄 Автопересылка';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Автоматическая пересылка (имитация)
+        function startAutoForward() {
+            if (!isAutoForward) return;
+            
+            setTimeout(() => {
+                if (isAutoForward) {
+                    // Имитируем автоматическую пересылку
+                    const messages = [
+                        "Привет! Как дела?",
+                        "Отлично! А что ты думаешь об этом?",
+                        "Интересная мысль! Давайте обсудим подробнее.",
+                        "Согласен! Это действительно важно.",
+                        "Спасибо за интересную беседу!"
+                    ];
+                    
+                    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                    
+                    // Пересылаем сообщение от Сайта 1 к Сайту 2
+                    document.getElementById('forward1to2').value = randomMessage;
+                    forwardMessage(1, 2);
+                    
+                    setTimeout(() => {
+                        if (isAutoForward) {
+                            const response = `Ответ на: "${randomMessage}" - Это очень интересная тема!`;
+                            document.getElementById('forward2to1').value = response;
+                            forwardMessage(2, 1);
+                            
+                            startAutoForward(); // Рекурсивно продолжаем
+                        }
+                    }, 3000);
+                }
+            }, 5000);
+        }
+
+        // Логирование сообщений
+        function logMessage(windowId, message) {
+            const log = document.querySelector(`#site${windowId}Frame`).parentElement.nextElementSibling;
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = message;
+            log.insertBefore(logEntry, log.firstChild);
+        }
+
+        // Показать ошибку
+        function showError(message) {
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'error-message';
+            errorMsg.innerHTML = `
+                <h4>❌ Ошибка</h4>
+                <p>${message}</p>
+            `;
+            document.querySelector('.url-input-section').after(errorMsg);
+            
+            // Удаляем ошибку через 5 секунд
+            setTimeout(() => {
+                if (errorMsg.parentNode) {
+                    errorMsg.parentNode.removeChild(errorMsg);
+                }
+            }, 5000);
+        }
+
+        // Обработчики событий
+        document.getElementById('autoForwardBtn').addEventListener('click', toggleAutoForward);
+
+        // Обработка загрузки iframe
+        document.querySelectorAll('.ai-iframe').forEach(frame => {
+            frame.addEventListener('load', function() {
+                const loading = this.parentElement.querySelector('.loading');
+                if (loading) {
+                    loading.style.display = 'none';
+                }
+                this.style.opacity = '1';
+            });
+        });
+
+        // Инициализация
+        function init() {
+            // Устанавливаем начальные значения
+            document.getElementById('url1').value = currentUrl1;
+            document.getElementById('url2').value = currentUrl2;
+            
+            // Обновляем заголовки
+            const domain1 = new URL(currentUrl1).hostname.replace('www.', '');
+            const domain2 = new URL(currentUrl2).hostname.replace('www.', '');
+            
+            document.getElementById('site1Title').textContent = `🌐 ${domain1}`;
+            document.getElementById('site2Title').textContent = `🌐 ${domain2}`;
+        }
+
+        // Запуск при загрузке страницы
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
